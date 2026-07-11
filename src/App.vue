@@ -1,61 +1,309 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { invoke } from "@tauri-apps/api/core";
+import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { LogicalSize, PhysicalPosition, Window, primaryMonitor } from "@tauri-apps/api/window";
+import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
+import ConfigPanel from "./components/ConfigPanel.vue";
+import OverlayWindow from "./components/OverlayWindow.vue";
+import { buildConfigFileJson, parseConfigFile } from "./domain/configFile";
+import { createDefaultConfig, type OverlayStyle } from "./domain/defaultConfig";
+import { estimateOverlaySize } from "./domain/overlaySize";
+import {
+  INPUT_STATE_EVENT,
+  OVERLAY_CONFIG_EVENT,
+  OVERLAY_STYLE_EVENT,
+  OVERLAY_VISIBLE_EVENT,
+  keyIdFromKeyboardCode,
+  keyIdFromMouseButton,
+  type InputStatePayload,
+} from "./domain/inputEvents";
 
-const greetMsg = ref("");
-const name = ref("");
+type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
-async function greet() {
-  // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-  greetMsg.value = await invoke("greet", { name: name.value });
+const config = reactive(createDefaultConfig());
+const activeKeyIds = ref(new Set<string>(["w", "shift-left", "mouse-left"]));
+const isOverlayVisible = ref(true);
+const profileName = ref("CS POV");
+const overlayPosition = ref<OverlayPosition>("bottom-right");
+
+const isOverlayWindow = computed(() => {
+  return new URLSearchParams(window.location.search).get("surface") === "pov";
+});
+
+let unlistenInputState: UnlistenFn | undefined;
+let unlistenOverlayStyle: UnlistenFn | undefined;
+
+type OverlayRuntimeConfig = {
+  layout: typeof config.layout;
+  keys: typeof config.keys;
+  style: OverlayStyle;
+};
+
+function updateActiveKey(keyId: string, pressed: boolean) {
+  const nextKeys = new Set(activeKeyIds.value);
+
+  if (pressed) {
+    nextKeys.add(keyId);
+  } else {
+    nextKeys.delete(keyId);
+  }
+
+  activeKeyIds.value = nextKeys;
 }
+
+function applyOverlayStyle(style: OverlayStyle) {
+  config.style = { ...style };
+}
+
+function applyOverlayLayout(layout: typeof config.layout) {
+  config.layout = { ...layout };
+}
+
+function applyOverlayKeys(keys: typeof config.keys) {
+  config.keys = [...keys];
+}
+
+async function updateOverlayStyle(style: OverlayStyle) {
+  applyOverlayStyle(style);
+  const overlayWindow = await Window.getByLabel("pov");
+  await resizeOverlayWindow(overlayWindow);
+  await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
+  await emitTo<OverlayStyle>("pov", OVERLAY_STYLE_EVENT, style);
+}
+
+async function resizeOverlayWindow(overlayWindow?: Window | null) {
+  const targetWindow = overlayWindow ?? (await Window.getByLabel("pov"));
+
+  if (!targetWindow) {
+    return;
+  }
+
+  const size = estimateOverlaySize(config.layout, config.keys, config.style);
+  await targetWindow.setSize(new LogicalSize(size.width, size.height));
+}
+
+async function setOverlayVisible(visible: boolean) {
+  const overlayWindow = await Window.getByLabel("pov");
+
+  if (!overlayWindow) {
+    isOverlayVisible.value = false;
+    return;
+  }
+
+  if (visible) {
+    await resizeOverlayWindow(overlayWindow);
+    await overlayWindow.show();
+  } else {
+    await overlayWindow.hide();
+  }
+
+  isOverlayVisible.value = visible;
+  await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, visible);
+}
+
+async function moveOverlay(position: OverlayPosition) {
+  overlayPosition.value = position;
+  const overlayWindow = await Window.getByLabel("pov");
+  const monitor = await primaryMonitor();
+
+  if (!overlayWindow || !monitor) {
+    return;
+  }
+
+  await resizeOverlayWindow(overlayWindow);
+
+  const margin = 24;
+  const overlaySize = await overlayWindow.outerSize();
+  const workArea = monitor.workArea;
+  const xMin = workArea.position.x + margin;
+  const yMin = workArea.position.y + margin;
+  const xMax = workArea.position.x + workArea.size.width - overlaySize.width - margin;
+  const yMax = workArea.position.y + workArea.size.height - overlaySize.height - margin;
+
+  const positions: Record<OverlayPosition, PhysicalPosition> = {
+    "top-left": new PhysicalPosition(xMin, yMin),
+    "top-right": new PhysicalPosition(xMax, yMin),
+    "bottom-left": new PhysicalPosition(xMin, yMax),
+    "bottom-right": new PhysicalPosition(xMax, yMax),
+    center: new PhysicalPosition((xMin + xMax) / 2, (yMin + yMax) / 2),
+  };
+
+  await overlayWindow.show();
+  await overlayWindow.setPosition(positions[position]);
+  isOverlayVisible.value = true;
+  await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+}
+
+async function loadConfig(text: string, fileName: string) {
+  const loadedConfig = parseConfigFile(text);
+  profileName.value = loadedConfig.name || profileNameFromFileName(fileName);
+  overlayPosition.value = (loadedConfig.overlay.position as OverlayPosition) ?? "bottom-right";
+
+  applyOverlayLayout(loadedConfig.overlay.layout);
+  applyOverlayKeys(loadedConfig.overlay.keys);
+  applyOverlayStyle(loadedConfig.overlay.style);
+  await resizeOverlayWindow();
+
+  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
+    layout: loadedConfig.overlay.layout,
+    keys: loadedConfig.overlay.keys,
+    style: loadedConfig.overlay.style,
+  });
+  await setOverlayVisible(loadedConfig.overlay.visible ?? true);
+}
+
+async function saveAndApplyConfig() {
+  await resizeOverlayWindow();
+  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
+    layout: config.layout,
+    keys: config.keys,
+    style: config.style,
+  });
+  await setOverlayVisible(isOverlayVisible.value);
+
+  const json = buildConfigFileJson({
+    name: profileName.value,
+    config,
+    visible: isOverlayVisible.value,
+    position: overlayPosition.value,
+  });
+  const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${profileName.value || "keyboard-display"}.json`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function profileNameFromFileName(fileName: string): string {
+  return fileName.replace(/\.json$/i, "");
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  const keyId = keyIdFromKeyboardCode(event.code);
+
+  if (keyId) {
+    updateActiveKey(keyId, true);
+  }
+}
+
+function handleKeyup(event: KeyboardEvent) {
+  const keyId = keyIdFromKeyboardCode(event.code);
+
+  if (keyId) {
+    updateActiveKey(keyId, false);
+  }
+}
+
+function handleMousedown(event: MouseEvent) {
+  if (!isOverlayWindow.value) {
+    return;
+  }
+
+  const keyId = keyIdFromMouseButton(event.button);
+  if (keyId) {
+    updateActiveKey(keyId, true);
+  }
+}
+
+function handleMouseup(event: MouseEvent) {
+  if (!isOverlayWindow.value) {
+    return;
+  }
+
+  const keyId = keyIdFromMouseButton(event.button);
+  if (keyId) {
+    updateActiveKey(keyId, false);
+  }
+}
+
+onMounted(async () => {
+  unlistenInputState = await listen<InputStatePayload>(
+    INPUT_STATE_EVENT,
+    (event) => {
+      updateActiveKey(event.payload.keyId, event.payload.pressed);
+    },
+  );
+
+  if (isOverlayWindow.value) {
+    unlistenOverlayStyle = await listen<OverlayStyle>(
+      OVERLAY_STYLE_EVENT,
+      (event) => {
+        applyOverlayStyle(event.payload);
+      },
+    );
+    const unlistenOverlayConfig = await listen<OverlayRuntimeConfig>(
+      OVERLAY_CONFIG_EVENT,
+      (event) => {
+        applyOverlayLayout(event.payload.layout);
+        applyOverlayKeys(event.payload.keys);
+        applyOverlayStyle(event.payload.style);
+      },
+    );
+    const originalUnlistenOverlayStyle = unlistenOverlayStyle;
+    unlistenOverlayStyle = () => {
+      originalUnlistenOverlayStyle();
+      unlistenOverlayConfig();
+    };
+  } else {
+    unlistenOverlayStyle = await listen<boolean>(
+      OVERLAY_VISIBLE_EVENT,
+      (event) => {
+        isOverlayVisible.value = event.payload;
+      },
+    );
+  }
+
+  window.addEventListener("keydown", handleKeydown);
+  window.addEventListener("keyup", handleKeyup);
+  window.addEventListener("mousedown", handleMousedown);
+  window.addEventListener("mouseup", handleMouseup);
+});
+
+onUnmounted(() => {
+  unlistenInputState?.();
+  unlistenOverlayStyle?.();
+  window.removeEventListener("keydown", handleKeydown);
+  window.removeEventListener("keyup", handleKeyup);
+  window.removeEventListener("mousedown", handleMousedown);
+  window.removeEventListener("mouseup", handleMouseup);
+});
 </script>
 
 <template>
-  <main class="container">
-    <h1>Welcome to Tauri + Vue</h1>
-
-    <div class="row">
-      <a href="https://vite.dev" target="_blank">
-        <img src="/vite.svg" class="logo vite" alt="Vite logo" />
-      </a>
-      <a href="https://tauri.app" target="_blank">
-        <img src="/tauri.svg" class="logo tauri" alt="Tauri logo" />
-      </a>
-      <a href="https://vuejs.org/" target="_blank">
-        <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-      </a>
+  <div :class="['app-surface', { 'overlay-surface': isOverlayWindow }]">
+    <div v-if="isOverlayWindow" class="overlay-window">
+      <OverlayWindow
+        :layout="config.layout"
+        :keys="config.keys"
+        :active-keys="activeKeyIds"
+        :overlay-style="config.style"
+      />
     </div>
-    <p>Click on the Tauri, Vite, and Vue logos to learn more.</p>
-
-    <form class="row" @submit.prevent="greet">
-      <input id="greet-input" v-model="name" placeholder="Enter a name..." />
-      <button type="submit">Greet</button>
-    </form>
-    <p>{{ greetMsg }}</p>
-  </main>
+    <ConfigPanel
+      v-else
+      :config="config"
+      :active-keys="activeKeyIds"
+      :overlay-visible="isOverlayVisible"
+      :profile-name="profileName"
+      @update-overlay-style="updateOverlayStyle"
+      @update-overlay-visible="setOverlayVisible"
+      @load-config="loadConfig"
+      @save-and-apply-config="saveAndApplyConfig"
+      @move-overlay="moveOverlay"
+    />
+  </div>
 </template>
 
-<style scoped>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #249b73);
-}
-
-</style>
 <style>
 :root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
   font-size: 16px;
-  line-height: 24px;
+  line-height: 1.5;
   font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
+  color: #eef2f6;
+  background-color: transparent;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -63,98 +311,41 @@ async function greet() {
   -webkit-text-size-adjust: 100%;
 }
 
-.container {
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
   margin: 0;
-  padding-top: 10vh;
+  min-height: 100%;
+}
+
+body {
+  overflow: auto;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-surface {
+  min-height: 100vh;
+}
+
+.overlay-surface {
+  overflow: hidden;
+}
+
+.overlay-window {
   display: flex;
-  flex-direction: column;
+  width: 100vw;
+  min-height: 100vh;
+  align-items: center;
   justify-content: center;
-  text-align: center;
+  background: transparent;
+  padding: 14px;
 }
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
-  }
-
-  a:hover {
-    color: #24c8db;
-  }
-
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
-  }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-}
-
 </style>
