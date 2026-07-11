@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "name": "Left keyboard",
+  "overlay": {
+    "visible": true,
+    "position": "bottom-left",
+    "layout": {
+      "unitPx": 54,
+      "gapUnit": 0.15
+    },
+    "style": {
+      "scale": 1,
+      "opacity": 0.92,
+      "backgroundMode": "transparent",
+      "backgroundColor": "#0a0c0e",
+      "backgroundOpacity": 0.72,
+      "backgroundRadius": 8,
+      "idleKeyVisibility": "visible",
+      "alwaysOnTop": false,
+      "idleColor": "#121417",
+      "activeColor": "#25d366",
+      "idleTextColor": "#f5f7fa",
+      "activeTextColor": "#ffffff"
+    },
+    "keys": [
+      {
+        "id": "escape",
+        "label": "Esc",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "backquote",
+        "label": "`",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "digit-1",
+        "label": "1",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "digit-2",
+        "label": "2",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "digit-3",
+        "label": "3",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "digit-4",
+        "label": "4",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "digit-5",
+        "label": "5",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "digit-6",
+        "label": "6",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "tab",
+        "label": "Tab",
+        "group": "modifier",
+        "row": 2,
+        "widthUnit": 1.5
+      },
+      {
+        "id": "q",
+        "label": "Q",
+        "group": "action",
+        "row": 2,
+        "widthUnit": 1
+      },
+      {
+        "id": "w",
+        "label": "W",
+        "group": "movement",
+        "row": 2,
+        "widthUnit": 1
+      },
+      {
+        "id": "e",
+        "label": "E",
+        "group": "action",
+        "row": 2,
+        "widthUnit": 1
+      },
+      {
+        "id": "r",
+        "label": "R",
+        "group": "action",
+        "row": 2,
+        "widthUnit": 1
+      },
+      {
+        "id": "t",
+        "label": "T",
+        "group": "action",
+        "row": 2,
+        "widthUnit": 1
+      },
+      {
+        "id": "caps-lock",
+        "label": "Caps",
+        "group": "modifier",
+        "row": 3,
+        "widthUnit": 1.75
+      },
+      {
+        "id": "a",
+        "label": "A",
+        "group": "movement",
+        "row": 3,
+        "widthUnit": 1
+      },
+      {
+        "id": "s",
+        "label": "S",
+        "group": "movement",
+        "row": 3,
+        "widthUnit": 1
+      },
+      {
+        "id": "d",
+        "label": "D",
+        "group": "movement",
+        "row": 3,
+        "widthUnit": 1
+      },
+      {
+        "id": "f",
+        "label": "F",
+        "group": "action",
+        "row": 3,
+        "widthUnit": 1
+      },
+      {
+        "id": "g",
+        "label": "G",
+        "group": "action",
+        "row": 3,
+        "widthUnit": 1
+      },
+      {
+        "id": "shift-left",
+        "label": "Shift",
+        "group": "modifier",
+        "row": 4,
+        "widthUnit": 2.25
+      },
+      {
+        "id": "z",
+        "label": "Z",
+        "group": "action",
+        "row": 4,
+        "widthUnit": 1
+      },
+      {
+        "id": "x",
+        "label": "X",
+        "group": "action",
+        "row": 4,
+        "widthUnit": 1
+      },
+      {
+        "id": "c",
+        "label": "C",
+        "group": "action",
+        "row": 4,
+        "widthUnit": 1
+      },
+      {
+        "id": "v",
+        "label": "V",
+        "group": "action",
+        "row": 4,
+        "widthUnit": 1
+      },
+      {
+        "id": "b",
+        "label": "B",
+        "group": "action",
+        "row": 4,
+        "widthUnit": 1
+      },
+      {
+        "id": "ctrl-left",
+        "label": "Ctrl",
+        "group": "modifier",
+        "row": 5,
+        "widthUnit": 1.25,
+        "platformLabels": {
+          "macos": "Ctrl",
+          "windows": "Ctrl"
+        }
+      },
+      {
+        "id": "meta-left",
+        "label": "Meta",
+        "group": "modifier",
+        "row": 5,
+        "widthUnit": 1.25,
+        "platformLabels": {
+          "macos": "Cmd",
+          "windows": "Win"
+        }
+      },
+      {
+        "id": "alt-left",
+        "label": "Alt",
+        "group": "modifier",
+        "row": 5,
+        "widthUnit": 1.25,
+        "platformLabels": {
+          "macos": "Opt",
+          "windows": "Alt"
+        }
+      },
+      {
+        "id": "space",
+        "label": "Space",
+        "group": "modifier",
+        "row": 5,
+        "widthUnit": 4
+      }
+    ]
+  },
+  "recording": {
+    "defaultFps": 60,
+    "fpsOptions": [
+      30,
+      60,
+      120
+    ],
+    "formatExtension": ".kbdrec",
+    "primaryArtifact": "input-binary"
+  },
+  "export": {
+    "defaultFormat": "webm",
+    "transparentFormat": "webm",
+    "compatibleFormat": "mp4"
+  }
+}

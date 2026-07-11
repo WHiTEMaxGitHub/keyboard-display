@@ -1,0 +1,127 @@
+{
+  "version": 1,
+  "name": "CS POV",
+  "overlay": {
+    "visible": true,
+    "position": "bottom-right",
+    "style": {
+      "scale": 1,
+      "opacity": 0.92,
+      "backgroundMode": "transparent",
+      "backgroundColor": "#0a0c0e",
+      "backgroundOpacity": 0.72,
+      "backgroundRadius": 8,
+      "idleKeyVisibility": "visible",
+      "alwaysOnTop": false,
+      "idleColor": "#121417",
+      "activeColor": "#25d366",
+      "idleTextColor": "#f5f7fa",
+      "activeTextColor": "#ffffff"
+    },
+    "keys": [
+      {
+        "id": "mouse-left",
+        "label": "M1",
+        "group": "mouse",
+        "gridArea": "mouseLeft",
+        "widthUnit": 1.35
+      },
+      {
+        "id": "mouse-right",
+        "label": "M2",
+        "group": "mouse",
+        "gridArea": "mouseRight",
+        "widthUnit": 1.35
+      },
+      {
+        "id": "w",
+        "label": "W",
+        "group": "movement",
+        "gridArea": "w",
+        "widthUnit": 1
+      },
+      {
+        "id": "a",
+        "label": "A",
+        "group": "movement",
+        "gridArea": "a",
+        "widthUnit": 1
+      },
+      {
+        "id": "s",
+        "label": "S",
+        "group": "movement",
+        "gridArea": "s",
+        "widthUnit": 1
+      },
+      {
+        "id": "d",
+        "label": "D",
+        "group": "movement",
+        "gridArea": "d",
+        "widthUnit": 1
+      },
+      {
+        "id": "shift-left",
+        "label": "Shift",
+        "group": "modifier",
+        "gridArea": "shift",
+        "widthUnit": 1
+      },
+      {
+        "id": "ctrl-left",
+        "label": "Ctrl",
+        "group": "modifier",
+        "gridArea": "ctrl",
+        "widthUnit": 1
+      },
+      {
+        "id": "space",
+        "label": "Space",
+        "group": "modifier",
+        "gridArea": "space",
+        "widthUnit": 4
+      },
+      {
+        "id": "r",
+        "label": "R",
+        "group": "action",
+        "gridArea": "r",
+        "widthUnit": 1
+      },
+      {
+        "id": "q",
+        "label": "Q",
+        "group": "action",
+        "gridArea": "q",
+        "widthUnit": 1
+      },
+      {
+        "id": "e",
+        "label": "E",
+        "group": "action",
+        "gridArea": "e",
+        "widthUnit": 1
+      }
+    ],
+    "layout": {
+      "unitPx": 54,
+      "gapUnit": 0.15
+    }
+  },
+  "recording": {
+    "defaultFps": 60,
+    "fpsOptions": [
+      30,
+      60,
+      120
+    ],
+    "formatExtension": ".kbdrec",
+    "primaryArtifact": "input-binary"
+  },
+  "export": {
+    "defaultFormat": "webm",
+    "transparentFormat": "webm",
+    "compatibleFormat": "mp4"
+  }
+}
