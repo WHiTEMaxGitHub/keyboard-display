@@ -50,11 +50,15 @@
 - [ ] Implement the Windows native input backend.
   - Current state:
     - macOS backend has an initial `CGEventTap` implementation.
-    - Windows backend is only a skeleton.
+    - Windows backend has an initial low-level hook implementation.
   - Target:
     - Use `SetWindowsHookExW(WH_KEYBOARD_LL)` for keyboard events.
     - Use `SetWindowsHookExW(WH_MOUSE_LL)` for mouse button events.
     - Emit the same normalized `input-state` payload used by macOS.
+  - Remaining:
+    - Build and run on a Windows machine.
+    - Confirm hook lifetime and message loop behavior.
+    - Confirm background capture when the app is not focused.
 
 - [ ] Verify macOS native input backend behavior.
   - Confirm Accessibility/Input Monitoring permission requirements.

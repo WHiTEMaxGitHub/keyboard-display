@@ -1,14 +1,34 @@
 <script setup lang="ts">
 import {
   Clapperboard,
+  Eye,
   Keyboard,
+  MonitorCog,
   MonitorUp,
   Palette,
   SlidersHorizontal,
   Video,
 } from "@lucide/vue";
+import { ref } from "vue";
 import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
+
+type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
+
+const activePage = ref<ConfigPage>("overview");
+
+const navItems: Array<{
+  id: ConfigPage;
+  label: string;
+  icon: typeof Eye;
+}> = [
+  { id: "overview", label: "Overview", icon: Eye },
+  { id: "layout", label: "Layout", icon: MonitorUp },
+  { id: "appearance", label: "Appearance", icon: Palette },
+  { id: "window", label: "Window", icon: MonitorCog },
+  { id: "recording", label: "Recording", icon: Clapperboard },
+  { id: "export", label: "Export", icon: Video },
+];
 
 const props = defineProps<{
   config: AppConfig;
@@ -106,11 +126,17 @@ function saveAndApplyConfig() {
         </div>
       </div>
 
-      <nav class="nav-list">
-        <a href="#layout"><MonitorUp :size="18" /> Layout</a>
-        <a href="#style"><Palette :size="18" /> Style</a>
-        <a href="#recording"><Clapperboard :size="18" /> Recording</a>
-        <a href="#export"><Video :size="18" /> Export</a>
+      <nav class="nav-list" aria-label="Configuration pages">
+        <button
+          v-for="item in navItems"
+          :key="item.id"
+          :class="{ active: activePage === item.id }"
+          type="button"
+          @click="activePage = item.id"
+        >
+          <component :is="item.icon" :size="18" aria-hidden="true" />
+          {{ item.label }}
+        </button>
       </nav>
     </aside>
 
@@ -132,53 +158,81 @@ function saveAndApplyConfig() {
         </div>
       </header>
 
-      <section class="preview-band" aria-label="Live preview">
-        <div class="preview-copy">
-          <p>Live Preview</p>
-          <h2>CS movement layout</h2>
-        </div>
-        <PovOverlay
-          :layout="config.layout"
-          :keys="config.keys"
-          :active-keys="activeKeys"
-          :overlay-style="config.style"
-        />
+      <section v-if="activePage === 'overview'" class="page-stack">
+        <section class="preview-band" aria-label="Live preview">
+          <div class="preview-copy">
+            <p>Live Preview</p>
+            <h2>{{ profileName }}</h2>
+          </div>
+          <PovOverlay
+            :layout="config.layout"
+            :keys="config.keys"
+            :active-keys="activeKeys"
+            :overlay-style="config.style"
+          />
+        </section>
+
+        <section class="panel-grid">
+          <article class="panel">
+            <h2>Profile</h2>
+            <div class="field-row">
+              <span>Name</span>
+              <strong>{{ profileName }}</strong>
+            </div>
+            <div class="field-row">
+              <span>Visible keys</span>
+              <strong>{{ config.keys.length }}</strong>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h2>Quick controls</h2>
+            <label class="toggle-row">
+              <input
+                :checked="overlayVisible"
+                type="checkbox"
+                @change="updateOverlayVisible"
+              />
+              Show POV overlay
+            </label>
+            <label class="toggle-row">
+              <input
+                :checked="config.style.alwaysOnTop"
+                type="checkbox"
+                @change="updateAlwaysOnTop"
+              />
+              Always on top
+            </label>
+          </article>
+        </section>
       </section>
 
-      <section class="panel-grid">
-        <article id="layout" class="panel">
+      <section v-else-if="activePage === 'layout'" class="page-stack">
+        <article class="panel">
           <h2>Layout</h2>
           <div class="field-row">
-            <span>Profile</span>
-            <strong>{{ profileName }}</strong>
+            <span>Unit size</span>
+            <strong>{{ config.layout.unitPx }}px</strong>
+          </div>
+          <div class="field-row">
+            <span>Gap</span>
+            <strong>{{ config.layout.gapUnit }} unit</strong>
           </div>
           <div class="field-row">
             <span>Visible keys</span>
             <strong>{{ config.keys.length }}</strong>
           </div>
           <div class="key-list">
-            <span v-for="key in config.keys" :key="key.id">{{ key.label }}</span>
+            <span v-for="key in config.keys" :key="key.id">
+              {{ key.label }} · {{ key.widthUnit }}u
+            </span>
           </div>
         </article>
+      </section>
 
-        <article id="style" class="panel">
-          <h2>Style</h2>
-          <label class="toggle-row">
-            <input
-              :checked="overlayVisible"
-              type="checkbox"
-              @change="updateOverlayVisible"
-            />
-            Show POV overlay
-          </label>
-          <label class="toggle-row">
-            <input
-              :checked="config.style.alwaysOnTop"
-              type="checkbox"
-              @change="updateAlwaysOnTop"
-            />
-            Always on top
-          </label>
+      <section v-else-if="activePage === 'appearance'" class="page-stack">
+        <article class="panel wide-panel">
+          <h2>Appearance</h2>
           <label>
             Scale
             <input
@@ -217,16 +271,6 @@ function saveAndApplyConfig() {
               <option value="hidden">Hidden until pressed</option>
             </select>
           </label>
-          <div class="position-control">
-            <span>Position</span>
-            <div class="position-grid">
-              <button type="button" @click="moveOverlay('top-left')">Top left</button>
-              <button type="button" @click="moveOverlay('top-right')">Top right</button>
-              <button type="button" @click="moveOverlay('center')">Center</button>
-              <button type="button" @click="moveOverlay('bottom-left')">Bottom left</button>
-              <button type="button" @click="moveOverlay('bottom-right')">Bottom right</button>
-            </div>
-          </div>
           <div class="color-grid" aria-label="Overlay colors">
             <label class="color-picker">
               <span>Idle key</span>
@@ -270,8 +314,42 @@ function saveAndApplyConfig() {
             </label>
           </div>
         </article>
+      </section>
 
-        <article id="recording" class="panel">
+      <section v-else-if="activePage === 'window'" class="page-stack">
+        <article class="panel wide-panel">
+          <h2>Window</h2>
+          <label class="toggle-row">
+            <input
+              :checked="overlayVisible"
+              type="checkbox"
+              @change="updateOverlayVisible"
+            />
+            Show POV overlay
+          </label>
+          <label class="toggle-row">
+            <input
+              :checked="config.style.alwaysOnTop"
+              type="checkbox"
+              @change="updateAlwaysOnTop"
+            />
+            Always on top
+          </label>
+          <div class="position-control">
+            <span>Position</span>
+            <div class="position-grid">
+              <button type="button" @click="moveOverlay('top-left')">Top left</button>
+              <button type="button" @click="moveOverlay('top-right')">Top right</button>
+              <button type="button" @click="moveOverlay('center')">Center</button>
+              <button type="button" @click="moveOverlay('bottom-left')">Bottom left</button>
+              <button type="button" @click="moveOverlay('bottom-right')">Bottom right</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section v-else-if="activePage === 'recording'" class="page-stack">
+        <article class="panel wide-panel">
           <h2>Recording</h2>
           <div class="segmented" aria-label="Capture frame rate">
             <button
@@ -292,8 +370,10 @@ function saveAndApplyConfig() {
             rendering or export.
           </p>
         </article>
+      </section>
 
-        <article id="export" class="panel">
+      <section v-else-if="activePage === 'export'" class="page-stack">
+        <article class="panel wide-panel">
           <h2>Export</h2>
           <div class="field-row">
             <span>Transparent overlay</span>
@@ -361,18 +441,27 @@ function saveAndApplyConfig() {
   gap: 6px;
 }
 
-.nav-list a {
+.nav-list button {
   display: flex;
   align-items: center;
   gap: 10px;
+  border: 0;
   border-radius: 7px;
+  background: transparent;
   color: #c9d1da;
+  cursor: pointer;
   padding: 10px 11px;
-  text-decoration: none;
+  text-align: left;
+  font-weight: 700;
 }
 
-.nav-list a:hover {
+.nav-list button:hover,
+.nav-list button.active {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.nav-list button.active {
+  color: #eafff0;
 }
 
 .workspace {
@@ -468,6 +557,11 @@ h2 {
   padding: 24px;
 }
 
+.page-stack {
+  display: grid;
+  gap: 16px;
+}
+
 .panel-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -480,6 +574,10 @@ h2 {
   border-radius: 8px;
   background: #171b22;
   padding: 18px;
+}
+
+.wide-panel {
+  max-width: 760px;
 }
 
 .panel h2 {
