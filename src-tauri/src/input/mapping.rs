@@ -75,6 +75,42 @@ pub fn key_id_from_windows_vk(vk_code: u32) -> Option<&'static str> {
     }
 }
 
+#[cfg_attr(not(any(test, target_os = "windows")), allow(dead_code))]
+pub fn key_id_from_windows_scancode(scan_code: u32) -> Option<&'static str> {
+    match scan_code {
+        0x01 => Some("escape"),
+        0x29 => Some("backquote"),
+        0x02 => Some("digit-1"),
+        0x03 => Some("digit-2"),
+        0x04 => Some("digit-3"),
+        0x05 => Some("digit-4"),
+        0x06 => Some("digit-5"),
+        0x07 => Some("digit-6"),
+        0x0F => Some("tab"),
+        0x10 => Some("q"),
+        0x11 => Some("w"),
+        0x12 => Some("e"),
+        0x13 => Some("r"),
+        0x14 => Some("t"),
+        0x3A => Some("caps-lock"),
+        0x1E => Some("a"),
+        0x1F => Some("s"),
+        0x20 => Some("d"),
+        0x21 => Some("f"),
+        0x22 => Some("g"),
+        0x2A => Some("shift-left"),
+        0x2C => Some("z"),
+        0x2D => Some("x"),
+        0x2E => Some("c"),
+        0x2F => Some("v"),
+        0x30 => Some("b"),
+        0x1D => Some("ctrl-left"),
+        0x38 => Some("alt-left"),
+        0x39 => Some("space"),
+        _ => None,
+    }
+}
+
 pub fn key_id_from_mouse_button(button: u16) -> Option<&'static str> {
     match button {
         0 => Some("mouse-left"),
@@ -85,7 +121,10 @@ pub fn key_id_from_mouse_button(button: u16) -> Option<&'static str> {
 
 #[cfg(test)]
 mod tests {
-    use super::{key_id_from_macos_keycode, key_id_from_mouse_button, key_id_from_windows_vk};
+    use super::{
+        key_id_from_macos_keycode, key_id_from_mouse_button, key_id_from_windows_scancode,
+        key_id_from_windows_vk,
+    };
 
     #[test]
     fn maps_macos_ansi_keycodes_to_overlay_ids() {
@@ -147,6 +186,14 @@ mod tests {
         assert_eq!(key_id_from_windows_vk(0x5B), Some("meta-left"));
         assert_eq!(key_id_from_windows_vk(0xA4), Some("alt-left"));
         assert_eq!(key_id_from_windows_vk(0x20), Some("space"));
+    }
+
+    #[test]
+    fn maps_windows_scan_codes_to_overlay_ids() {
+        assert_eq!(key_id_from_windows_scancode(0x29), Some("backquote"));
+        assert_eq!(key_id_from_windows_scancode(0x11), Some("w"));
+        assert_eq!(key_id_from_windows_scancode(0x2A), Some("shift-left"));
+        assert_eq!(key_id_from_windows_scancode(0x39), Some("space"));
     }
 
     #[test]

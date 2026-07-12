@@ -319,11 +319,13 @@ html,
 body,
 #app {
   margin: 0;
+  width: 100%;
   min-height: 100%;
+  overflow: hidden;
 }
 
 body {
-  overflow: auto;
+  overflow: hidden;
 }
 
 button,
@@ -336,6 +338,8 @@ input {
 }
 
 .overlay-surface {
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
 }
 
