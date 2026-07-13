@@ -45,6 +45,37 @@
   - Add a fallback language, likely English.
   - Add a simple missing-key check before release.
 
+## Recording sync
+
+- [ ] Use monotonic timestamps for input recordings.
+  - Store event time as `t = now_monotonic - record_start_monotonic`.
+  - Do not rely on wall-clock time for frame/event alignment.
+
+- [ ] Add sync markers to the recording format.
+  - Example event:
+    - `{ "t": 18342, "type": "marker", "name": "sync" }`
+  - Markers should be visible in the UI timeline/list.
+
+- [ ] Add a manual sync marker action.
+  - Button: `Add sync marker`.
+  - Hotkey candidate: `F8`.
+  - The marker should be written into the `.kbdrec` event stream.
+
+- [ ] Add visible sync feedback.
+  - Flash the POV overlay when a sync marker is inserted.
+  - Optionally play a short beep.
+  - This gives the video timeline a visible/audio cue for alignment.
+
+- [ ] Support export offset.
+  - Export overlay video with an `offsetMs` option.
+  - Use this to align `.kbdrec` playback with external game footage.
+
+- [ ] Document two recording workflows.
+  - Realtime OBS capture: overlay is recorded directly, no later alignment
+    needed.
+  - Post-production export: `.kbdrec` is rendered later and aligned with sync
+    markers.
+
 ## Cross-platform gaps
 
 - [ ] Implement the Windows native input backend.

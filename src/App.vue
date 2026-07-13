@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { LogicalSize, PhysicalPosition, Window, primaryMonitor } from "@tauri-apps/api/window";
+import { save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
@@ -166,12 +168,17 @@ async function saveAndApplyConfig() {
     visible: isOverlayVisible.value,
     position: overlayPosition.value,
   });
-  const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `${profileName.value || "keyboard-display"}.json`;
-  anchor.click();
-  URL.revokeObjectURL(url);
+  const path = await save({
+    title: "Save keyboard display config",
+    defaultPath: `${profileName.value || "keyboard-display"}.json`,
+    filters: [{ name: "JSON", extensions: ["json"] }],
+  });
+
+  if (!path) {
+    return;
+  }
+
+  await invoke("save_config_file", { path, contents: json });
 }
 
 function profileNameFromFileName(fileName: string): string {
