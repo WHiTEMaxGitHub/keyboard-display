@@ -9,9 +9,10 @@ import {
   primaryMonitor,
 } from "@tauri-apps/api/window";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
+import { computed, onMounted, onUnmounted, reactive, ref, watch, type WatchStopHandle } from "vue";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
+import { buildAppConfigFile, parseAppConfigFile } from "./domain/appConfig";
 import { buildConfigFileJson, parseConfigFile } from "./domain/configFile";
 import { createDefaultConfig, type OverlayStyle } from "./domain/defaultConfig";
 import { estimateOverlaySize } from "./domain/overlaySize";
@@ -58,6 +59,8 @@ const isOverlayWindow = computed(() => {
 
 let unlistenInputState: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
+let appConfigSaveTimer: number | undefined;
+let stopAppConfigWatch: WatchStopHandle | undefined;
 
 type OverlayRuntimeConfig = {
   layout: typeof config.layout;
@@ -190,6 +193,74 @@ async function loadConfig(text: string, fileName: string) {
   }
 }
 
+async function restoreAppConfig() {
+  const savedConfig = await invoke<string | null>("load_app_config");
+  if (!savedConfig) {
+    return;
+  }
+
+  const appConfig = parseAppConfigFile(savedConfig);
+  profileName.value = appConfig.currentProfile.name;
+  overlayPosition.value = appConfig.currentProfile.overlay.position as OverlayPosition;
+  recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
+  recordingHotkeys.value = appConfig.recording.hotkeys;
+
+  applyOverlayLayout(appConfig.currentProfile.overlay.layout);
+  applyOverlayKeys(appConfig.currentProfile.overlay.keys);
+  applyOverlayStyle(appConfig.currentProfile.overlay.style);
+
+  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
+    layout: appConfig.currentProfile.overlay.layout,
+    keys: appConfig.currentProfile.overlay.keys,
+    style: appConfig.currentProfile.overlay.style,
+  });
+
+  await setOverlayVisible(appConfig.currentProfile.overlay.visible);
+  if (appConfig.currentProfile.overlay.visible) {
+    await moveOverlay(overlayPosition.value);
+  }
+}
+
+function scheduleAppConfigSave() {
+  if (isOverlayWindow.value) {
+    return;
+  }
+
+  if (appConfigSaveTimer !== undefined) {
+    window.clearTimeout(appConfigSaveTimer);
+  }
+
+  appConfigSaveTimer = window.setTimeout(() => {
+    void saveAppConfig();
+  }, 300);
+}
+
+async function saveAppConfig() {
+  const appConfig = buildAppConfigFile({
+    defaultProfilePath: "docs/default-config.json",
+    currentProfile: {
+      name: profileName.value,
+      sourcePath: null,
+      dirty: true,
+      overlay: {
+        visible: isOverlayVisible.value,
+        position: overlayPosition.value,
+        layout: config.layout,
+        style: config.style,
+        keys: config.keys,
+      },
+    },
+    recording: {
+      outputDirectory: recordingDirectory.value || null,
+      hotkeys: recordingHotkeys.value,
+    },
+  });
+
+  await invoke("save_app_config", {
+    contents: `${JSON.stringify(appConfig, null, 2)}\n`,
+  });
+}
+
 async function saveAndApplyConfig() {
   await resizeOverlayWindow();
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
@@ -227,6 +298,7 @@ async function chooseRecordingDirectory() {
 
   if (typeof selectedPath === "string") {
     recordingDirectory.value = selectedPath;
+    scheduleAppConfigSave();
   }
 }
 
@@ -271,6 +343,7 @@ async function stopRecording() {
 
 function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
   recordingHotkeys.value = { ...recordingHotkeys.value, mode };
+  scheduleAppConfigSave();
 }
 
 function beginHotkeyCapture(target: "start" | "stop") {
@@ -291,6 +364,7 @@ function finishHotkeyCapture() {
     ...recordingHotkeys.value,
     [target]: normalizeHotkey(capturedHotkeyKeys.value),
   };
+  scheduleAppConfigSave();
   hotkeyCaptureTarget.value = null;
   capturedHotkeyKeys.value = new Set();
 }
@@ -393,6 +467,10 @@ function handleMouseup(event: MouseEvent) {
 }
 
 onMounted(async () => {
+  if (!isOverlayWindow.value) {
+    await restoreAppConfig();
+  }
+
   unlistenInputState = await listen<InputStatePayload>(
     INPUT_STATE_EVENT,
     (event) => {
@@ -446,9 +524,21 @@ onMounted(async () => {
   window.addEventListener("keyup", handleKeyup);
   window.addEventListener("mousedown", handleMousedown);
   window.addEventListener("mouseup", handleMouseup);
+
+  if (!isOverlayWindow.value) {
+    stopAppConfigWatch = watch(
+      [config, isOverlayVisible, profileName, overlayPosition],
+      scheduleAppConfigSave,
+      { deep: true },
+    );
+  }
 });
 
 onUnmounted(() => {
+  if (appConfigSaveTimer !== undefined) {
+    window.clearTimeout(appConfigSaveTimer);
+  }
+  stopAppConfigWatch?.();
   unlistenInputState?.();
   unlistenOverlayStyle?.();
   window.removeEventListener("keydown", handleKeydown);

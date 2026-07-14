@@ -1,6 +1,7 @@
 mod input;
 mod recording;
 use recording::RecordingManager;
+use tauri::Manager;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -11,6 +12,34 @@ fn greet(name: &str) -> String {
 #[tauri::command]
 fn save_config_file(path: std::path::PathBuf, contents: String) -> Result<(), String> {
     std::fs::write(path, contents).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn load_app_config(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    let path = app_config_path(&app)?;
+
+    if !path.exists() {
+        return Ok(None);
+    }
+
+    std::fs::read_to_string(path).map(Some).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn save_app_config(app: tauri::AppHandle, contents: String) -> Result<(), String> {
+    let path = app_config_path(&app)?;
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    std::fs::write(path, contents).map_err(|error| error.to_string())
+}
+
+fn app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    Ok(app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?
+        .join("app-config.json"))
 }
 
 #[tauri::command]
@@ -43,6 +72,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             save_config_file,
+            load_app_config,
+            save_app_config,
             start_recording,
             record_input_event,
             stop_recording
