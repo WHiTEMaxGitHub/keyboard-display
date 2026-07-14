@@ -68,6 +68,11 @@ fn handle_event(
         CGEventType::FlagsChanged => {
             let keycode = event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u16;
             if let Some(key_id) = mapping::key_id_from_macos_keycode(keycode) {
+                if key_id == "caps-lock" {
+                    emit_pulse(app_handle, key_id);
+                    return;
+                }
+
                 let Ok(mut state) = modifier_state.lock() else {
                     return;
                 };
@@ -106,5 +111,15 @@ fn handle_event(
 }
 
 fn is_macos_modifier_keycode(keycode: u16) -> bool {
-    matches!(keycode, 56 | 60 | 59 | 62)
+    matches!(keycode, 56 | 60 | 59 | 62 | 57)
+}
+
+fn emit_pulse(app_handle: &AppHandle, key_id: &'static str) {
+    emit_input_state(app_handle, key_id, true);
+
+    let app_handle = app_handle.clone();
+    std::thread::spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(80));
+        emit_input_state(&app_handle, key_id, false);
+    });
 }

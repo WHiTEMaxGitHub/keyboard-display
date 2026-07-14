@@ -31,13 +31,6 @@
         "widthUnit": 1
       },
       {
-        "id": "backquote",
-        "label": "`",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
         "id": "digit-1",
         "label": "1",
         "group": "action",
@@ -75,6 +68,13 @@
       {
         "id": "digit-6",
         "label": "6",
+        "group": "action",
+        "row": 1,
+        "widthUnit": 1
+      },
+      {
+        "id": "backquote",
+        "label": "`",
         "group": "action",
         "row": 1,
         "widthUnit": 1
