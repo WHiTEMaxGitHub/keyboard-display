@@ -76,6 +76,28 @@
   - Post-production export: `.kbdrec` is rendered later and aligned with sync
     markers.
 
+## App configuration
+
+- [ ] Implement app-level configuration persistence.
+  - Shape is drafted in `docs/app-config.json`.
+  - App config is separate from POV profile config.
+  - Keep this file small. It should only store values users actually need to
+    persist outside an individual POV profile:
+    - default/last profile path
+    - recent profiles
+    - recording output directory
+    - UI language
+
+- [ ] Load app config on startup.
+  - Load default profile if no last profile exists.
+  - Keep recent profile paths available in the config UI.
+  - Restore the last recording output directory.
+
+- [ ] Save app config when user changes app-level state.
+  - Profile path changes.
+  - Recording output directory changes.
+  - Language changes.
+
 ## Cross-platform gaps
 
 - [ ] Implement the Windows native input backend.

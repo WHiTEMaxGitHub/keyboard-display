@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "profiles": {
+    "defaultProfilePath": "docs/default-config.json",
+    "lastProfilePath": null,
+    "recentProfilePaths": []
+  },
+  "recording": {
+    "outputDirectory": null
+  },
+  "ui": {
+    "language": "system"
+  }
+}
