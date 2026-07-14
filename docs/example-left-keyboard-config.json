@@ -3,7 +3,7 @@
   "name": "Left keyboard",
   "overlay": {
     "visible": true,
-    "position": "bottom-left",
+    "position": "bottom-right",
     "layout": {
       "unitPx": 54,
       "gapUnit": 0.15
@@ -15,8 +15,8 @@
       "backgroundColor": "#0a0c0e",
       "backgroundOpacity": 0.72,
       "backgroundRadius": 8,
-      "idleKeyVisibility": "visible",
-      "alwaysOnTop": false,
+      "idleKeyVisibility": "hidden",
+      "alwaysOnTop": true,
       "idleColor": "#121417",
       "activeColor": "#25d366",
       "idleTextColor": "#f5f7fa",

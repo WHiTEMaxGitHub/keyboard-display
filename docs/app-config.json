@@ -6,7 +6,12 @@
     "recentProfilePaths": []
   },
   "recording": {
-    "outputDirectory": null
+    "outputDirectory": null,
+    "hotkeys": {
+      "mode": "disabled",
+      "start": [],
+      "stop": []
+    }
   },
   "ui": {
     "language": "system"
