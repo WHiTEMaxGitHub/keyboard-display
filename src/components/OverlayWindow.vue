@@ -12,7 +12,9 @@ defineProps<{
 }>();
 
 onMounted(async () => {
-  await getCurrentWindow().setIgnoreCursorEvents(true);
+  const currentWindow = getCurrentWindow();
+  await currentWindow.setVisibleOnAllWorkspaces(true);
+  await currentWindow.setIgnoreCursorEvents(true);
 });
 </script>
 

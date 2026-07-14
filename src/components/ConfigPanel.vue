@@ -9,8 +9,8 @@ import {
   SlidersHorizontal,
   Video,
 } from "@lucide/vue";
-import { ref } from "vue";
-import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
+import { computed, ref } from "vue";
+import type { AppConfig, KeyBinding, OverlayStyle } from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
@@ -35,13 +35,38 @@ const props = defineProps<{
   activeKeys: Set<string>;
   overlayVisible: boolean;
   profileName: string;
+  recordingDirectory: string;
+  isRecording: boolean;
+  recordingCountdown: number;
+  lastRecordingPath: string;
+  overlayPosition: string;
 }>();
+
+const layoutRows = computed(() => {
+  if (props.config.keys.some((key) => key.row !== undefined)) {
+    const rowMap = new Map<number, KeyBinding[]>();
+
+    for (const key of props.config.keys) {
+      const row = key.row ?? 0;
+      rowMap.set(row, [...(rowMap.get(row) ?? []), key]);
+    }
+
+    return [...rowMap.entries()]
+      .sort(([left], [right]) => left - right)
+      .map(([row, keys]) => ({ row, keys }));
+  }
+
+  return [{ row: 1, keys: props.config.keys }];
+});
 
 const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-visible": [visible: boolean];
   "load-config": [text: string, fileName: string];
   "save-and-apply-config": [];
+  "choose-recording-directory": [];
+  "start-recording": [];
+  "stop-recording": [];
   "move-overlay": [
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center",
   ];
@@ -112,6 +137,18 @@ async function loadConfigFile(event: Event) {
 
 function saveAndApplyConfig() {
   emit("save-and-apply-config");
+}
+
+function chooseRecordingDirectory() {
+  emit("choose-recording-directory");
+}
+
+function startRecording() {
+  emit("start-recording");
+}
+
+function stopRecording() {
+  emit("stop-recording");
 }
 </script>
 
@@ -222,10 +259,15 @@ function saveAndApplyConfig() {
             <span>Visible keys</span>
             <strong>{{ config.keys.length }}</strong>
           </div>
-          <div class="key-list">
-            <span v-for="key in config.keys" :key="key.id">
-              {{ key.label }} · {{ key.widthUnit }}u
-            </span>
+          <div class="layout-line-list">
+            <div v-for="line in layoutRows" :key="line.row" class="layout-line">
+              <span class="line-label">Line {{ line.row }}:</span>
+              <span class="line-keys">
+                <span v-for="key in line.keys" :key="key.id" class="line-key">
+                  {{ key.label }} · {{ key.widthUnit }}u
+                </span>
+              </span>
+            </div>
           </div>
         </article>
       </section>
@@ -319,6 +361,10 @@ function saveAndApplyConfig() {
       <section v-else-if="activePage === 'window'" class="page-stack">
         <article class="panel wide-panel">
           <h2>Window</h2>
+          <div class="field-row">
+            <span>Position</span>
+            <strong>{{ overlayPosition }}</strong>
+          </div>
           <label class="toggle-row">
             <input
               :checked="overlayVisible"
@@ -351,6 +397,23 @@ function saveAndApplyConfig() {
       <section v-else-if="activePage === 'recording'" class="page-stack">
         <article class="panel wide-panel">
           <h2>Recording</h2>
+          <div class="field-row">
+            <span>Save folder</span>
+            <strong>{{ recordingDirectory || "Not selected" }}</strong>
+          </div>
+          <div class="recording-actions">
+            <button type="button" @click="chooseRecordingDirectory">Choose folder</button>
+            <button
+              type="button"
+              :disabled="!recordingDirectory || isRecording || recordingCountdown > 0"
+              @click="startRecording"
+            >
+              {{ recordingCountdown > 0 ? `Starting in ${recordingCountdown}` : "Start recording" }}
+            </button>
+            <button type="button" :disabled="!isRecording" @click="stopRecording">
+              Stop recording
+            </button>
+          </div>
           <div class="segmented" aria-label="Capture frame rate">
             <button
               v-for="fps in config.recording.fpsOptions"
@@ -368,6 +431,9 @@ function saveAndApplyConfig() {
           <p class="quiet">
             Input frames are stored as compact binary state, then replayed for
             rendering or export.
+          </p>
+          <p v-if="lastRecordingPath" class="quiet">
+            Last recording: {{ lastRecordingPath }}
           </p>
         </article>
       </section>
@@ -592,14 +658,32 @@ h2 {
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.key-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
+.layout-line-list {
+  display: grid;
+  gap: 10px;
   margin-top: 16px;
 }
 
-.key-list span {
+.layout-line {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.line-label {
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.line-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.line-key {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
   background: #202630;
@@ -660,6 +744,33 @@ label {
 }
 
 .position-grid button:hover {
+  background: #29313d;
+}
+
+.recording-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.recording-actions button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.recording-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.recording-actions button:not(:disabled):hover {
   background: #29313d;
 }
 

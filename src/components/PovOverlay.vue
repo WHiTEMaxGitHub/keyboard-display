@@ -219,6 +219,10 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
   opacity: 0.32;
 }
 
+.pov-shell.idle-hidden .key {
+  transition: none;
+}
+
 .key.hidden {
   visibility: hidden;
 }

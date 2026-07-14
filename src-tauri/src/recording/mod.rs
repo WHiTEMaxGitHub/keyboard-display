@@ -1,7 +1,12 @@
 #![allow(dead_code)]
 
 use serde::Serialize;
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    path::PathBuf,
+    sync::Mutex,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(untagged)]
@@ -41,6 +46,21 @@ pub struct RecordingSession {
     fps: u16,
     start_time_ms: u64,
     events: Vec<RecordingEvent>,
+    active_keys: HashSet<String>,
+}
+
+pub struct RecordingManager {
+    session: Mutex<Option<ActiveRecordingSession>>,
+}
+
+struct ActiveRecordingSession {
+    start_unix_ms: u64,
+    session: RecordingSession,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct StopRecordingResult {
+    pub path: String,
 }
 
 impl RecordingSession {
@@ -49,6 +69,7 @@ impl RecordingSession {
             fps,
             start_time_ms,
             events: Vec::new(),
+            active_keys: HashSet::new(),
         }
     }
 
@@ -57,8 +78,17 @@ impl RecordingSession {
         let key_id = key_id.into();
 
         if pressed {
+            if self.active_keys.contains(&key_id) {
+                return;
+            }
+
+            self.active_keys.insert(key_id.clone());
             self.events.push(RecordingEvent::KeyDown { t, key_id });
         } else {
+            if !self.active_keys.remove(&key_id) {
+                return;
+            }
+
             self.events.push(RecordingEvent::KeyUp { t, key_id });
         }
     }
@@ -82,6 +112,69 @@ impl RecordingSession {
     fn relative_time(&self, now_ms: u64) -> u64 {
         now_ms.saturating_sub(self.start_time_ms)
     }
+}
+
+impl RecordingManager {
+    pub fn new() -> Self {
+        Self {
+            session: Mutex::new(None),
+        }
+    }
+
+    pub fn start(&self, fps: u16, now_ms: u64) -> Result<(), String> {
+        let mut session = self.session.lock().map_err(|error| error.to_string())?;
+
+        *session = Some(ActiveRecordingSession {
+            start_unix_ms: now_ms,
+            session: RecordingSession::new(fps, now_ms),
+        });
+
+        Ok(())
+    }
+
+    pub fn record_input(
+        &self,
+        now_ms: u64,
+        key_id: impl Into<String>,
+        pressed: bool,
+    ) -> Result<(), String> {
+        let mut session = self.session.lock().map_err(|error| error.to_string())?;
+
+        if let Some(active_session) = session.as_mut() {
+            active_session.session.record_input(now_ms, key_id, pressed);
+        }
+
+        Ok(())
+    }
+
+    pub fn stop(&self, output_dir: PathBuf, now_ms: u64) -> Result<StopRecordingResult, String> {
+        let mut session = self.session.lock().map_err(|error| error.to_string())?;
+        let Some(active_session) = session.take() else {
+            return Err("recording has not started".to_string());
+        };
+
+        std::fs::create_dir_all(&output_dir).map_err(|error| error.to_string())?;
+
+        let path = output_dir.join(format!(
+            "{}-{}.kbdrec",
+            active_session.start_unix_ms, now_ms
+        ));
+        let contents = serde_json::to_string_pretty(&active_session.session.snapshot())
+            .map_err(|error| error.to_string())?;
+        std::fs::write(&path, format!("{contents}\n")).map_err(|error| error.to_string())?;
+
+        Ok(StopRecordingResult {
+            path: path.to_string_lossy().to_string(),
+        })
+    }
+}
+
+pub fn now_ms() -> Result<u64, String> {
+    let duration = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?;
+
+    Ok(duration.as_millis() as u64)
 }
 
 pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> Vec<RecordingFrame> {
@@ -147,6 +240,30 @@ mod tests {
                 RecordingEvent::KeyUp {
                     t: 190,
                     key_id: "w".to_string(),
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn ignores_duplicate_state_events() {
+        let mut session = RecordingSession::new(60, 1000);
+
+        session.record_input(1100, "tab", true);
+        session.record_input(1110, "tab", true);
+        session.record_input(1120, "tab", false);
+        session.record_input(1130, "tab", false);
+
+        assert_eq!(
+            session.snapshot().events,
+            vec![
+                RecordingEvent::KeyDown {
+                    t: 100,
+                    key_id: "tab".to_string(),
+                },
+                RecordingEvent::KeyUp {
+                    t: 120,
+                    key_id: "tab".to_string(),
                 },
             ],
         );

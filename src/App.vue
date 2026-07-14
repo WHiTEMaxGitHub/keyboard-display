@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
-import { LogicalSize, PhysicalPosition, Window, primaryMonitor } from "@tauri-apps/api/window";
-import { save } from "@tauri-apps/plugin-dialog";
+import {
+  LogicalSize,
+  PhysicalPosition,
+  Window,
+  currentMonitor,
+  primaryMonitor,
+} from "@tauri-apps/api/window";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, onUnmounted, reactive, ref } from "vue";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
@@ -22,10 +28,14 @@ import {
 type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
 const config = reactive(createDefaultConfig());
-const activeKeyIds = ref(new Set<string>(["w", "shift-left", "mouse-left"]));
+const activeKeyIds = ref(new Set<string>());
 const isOverlayVisible = ref(true);
 const profileName = ref("CS POV");
 const overlayPosition = ref<OverlayPosition>("bottom-right");
+const recordingDirectory = ref("");
+const isRecording = ref(false);
+const recordingCountdown = ref(0);
+const lastRecordingPath = ref("");
 
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
@@ -50,6 +60,14 @@ function updateActiveKey(keyId: string, pressed: boolean) {
   }
 
   activeKeyIds.value = nextKeys;
+}
+
+async function recordInputIfNeeded(keyId: string, pressed: boolean) {
+  if (isOverlayWindow.value || !isRecording.value) {
+    return;
+  }
+
+  await invoke("record_input_event", { keyId, pressed });
 }
 
 function applyOverlayStyle(style: OverlayStyle) {
@@ -105,7 +123,7 @@ async function setOverlayVisible(visible: boolean) {
 async function moveOverlay(position: OverlayPosition) {
   overlayPosition.value = position;
   const overlayWindow = await Window.getByLabel("pov");
-  const monitor = await primaryMonitor();
+  const monitor = (await currentMonitor()) ?? (await primaryMonitor());
 
   if (!overlayWindow || !monitor) {
     return;
@@ -150,7 +168,11 @@ async function loadConfig(text: string, fileName: string) {
     keys: loadedConfig.overlay.keys,
     style: loadedConfig.overlay.style,
   });
-  await setOverlayVisible(loadedConfig.overlay.visible ?? true);
+  const visible = loadedConfig.overlay.visible ?? true;
+  await setOverlayVisible(visible);
+  if (visible) {
+    await moveOverlay(overlayPosition.value);
+  }
 }
 
 async function saveAndApplyConfig() {
@@ -179,6 +201,49 @@ async function saveAndApplyConfig() {
   }
 
   await invoke("save_config_file", { path, contents: json });
+}
+
+async function chooseRecordingDirectory() {
+  const selectedPath = await open({
+    title: "Choose recording folder",
+    directory: true,
+    multiple: false,
+  });
+
+  if (typeof selectedPath === "string") {
+    recordingDirectory.value = selectedPath;
+  }
+}
+
+async function startRecordingWithCountdown() {
+  if (!recordingDirectory.value || isRecording.value || recordingCountdown.value > 0) {
+    return;
+  }
+
+  recordingCountdown.value = 3;
+
+  const timer = window.setInterval(async () => {
+    recordingCountdown.value -= 1;
+
+    if (recordingCountdown.value <= 0) {
+      window.clearInterval(timer);
+      await invoke("start_recording", { fps: config.recording.defaultFps });
+      isRecording.value = true;
+      lastRecordingPath.value = "";
+    }
+  }, 1000);
+}
+
+async function stopRecording() {
+  if (!isRecording.value) {
+    return;
+  }
+
+  const result = await invoke<{ path: string }>("stop_recording", {
+    outputDir: recordingDirectory.value,
+  });
+  isRecording.value = false;
+  lastRecordingPath.value = result.path;
 }
 
 function profileNameFromFileName(fileName: string): string {
@@ -228,6 +293,7 @@ onMounted(async () => {
     INPUT_STATE_EVENT,
     (event) => {
       updateActiveKey(event.payload.keyId, event.payload.pressed);
+      void recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
     },
   );
 
@@ -292,10 +358,18 @@ onUnmounted(() => {
       :active-keys="activeKeyIds"
       :overlay-visible="isOverlayVisible"
       :profile-name="profileName"
+      :recording-directory="recordingDirectory"
+      :is-recording="isRecording"
+      :recording-countdown="recordingCountdown"
+      :last-recording-path="lastRecordingPath"
+      :overlay-position="overlayPosition"
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-visible="setOverlayVisible"
       @load-config="loadConfig"
       @save-and-apply-config="saveAndApplyConfig"
+      @choose-recording-directory="chooseRecordingDirectory"
+      @start-recording="startRecordingWithCountdown"
+      @stop-recording="stopRecording"
       @move-overlay="moveOverlay"
     />
   </div>
