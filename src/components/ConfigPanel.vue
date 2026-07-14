@@ -11,6 +11,7 @@ import {
 } from "@lucide/vue";
 import { computed, ref } from "vue";
 import type { AppConfig, KeyBinding, OverlayStyle } from "../domain/defaultConfig";
+import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
@@ -40,6 +41,8 @@ const props = defineProps<{
   recordingCountdown: number;
   lastRecordingPath: string;
   overlayPosition: string;
+  recordingHotkeys: RecordingHotkeyConfig;
+  hotkeyCaptureTarget: "start" | "stop" | null;
 }>();
 
 const layoutRows = computed(() => {
@@ -67,6 +70,8 @@ const emit = defineEmits<{
   "choose-recording-directory": [];
   "start-recording": [];
   "stop-recording": [];
+  "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
+  "begin-hotkey-capture": [target: "start" | "stop"];
   "move-overlay": [
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center",
   ];
@@ -149,6 +154,18 @@ function startRecording() {
 
 function stopRecording() {
   emit("stop-recording");
+}
+
+function updateRecordingHotkeyMode(event: Event) {
+  emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
+}
+
+function beginHotkeyCapture(target: "start" | "stop") {
+  emit("begin-hotkey-capture", target);
+}
+
+function formatHotkey(keys: string[]) {
+  return keys.length > 0 ? keys.join(" + ") : "Not set";
 }
 </script>
 
@@ -413,6 +430,30 @@ function stopRecording() {
             <button type="button" :disabled="!isRecording" @click="stopRecording">
               Stop recording
             </button>
+          </div>
+          <div class="hotkey-panel">
+            <label>
+              Hotkey mode
+              <select :value="recordingHotkeys.mode" @change="updateRecordingHotkeyMode">
+                <option value="disabled">Disabled</option>
+                <option value="toggle">Toggle start/stop</option>
+                <option value="separate">Separate start/stop</option>
+              </select>
+            </label>
+            <div v-if="recordingHotkeys.mode !== 'disabled'" class="hotkey-row">
+              <span>Start</span>
+              <strong>{{ formatHotkey(recordingHotkeys.start) }}</strong>
+              <button type="button" @click="beginHotkeyCapture('start')">
+                {{ hotkeyCaptureTarget === "start" ? "Press shortcut..." : "Set" }}
+              </button>
+            </div>
+            <div v-if="recordingHotkeys.mode === 'separate'" class="hotkey-row">
+              <span>Stop</span>
+              <strong>{{ formatHotkey(recordingHotkeys.stop) }}</strong>
+              <button type="button" @click="beginHotkeyCapture('stop')">
+                {{ hotkeyCaptureTarget === "stop" ? "Press shortcut..." : "Set" }}
+              </button>
+            </div>
           </div>
           <div class="segmented" aria-label="Capture frame rate">
             <button
@@ -772,6 +813,43 @@ label {
 
 .recording-actions button:not(:disabled):hover {
   background: #29313d;
+}
+
+.hotkey-panel {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.hotkey-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.hotkey-row span {
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.hotkey-row strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotkey-row button {
+  min-height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0 10px;
 }
 
 input[type="range"] {

@@ -24,6 +24,12 @@ import {
   keyIdFromMouseButton,
   type InputStatePayload,
 } from "./domain/inputEvents";
+import {
+  isHotkeyMatch,
+  normalizeHotkey,
+  type RecordingHotkeyConfig,
+  type RecordingHotkeyMode,
+} from "./domain/recordingHotkeys";
 
 type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
@@ -35,7 +41,16 @@ const overlayPosition = ref<OverlayPosition>("bottom-right");
 const recordingDirectory = ref("");
 const isRecording = ref(false);
 const recordingCountdown = ref(0);
+const recordingCountdownTimer = ref<number | null>(null);
 const lastRecordingPath = ref("");
+const recordingHotkeys = ref<RecordingHotkeyConfig>({
+  mode: "disabled",
+  start: [],
+  stop: [],
+});
+const hotkeyCaptureTarget = ref<"start" | "stop" | null>(null);
+const capturedHotkeyKeys = ref(new Set<string>());
+const activeRecordingHotkeySignature = ref("");
 
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
@@ -222,16 +237,24 @@ async function startRecordingWithCountdown() {
 
   recordingCountdown.value = 3;
 
-  const timer = window.setInterval(async () => {
+  recordingCountdownTimer.value = window.setInterval(async () => {
     recordingCountdown.value -= 1;
 
     if (recordingCountdown.value <= 0) {
-      window.clearInterval(timer);
+      cancelRecordingCountdown();
       await invoke("start_recording", { fps: config.recording.defaultFps });
       isRecording.value = true;
       lastRecordingPath.value = "";
     }
   }, 1000);
+}
+
+function cancelRecordingCountdown() {
+  if (recordingCountdownTimer.value !== null) {
+    window.clearInterval(recordingCountdownTimer.value);
+    recordingCountdownTimer.value = null;
+  }
+  recordingCountdown.value = 0;
 }
 
 async function stopRecording() {
@@ -246,6 +269,77 @@ async function stopRecording() {
   lastRecordingPath.value = result.path;
 }
 
+function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
+  recordingHotkeys.value = { ...recordingHotkeys.value, mode };
+}
+
+function beginHotkeyCapture(target: "start" | "stop") {
+  capturedHotkeyKeys.value = new Set();
+  hotkeyCaptureTarget.value = target;
+}
+
+function finishHotkeyCapture() {
+  const target = hotkeyCaptureTarget.value;
+
+  if (!target || capturedHotkeyKeys.value.size === 0) {
+    hotkeyCaptureTarget.value = null;
+    capturedHotkeyKeys.value = new Set();
+    return;
+  }
+
+  recordingHotkeys.value = {
+    ...recordingHotkeys.value,
+    [target]: normalizeHotkey(capturedHotkeyKeys.value),
+  };
+  hotkeyCaptureTarget.value = null;
+  capturedHotkeyKeys.value = new Set();
+}
+
+async function handleRecordingHotkeys() {
+  if (recordingHotkeys.value.mode === "disabled" || hotkeyCaptureTarget.value) {
+    return;
+  }
+
+  const activeSignature = normalizeHotkey(activeKeyIds.value).join("+");
+  if (activeSignature === activeRecordingHotkeySignature.value) {
+    return;
+  }
+
+  const matchesStart = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.start);
+  const matchesStop = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.stop);
+
+  if (!matchesStart && !matchesStop) {
+    if (activeSignature === "") {
+      activeRecordingHotkeySignature.value = "";
+    }
+    return;
+  }
+
+  activeRecordingHotkeySignature.value = activeSignature;
+
+  if (recordingHotkeys.value.mode === "toggle") {
+    if (recordingCountdown.value > 0) {
+      cancelRecordingCountdown();
+      return;
+    }
+
+    if (isRecording.value) {
+      await stopRecording();
+    } else {
+      await startRecordingWithCountdown();
+    }
+    return;
+  }
+
+  if (recordingHotkeys.value.mode === "separate") {
+    if (!isRecording.value && matchesStart) {
+      await startRecordingWithCountdown();
+    } else if (isRecording.value && matchesStop) {
+      await stopRecording();
+    }
+  }
+}
+
 function profileNameFromFileName(fileName: string): string {
   return fileName.replace(/\.json$/i, "");
 }
@@ -255,6 +349,11 @@ function handleKeydown(event: KeyboardEvent) {
 
   if (keyId) {
     updateActiveKey(keyId, true);
+    if (hotkeyCaptureTarget.value) {
+      capturedHotkeyKeys.value = new Set([...capturedHotkeyKeys.value, keyId]);
+    } else {
+      void handleRecordingHotkeys();
+    }
   }
 }
 
@@ -263,6 +362,11 @@ function handleKeyup(event: KeyboardEvent) {
 
   if (keyId) {
     updateActiveKey(keyId, false);
+    if (hotkeyCaptureTarget.value) {
+      finishHotkeyCapture();
+    } else {
+      void handleRecordingHotkeys();
+    }
   }
 }
 
@@ -293,6 +397,18 @@ onMounted(async () => {
     INPUT_STATE_EVENT,
     (event) => {
       updateActiveKey(event.payload.keyId, event.payload.pressed);
+      if (hotkeyCaptureTarget.value) {
+        if (event.payload.pressed) {
+          capturedHotkeyKeys.value = new Set([
+            ...capturedHotkeyKeys.value,
+            event.payload.keyId,
+          ]);
+        } else {
+          finishHotkeyCapture();
+        }
+      } else {
+        void handleRecordingHotkeys();
+      }
       void recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
     },
   );
@@ -363,6 +479,8 @@ onUnmounted(() => {
       :recording-countdown="recordingCountdown"
       :last-recording-path="lastRecordingPath"
       :overlay-position="overlayPosition"
+      :recording-hotkeys="recordingHotkeys"
+      :hotkey-capture-target="hotkeyCaptureTarget"
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-visible="setOverlayVisible"
       @load-config="loadConfig"
@@ -370,6 +488,8 @@ onUnmounted(() => {
       @choose-recording-directory="chooseRecordingDirectory"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
+      @update-recording-hotkey-mode="updateRecordingHotkeyMode"
+      @begin-hotkey-capture="beginHotkeyCapture"
       @move-overlay="moveOverlay"
     />
   </div>
