@@ -147,6 +147,16 @@ impl RecordingManager {
         Ok(())
     }
 
+    pub fn add_marker(&self, now_ms: u64, name: impl Into<String>) -> Result<(), String> {
+        let mut session = self.session.lock().map_err(|error| error.to_string())?;
+
+        if let Some(active_session) = session.as_mut() {
+            active_session.session.add_marker(now_ms, name);
+        }
+
+        Ok(())
+    }
+
     pub fn stop(&self, output_dir: PathBuf, now_ms: u64) -> Result<StopRecordingResult, String> {
         let mut session = self.session.lock().map_err(|error| error.to_string())?;
         let Some(active_session) = session.take() else {
@@ -221,7 +231,7 @@ fn event_time(event: &RecordingEvent) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{sample_frames, RecordingEvent, RecordingSession};
+    use super::{sample_frames, RecordingEvent, RecordingManager, RecordingSession};
 
     #[test]
     fn stores_key_events_with_monotonic_relative_timestamps() {
@@ -286,6 +296,24 @@ mod tests {
         let serialized = serde_json::to_value(session.snapshot()).unwrap();
         assert_eq!(serialized["events"][0]["marker"], "sync");
         assert!(serialized["events"][0].get("type").is_none());
+    }
+
+    #[test]
+    fn manager_adds_markers_to_active_session() {
+        let manager = RecordingManager::new();
+
+        manager.start(60, 1000).unwrap();
+        manager.add_marker(1250, "hotkey-start").unwrap();
+
+        let session = manager.session.lock().unwrap();
+        let active_session = session.as_ref().unwrap();
+        assert_eq!(
+            active_session.session.snapshot().events,
+            vec![RecordingEvent::Marker {
+                t: 250,
+                name: "hotkey-start".to_string(),
+            }],
+        );
     }
 
     #[test]

@@ -22,7 +22,9 @@ fn load_app_config(app: tauri::AppHandle) -> Result<Option<String>, String> {
         return Ok(None);
     }
 
-    std::fs::read_to_string(path).map(Some).map_err(|error| error.to_string())
+    std::fs::read_to_string(path)
+        .map(Some)
+        .map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -57,6 +59,14 @@ fn record_input_event(
 }
 
 #[tauri::command]
+fn add_recording_marker(
+    state: tauri::State<'_, RecordingManager>,
+    name: String,
+) -> Result<(), String> {
+    state.add_marker(recording::now_ms()?, name)
+}
+
+#[tauri::command]
 fn stop_recording(
     state: tauri::State<'_, RecordingManager>,
     output_dir: std::path::PathBuf,
@@ -76,6 +86,7 @@ pub fn run() {
             save_app_config,
             start_recording,
             record_input_event,
+            add_recording_marker,
             stop_recording
         ])
         .setup(|app| {

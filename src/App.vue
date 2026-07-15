@@ -85,7 +85,19 @@ async function recordInputIfNeeded(keyId: string, pressed: boolean) {
     return;
   }
 
+  if (recordingControlKeys().has(keyId)) {
+    return;
+  }
+
   await invoke("record_input_event", { keyId, pressed });
+}
+
+function recordingControlKeys(): Set<string> {
+  if (recordingHotkeys.value.mode === "disabled") {
+    return new Set();
+  }
+
+  return new Set([...recordingHotkeys.value.start, ...recordingHotkeys.value.stop]);
 }
 
 function applyOverlayStyle(style: OverlayStyle) {
@@ -302,7 +314,7 @@ async function chooseRecordingDirectory() {
   }
 }
 
-async function startRecordingWithCountdown() {
+async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manual") {
   if (!recordingDirectory.value || isRecording.value || recordingCountdown.value > 0) {
     return;
   }
@@ -315,6 +327,9 @@ async function startRecordingWithCountdown() {
     if (recordingCountdown.value <= 0) {
       cancelRecordingCountdown();
       await invoke("start_recording", { fps: config.recording.defaultFps });
+      if (trigger === "hotkey") {
+        await invoke("add_recording_marker", { name: "hotkey-start" });
+      }
       isRecording.value = true;
       lastRecordingPath.value = "";
     }
@@ -329,9 +344,13 @@ function cancelRecordingCountdown() {
   recordingCountdown.value = 0;
 }
 
-async function stopRecording() {
+async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
   if (!isRecording.value) {
     return;
+  }
+
+  if (trigger === "hotkey") {
+    await invoke("add_recording_marker", { name: "hotkey-stop" });
   }
 
   const result = await invoke<{ path: string }>("stop_recording", {
@@ -398,18 +417,18 @@ async function handleRecordingHotkeys() {
     }
 
     if (isRecording.value) {
-      await stopRecording();
+      await stopRecording("hotkey");
     } else {
-      await startRecordingWithCountdown();
+      await startRecordingWithCountdown("hotkey");
     }
     return;
   }
 
   if (recordingHotkeys.value.mode === "separate") {
     if (!isRecording.value && matchesStart) {
-      await startRecordingWithCountdown();
+      await startRecordingWithCountdown("hotkey");
     } else if (isRecording.value && matchesStop) {
-      await stopRecording();
+      await stopRecording("hotkey");
     }
   }
 }
