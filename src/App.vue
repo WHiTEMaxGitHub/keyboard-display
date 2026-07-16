@@ -448,11 +448,21 @@ async function chooseRecordingDirectory() {
   }
 }
 
-async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manual") {
-  if (!recordingDirectory.value) {
-    recordingStatusMessage.value = "Choose a save folder before recording.";
-    return;
+async function resolveRecordingDirectory(): Promise<string> {
+  if (recordingDirectory.value) {
+    return recordingDirectory.value;
   }
+
+  const defaultDirectory = await invoke<string>("default_recording_dir");
+  recordingDirectory.value = defaultDirectory;
+  recordingStatusMessage.value = `Using default save folder: ${defaultDirectory}`;
+  scheduleAppConfigSave();
+
+  return defaultDirectory;
+}
+
+async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manual") {
+  await resolveRecordingDirectory();
 
   if (isRecording.value || recordingCountdown.value > 0) {
     return;
@@ -499,7 +509,7 @@ async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
   }
 
   const result = await invoke<{ path: string }>("stop_recording", {
-    outputDir: recordingDirectory.value,
+    outputDir: await resolveRecordingDirectory(),
   });
   isRecording.value = false;
   lastRecordingPath.value = result.path;

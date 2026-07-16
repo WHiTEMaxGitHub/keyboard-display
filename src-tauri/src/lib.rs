@@ -50,6 +50,17 @@ fn app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String>
 }
 
 #[tauri::command]
+fn default_recording_dir(app: tauri::AppHandle) -> Result<String, String> {
+    let path = app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?
+        .join("recording-files");
+
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 fn start_recording(state: tauri::State<'_, RecordingManager>, fps: u16) -> Result<(), String> {
     state.start(
         fps,
@@ -102,6 +113,7 @@ pub fn run() {
             read_config_file,
             load_app_config,
             save_app_config,
+            default_recording_dir,
             start_recording,
             record_input_event,
             add_recording_marker,

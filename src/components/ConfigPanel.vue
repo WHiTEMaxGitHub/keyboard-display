@@ -513,13 +513,13 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
           <h2>Recording</h2>
           <div class="field-row">
             <span>Save folder</span>
-            <strong>{{ recordingDirectory || "Not selected" }}</strong>
+            <strong>{{ recordingDirectory || "Default app folder" }}</strong>
           </div>
           <div class="recording-actions">
             <button type="button" @click="chooseRecordingDirectory">Choose folder</button>
             <button
               type="button"
-              :disabled="!recordingDirectory || isRecording || recordingCountdown > 0"
+              :disabled="isRecording || recordingCountdown > 0"
               @click="startRecording"
             >
               {{ recordingCountdown > 0 ? `Starting in ${recordingCountdown}` : "Start recording" }}
