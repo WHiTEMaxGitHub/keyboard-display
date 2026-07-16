@@ -31,6 +31,7 @@ import {
   type InputStatePayload,
 } from "./domain/inputEvents";
 import {
+  isRecordingControlKey,
   isHotkeyMatch,
   normalizeHotkey,
   type RecordingHotkeyConfig,
@@ -115,19 +116,11 @@ async function recordInputIfNeeded(keyId: string, pressed: boolean) {
     return;
   }
 
-  if (recordingControlKeys().has(keyId)) {
+  if (isRecordingControlKey(keyId, recordingHotkeys.value)) {
     return;
   }
 
   await invoke("record_input_event", { keyId, pressed });
-}
-
-function recordingControlKeys(): Set<string> {
-  if (recordingHotkeys.value.mode === "disabled") {
-    return new Set();
-  }
-
-  return new Set([...recordingHotkeys.value.start, ...recordingHotkeys.value.stop]);
 }
 
 function applyOverlayStyle(style: OverlayStyle) {

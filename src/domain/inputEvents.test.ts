@@ -15,6 +15,8 @@ describe("input event mapping", () => {
     expect(keyIdFromKeyboardCode("MetaLeft")).toBe("meta-left");
     expect(keyIdFromKeyboardCode("AltLeft")).toBe("alt-left");
     expect(keyIdFromKeyboardCode("Space")).toBe("space");
+    expect(keyIdFromKeyboardCode("F1")).toBe("f1");
+    expect(keyIdFromKeyboardCode("F12")).toBe("f12");
   });
 
   it("maps mouse buttons to overlay key ids", () => {

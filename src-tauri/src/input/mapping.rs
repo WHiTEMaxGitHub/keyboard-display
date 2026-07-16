@@ -32,6 +32,18 @@ pub fn key_id_from_macos_keycode(keycode: u16) -> Option<&'static str> {
         15 => Some("r"),
         12 => Some("q"),
         14 => Some("e"),
+        122 => Some("f1"),
+        120 => Some("f2"),
+        99 => Some("f3"),
+        118 => Some("f4"),
+        96 => Some("f5"),
+        97 => Some("f6"),
+        98 => Some("f7"),
+        100 => Some("f8"),
+        101 => Some("f9"),
+        109 => Some("f10"),
+        103 => Some("f11"),
+        111 => Some("f12"),
         _ => None,
     }
 }
@@ -71,6 +83,18 @@ pub fn key_id_from_windows_vk(vk_code: u32) -> Option<&'static str> {
         0x52 => Some("r"),
         0x51 => Some("q"),
         0x45 => Some("e"),
+        0x70 => Some("f1"),
+        0x71 => Some("f2"),
+        0x72 => Some("f3"),
+        0x73 => Some("f4"),
+        0x74 => Some("f5"),
+        0x75 => Some("f6"),
+        0x76 => Some("f7"),
+        0x77 => Some("f8"),
+        0x78 => Some("f9"),
+        0x79 => Some("f10"),
+        0x7A => Some("f11"),
+        0x7B => Some("f12"),
         _ => None,
     }
 }
@@ -107,6 +131,18 @@ pub fn key_id_from_windows_scancode(scan_code: u32) -> Option<&'static str> {
         0x1D => Some("ctrl-left"),
         0x38 => Some("alt-left"),
         0x39 => Some("space"),
+        0x3B => Some("f1"),
+        0x3C => Some("f2"),
+        0x3D => Some("f3"),
+        0x3E => Some("f4"),
+        0x3F => Some("f5"),
+        0x40 => Some("f6"),
+        0x41 => Some("f7"),
+        0x42 => Some("f8"),
+        0x43 => Some("f9"),
+        0x44 => Some("f10"),
+        0x57 => Some("f11"),
+        0x58 => Some("f12"),
         _ => None,
     }
 }
@@ -155,6 +191,8 @@ mod tests {
         assert_eq!(key_id_from_macos_keycode(55), Some("meta-left"));
         assert_eq!(key_id_from_macos_keycode(58), Some("alt-left"));
         assert_eq!(key_id_from_macos_keycode(49), Some("space"));
+        assert_eq!(key_id_from_macos_keycode(122), Some("f1"));
+        assert_eq!(key_id_from_macos_keycode(111), Some("f12"));
     }
 
     #[test]
@@ -186,6 +224,8 @@ mod tests {
         assert_eq!(key_id_from_windows_vk(0x5B), Some("meta-left"));
         assert_eq!(key_id_from_windows_vk(0xA4), Some("alt-left"));
         assert_eq!(key_id_from_windows_vk(0x20), Some("space"));
+        assert_eq!(key_id_from_windows_vk(0x70), Some("f1"));
+        assert_eq!(key_id_from_windows_vk(0x7B), Some("f12"));
     }
 
     #[test]
@@ -194,6 +234,8 @@ mod tests {
         assert_eq!(key_id_from_windows_scancode(0x11), Some("w"));
         assert_eq!(key_id_from_windows_scancode(0x2A), Some("shift-left"));
         assert_eq!(key_id_from_windows_scancode(0x39), Some("space"));
+        assert_eq!(key_id_from_windows_scancode(0x3B), Some("f1"));
+        assert_eq!(key_id_from_windows_scancode(0x58), Some("f12"));
     }
 
     #[test]

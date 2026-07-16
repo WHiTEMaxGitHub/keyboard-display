@@ -101,10 +101,20 @@
   - Reconstruct pressed-state frames by applying event stream changes.
   - Use this before adding video export.
 
-- [ ] Add a `.kbdrec` inspection UI or CLI entry point.
+- [x] Add a `.kbdrec` inspection UI or CLI entry point.
   - Choose a `.kbdrec` file.
   - Show decoded key table, events, markers, and reconstructed frames.
   - Use the same Rust inspection command as the source of truth.
+
+- [x] Support recording hotkeys outside the POV profile layout.
+  - Hotkey capture should not require keys to exist in `overlay.rows`.
+  - Extend normalized key mapping for common non-display hotkeys such as
+    `F1` through `F12`.
+  - Show hotkey labels from normalized key ids when the key is not in the
+    current profile.
+  - Continue filtering recording control hotkeys out of `.kbdrec` events.
+  - Add tests proving a non-profile hotkey can start/stop recording without
+    being recorded as input.
 
 - [ ] Use monotonic timestamps for input recordings.
   - Store event time as `t = now_monotonic - record_start_monotonic`.

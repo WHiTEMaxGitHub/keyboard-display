@@ -23,3 +23,15 @@ export function isHotkeyMatch(activeKeys: Set<string>, hotkey: string[]): boolea
 
   return normalizedHotkey.every((key) => activeKeys.has(key));
 }
+
+export function recordingControlKeys(config: RecordingHotkeyConfig): Set<string> {
+  if (config.mode === "disabled") {
+    return new Set();
+  }
+
+  return new Set([...config.start, ...config.stop]);
+}
+
+export function isRecordingControlKey(keyId: string, config: RecordingHotkeyConfig): boolean {
+  return recordingControlKeys(config).has(keyId);
+}
