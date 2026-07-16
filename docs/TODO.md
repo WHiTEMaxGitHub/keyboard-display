@@ -47,7 +47,7 @@
 
 ## Recording sync
 
-- [ ] Implement `.kbdrec` binary v1 as an event stream.
+- [x] Implement `.kbdrec` binary v1 as an event stream.
   - Record input transitions per capture frame, not every rendered frame state.
   - Use a simple event-stream format first, not Huffman.
   - Format shape:
@@ -82,6 +82,11 @@
     - RLE state bitset stream for video export caches
   - Keep the current JSON event stream as a debug / test format.
   - Consider Huffman only as a future v2 after collecting real samples.
+
+- [ ] Add `.kbdrec` inspection / replay tooling.
+  - Decode binary recordings into a human-readable debug view.
+  - Reconstruct pressed-state frames by applying event stream changes.
+  - Use this before adding video export.
 
 - [ ] Use monotonic timestamps for input recordings.
   - Store event time as `t = now_monotonic - record_start_monotonic`.

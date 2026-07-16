@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+mod binary;
+
 use serde::Serialize;
 use std::{
     collections::HashSet,
@@ -169,9 +171,8 @@ impl RecordingManager {
             "{}-{}.kbdrec",
             active_session.start_unix_ms, now_ms
         ));
-        let contents = serde_json::to_string_pretty(&active_session.session.snapshot())
-            .map_err(|error| error.to_string())?;
-        std::fs::write(&path, format!("{contents}\n")).map_err(|error| error.to_string())?;
+        let contents = binary::encode_kbdrec(&active_session.session.snapshot())?;
+        std::fs::write(&path, contents).map_err(|error| error.to_string())?;
 
         Ok(StopRecordingResult {
             path: path.to_string_lossy().to_string(),
@@ -231,7 +232,10 @@ fn event_time(event: &RecordingEvent) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use super::{sample_frames, RecordingEvent, RecordingManager, RecordingSession};
+    use super::{
+        binary::{decode_kbdrec, encode_kbdrec},
+        sample_frames, RecordingEvent, RecordingManager, RecordingSession, RecordingSnapshot,
+    };
 
     #[test]
     fn stores_key_events_with_monotonic_relative_timestamps() {
@@ -355,5 +359,72 @@ mod tests {
         assert_eq!(frames[1].keys, vec!["w".to_string()]);
         assert_eq!(frames[2].keys, vec!["w".to_string()]);
         assert!(frames[3].keys.is_empty());
+    }
+
+    #[test]
+    fn manager_writes_binary_kbdrec_file() {
+        let output_dir = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&output_dir);
+        let manager = RecordingManager::new();
+
+        manager.start(60, 1000).unwrap();
+        manager.record_input(1016, "w", true).unwrap();
+        let result = manager.stop(output_dir.clone(), 1200).unwrap();
+        let contents = std::fs::read(&result.path).unwrap();
+        let decoded = decode_kbdrec(&contents).unwrap();
+
+        assert_eq!(&contents[0..4], b"KBDR");
+        assert_eq!(decoded.events.len(), 1);
+        assert_eq!(decoded.events[0].down, vec!["w"]);
+
+        let _ = std::fs::remove_dir_all(output_dir);
+    }
+
+    #[test]
+    fn binary_recording_roundtrips_event_stream() {
+        let snapshot = {
+            let mut session = RecordingSession::new(60, 1000);
+            session.record_input(1016, "w", true);
+            session.record_input(1016, "shift-left", true);
+            session.record_input(1083, "shift-left", false);
+            session.add_marker(1200, "sync");
+            session.snapshot()
+        };
+
+        let encoded = encode_kbdrec(&snapshot).unwrap();
+        let decoded = decode_kbdrec(&encoded).unwrap();
+
+        assert_eq!(decoded.fps, 60);
+        assert_eq!(decoded.key_ids, vec!["w", "shift-left"]);
+        assert_eq!(decoded.events.len(), 2);
+        assert_eq!(decoded.events[0].frame_delta, 1);
+        assert_eq!(decoded.events[0].down, vec!["w", "shift-left"]);
+        assert!(decoded.events[0].up.is_empty());
+        assert_eq!(decoded.events[1].frame_delta, 4);
+        assert!(decoded.events[1].down.is_empty());
+        assert_eq!(decoded.events[1].up, vec!["shift-left"]);
+        assert_eq!(decoded.markers[0].t_ms, 200);
+        assert_eq!(decoded.markers[0].name, "sync");
+    }
+
+    #[test]
+    fn binary_recording_excludes_virtual_void_keys() {
+        let snapshot = RecordingSnapshot {
+            version: 1,
+            fps: 60,
+            timebase: "monotonic",
+            events: vec![RecordingEvent::KeyDown {
+                t: 0,
+                key_id: "void".to_string(),
+            }],
+        };
+
+        let decoded = decode_kbdrec(&encode_kbdrec(&snapshot).unwrap()).unwrap();
+
+        assert!(decoded.key_ids.is_empty());
+        assert!(decoded.events.is_empty());
     }
 }
