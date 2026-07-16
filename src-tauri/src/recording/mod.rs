@@ -111,6 +111,34 @@ impl RecordingSession {
         });
     }
 
+    pub fn suppress_recent_keys(&mut self, key_ids: &[String]) {
+        let Some(suppress_since) = key_ids
+            .iter()
+            .filter_map(|key_id| self.last_key_down_time(key_id))
+            .min()
+        else {
+            return;
+        };
+
+        self.events.retain(|event| match event {
+            RecordingEvent::KeyDown { t, key_id } | RecordingEvent::KeyUp { t, key_id } => {
+                !key_ids.iter().any(|target| target == key_id) || *t < suppress_since
+            }
+            RecordingEvent::Marker { .. } => true,
+        });
+
+        for key_id in key_ids {
+            self.active_keys.remove(key_id);
+        }
+    }
+
+    fn last_key_down_time(&self, target_key_id: &str) -> Option<u64> {
+        self.events.iter().rev().find_map(|event| match event {
+            RecordingEvent::KeyDown { t, key_id } if key_id == target_key_id => Some(*t),
+            _ => None,
+        })
+    }
+
     pub fn snapshot(&self) -> RecordingSnapshot {
         RecordingSnapshot {
             version: 1,
@@ -168,6 +196,16 @@ impl RecordingManager {
 
         if let Some(active_session) = session.as_mut() {
             active_session.session.add_marker(now_ms, name);
+        }
+
+        Ok(())
+    }
+
+    pub fn suppress_recent_keys(&self, key_ids: Vec<String>) -> Result<(), String> {
+        let mut session = self.session.lock().map_err(|error| error.to_string())?;
+
+        if let Some(active_session) = session.as_mut() {
+            active_session.session.suppress_recent_keys(&key_ids);
         }
 
         Ok(())
@@ -327,6 +365,46 @@ mod tests {
                 },
             ],
         );
+    }
+
+    #[test]
+    fn suppresses_only_recent_control_chord_events() {
+        let mut session = RecordingSession::new(60, 1000);
+
+        session.record_input(1010, "ctrl-left", true);
+        session.record_input(1020, "ctrl-left", false);
+        session.record_input(1100, "ctrl-left", true);
+        session.record_input(1110, "shift-left", true);
+        session.record_input(1120, "r", true);
+        session.suppress_recent_keys(&[
+            "ctrl-left".to_string(),
+            "shift-left".to_string(),
+            "r".to_string(),
+        ]);
+
+        assert_eq!(
+            session.snapshot().events,
+            vec![
+                RecordingEvent::KeyDown {
+                    t: 10,
+                    key_id: "ctrl-left".to_string(),
+                },
+                RecordingEvent::KeyUp {
+                    t: 20,
+                    key_id: "ctrl-left".to_string(),
+                },
+            ],
+        );
+    }
+
+    #[test]
+    fn keeps_single_control_key_when_no_hotkey_is_suppressed() {
+        let mut session = RecordingSession::new(60, 1000);
+
+        session.record_input(1010, "ctrl-left", true);
+        session.record_input(1020, "ctrl-left", false);
+
+        assert_eq!(session.snapshot().events.len(), 2);
     }
 
     #[test]

@@ -87,6 +87,14 @@ fn add_recording_marker(
 }
 
 #[tauri::command]
+fn suppress_recording_keys(
+    state: tauri::State<'_, RecordingManager>,
+    key_ids: Vec<String>,
+) -> Result<(), String> {
+    state.suppress_recent_keys(key_ids)
+}
+
+#[tauri::command]
 fn stop_recording(
     state: tauri::State<'_, RecordingManager>,
     output_dir: std::path::PathBuf,
@@ -117,6 +125,7 @@ pub fn run() {
             start_recording,
             record_input_event,
             add_recording_marker,
+            suppress_recording_keys,
             stop_recording,
             inspect_recording_file
         ])

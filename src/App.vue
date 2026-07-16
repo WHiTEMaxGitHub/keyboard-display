@@ -32,7 +32,6 @@ import {
   type InputStatePayload,
 } from "./domain/inputEvents";
 import {
-  isRecordingControlKey,
   isHotkeyMatch,
   normalizeHotkey,
   normalizeRecordingHotkeyConfig,
@@ -115,10 +114,6 @@ function updateActiveKey(keyId: string, pressed: boolean) {
 
 async function recordInputIfNeeded(keyId: string, pressed: boolean) {
   if (isOverlayWindow.value || !isRecording.value) {
-    return;
-  }
-
-  if (isRecordingControlKey(keyId, effectiveRecordingHotkeys())) {
     return;
   }
 
@@ -584,6 +579,14 @@ async function addSyncMarker() {
   recordingStatusMessage.value = "Sync marker added.";
 }
 
+async function suppressRecordingHotkeyInput(keys: string[]) {
+  if (!isRecording.value || keys.length === 0) {
+    return;
+  }
+
+  await invoke("suppress_recording_keys", { keyIds: normalizeHotkey(keys) });
+}
+
 function beginHotkeyCapture(target: "start" | "stop" | "sync") {
   capturedHotkeyKeys.value = new Set();
   hotkeyCaptureTarget.value = target;
@@ -607,14 +610,14 @@ function finishHotkeyCapture() {
   capturedHotkeyKeys.value = new Set();
 }
 
-async function handleRecordingHotkeys() {
+async function handleRecordingHotkeys(): Promise<boolean> {
   if (hotkeyCaptureTarget.value) {
-    return;
+    return false;
   }
 
   const activeSignature = normalizeHotkey(activeKeyIds.value).join("+");
   if (activeSignature === activeRecordingHotkeySignature.value) {
-    return;
+    return false;
   }
 
   const hotkeys = effectiveRecordingHotkeys();
@@ -626,41 +629,48 @@ async function handleRecordingHotkeys() {
     if (activeSignature === "") {
       activeRecordingHotkeySignature.value = "";
     }
-    return;
+    return false;
   }
 
   activeRecordingHotkeySignature.value = activeSignature;
 
   if (matchesSync && isRecording.value) {
+    await suppressRecordingHotkeyInput(hotkeys.sync);
     await addSyncMarker();
-    return;
+    return true;
   }
 
   if (hotkeys.mode === "disabled") {
-    return;
+    return false;
   }
 
   if (hotkeys.mode === "toggle") {
     if (recordingCountdown.value > 0) {
       cancelRecordingCountdown();
-      return;
+      return true;
     }
 
     if (isRecording.value) {
+      await suppressRecordingHotkeyInput(hotkeys.stop);
       await stopRecording("hotkey");
     } else {
       await startRecordingWithCountdown("hotkey");
     }
-    return;
+    return true;
   }
 
   if (hotkeys.mode === "separate") {
     if (!isRecording.value && matchesStart) {
       await startRecordingWithCountdown("hotkey");
+      return true;
     } else if (isRecording.value && matchesStop) {
+      await suppressRecordingHotkeyInput(hotkeys.stop);
       await stopRecording("hotkey");
+      return true;
     }
   }
+
+  return false;
 }
 
 function profileNameFromFileName(fileName: string): string {
@@ -733,10 +743,15 @@ onMounted(async () => {
         } else {
           finishHotkeyCapture();
         }
-      } else {
-        void handleRecordingHotkeys();
+        return;
       }
-      void recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
+
+      void (async () => {
+        const consumed = await handleRecordingHotkeys();
+        if (!consumed) {
+          await recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
+        }
+      })();
     },
   );
 
