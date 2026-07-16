@@ -47,6 +47,42 @@
 
 ## Recording sync
 
+- [ ] Implement `.kbdrec` binary v1 as an event stream.
+  - Record input transitions per capture frame, not every rendered frame state.
+  - Use a simple event-stream format first, not Huffman.
+  - Format shape:
+    - Header
+    - Key table
+    - Event stream
+    - Marker stream
+  - Header fields:
+    - magic: `"KBDR"`
+    - version: `1`
+    - flags
+    - fps
+    - key_count
+    - event_count
+    - marker_count
+  - Key table:
+    - stores only real recordable keys
+    - excludes virtual layout-only keys such as `void`
+    - maps profile key id to compact numeric key id
+  - Event stream:
+    - each event stores changes that happened at one capture frame
+    - use `frame_delta varint` instead of absolute frame numbers
+    - event payload:
+      - `down_count varint + down_key_ids`
+      - `up_count varint + up_key_ids`
+    - playback reconstructs pressed state by applying `down` then `up`
+  - Marker stream:
+    - `marker_count varint`
+    - each marker: `t_ms varint + name_len varint + utf8 name`
+  - Future optional sections:
+    - periodic state checkpoints for fast seeking
+    - RLE state bitset stream for video export caches
+  - Keep the current JSON event stream as a debug / test format.
+  - Consider Huffman only as a future v2 after collecting real samples.
+
 - [ ] Use monotonic timestamps for input recordings.
   - Store event time as `t = now_monotonic - record_start_monotonic`.
   - Do not rely on wall-clock time for frame/event alignment.
