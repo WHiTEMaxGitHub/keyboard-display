@@ -41,9 +41,16 @@ describe("isHotkeyMatch", () => {
     ).toBe(true);
   });
 
-  it("does not match empty, partial, or extra key sets", () => {
+  it("matches when the active key set contains the whole hotkey", () => {
+    expect(isHotkeyMatch(new Set(["ctrl-left", "shift-left", "r", "w"]), [
+      "shift-left",
+      "ctrl-left",
+      "r",
+    ])).toBe(true);
+  });
+
+  it("does not match empty or partial key sets", () => {
     expect(isHotkeyMatch(new Set(["ctrl-left"]), [])).toBe(false);
     expect(isHotkeyMatch(new Set(["ctrl-left"]), ["ctrl-left", "r"])).toBe(false);
-    expect(isHotkeyMatch(new Set(["ctrl-left", "r", "w"]), ["ctrl-left", "r"])).toBe(false);
   });
 });

@@ -55,6 +55,7 @@ const isRecording = ref(false);
 const recordingCountdown = ref(0);
 const recordingCountdownTimer = ref<number | null>(null);
 const lastRecordingPath = ref("");
+const recordingStatusMessage = ref("");
 const inspectedRecordingPath = ref("");
 const recordingInspection = ref<RecordingInspection | null>(null);
 const recordingInspectionError = ref("");
@@ -442,15 +443,22 @@ async function chooseRecordingDirectory() {
 
   if (typeof selectedPath === "string") {
     recordingDirectory.value = selectedPath;
+    recordingStatusMessage.value = "";
     scheduleAppConfigSave();
   }
 }
 
 async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manual") {
-  if (!recordingDirectory.value || isRecording.value || recordingCountdown.value > 0) {
+  if (!recordingDirectory.value) {
+    recordingStatusMessage.value = "Choose a save folder before recording.";
     return;
   }
 
+  if (isRecording.value || recordingCountdown.value > 0) {
+    return;
+  }
+
+  recordingStatusMessage.value = "";
   recordingCountdown.value = 3;
 
   recordingCountdownTimer.value = window.setInterval(async () => {
@@ -468,6 +476,7 @@ async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manua
       }
       isRecording.value = true;
       lastRecordingPath.value = "";
+      recordingStatusMessage.value = "Recording started.";
     }
   }, 1000);
 }
@@ -494,6 +503,7 @@ async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
   });
   isRecording.value = false;
   lastRecordingPath.value = result.path;
+  recordingStatusMessage.value = `Recording saved: ${result.path}`;
 
   if (silentRecording.value && restoreOverlayAfterRecording.value) {
     await setOverlayVisible(true);
@@ -765,6 +775,7 @@ onUnmounted(() => {
       :is-recording="isRecording"
       :recording-countdown="recordingCountdown"
       :last-recording-path="lastRecordingPath"
+      :recording-status-message="recordingStatusMessage"
       :inspected-recording-path="inspectedRecordingPath"
       :recording-inspection="recordingInspection"
       :recording-inspection-error="recordingInspectionError"

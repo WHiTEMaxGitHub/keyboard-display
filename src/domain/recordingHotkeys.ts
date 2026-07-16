@@ -17,10 +17,6 @@ export function isHotkeyMatch(activeKeys: Set<string>, hotkey: string[]): boolea
     return false;
   }
 
-  if (activeKeys.size !== normalizedHotkey.length) {
-    return false;
-  }
-
   return normalizedHotkey.every((key) => activeKeys.has(key));
 }
 

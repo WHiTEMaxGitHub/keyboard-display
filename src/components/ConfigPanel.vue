@@ -72,6 +72,7 @@ const props = defineProps<{
   isRecording: boolean;
   recordingCountdown: number;
   lastRecordingPath: string;
+  recordingStatusMessage: string;
   inspectedRecordingPath: string;
   recordingInspection: RecordingInspection | null;
   recordingInspectionError: string;
@@ -605,6 +606,9 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
           <p v-if="lastRecordingPath" class="quiet">
             Last recording: {{ lastRecordingPath }}
           </p>
+          <p v-if="recordingStatusMessage" class="status-text">
+            {{ recordingStatusMessage }}
+          </p>
           <div class="inspection-panel">
             <div class="section-header">
               <h3>Recording inspection</h3>
@@ -1090,6 +1094,13 @@ label {
 .error-text {
   margin: 0;
   color: #ff8f8f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-text {
+  margin: 10px 0 0;
+  color: #c9d1da;
   font-size: 13px;
   font-weight: 700;
 }
