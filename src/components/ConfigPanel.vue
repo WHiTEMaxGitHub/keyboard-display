@@ -307,13 +307,15 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             <p>Live Preview</p>
             <h2>{{ profileName }}</h2>
           </div>
-          <PovOverlay
-            :layout="config.layout"
-            :rows="config.rows"
-            :keys="config.keys"
-            :active-keys="activeKeys"
-            :overlay-style="config.style"
-          />
+          <div class="preview-viewport">
+            <PovOverlay
+              :layout="config.layout"
+              :rows="config.rows"
+              :keys="config.keys"
+              :active-keys="activeKeys"
+              :overlay-style="config.style"
+            />
+          </div>
         </section>
 
         <section class="panel-grid">
@@ -851,6 +853,7 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  min-width: 0;
   min-height: 250px;
   margin-bottom: 20px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -859,6 +862,24 @@ h2 {
     linear-gradient(90deg, rgba(37, 211, 102, 0.1), transparent 44%),
     #151920;
   padding: 24px;
+}
+
+.preview-copy {
+  flex: 0 0 180px;
+}
+
+.preview-viewport {
+  display: grid;
+  justify-content: end;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 8px 0 10px 8px;
+}
+
+.preview-viewport :deep(.pov-shell) {
+  flex: 0 0 auto;
 }
 
 .page-stack {
