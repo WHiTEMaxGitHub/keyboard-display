@@ -3,6 +3,7 @@ import {
   isHotkeyMatch,
   isRecordingControlKey,
   normalizeHotkey,
+  normalizeRecordingHotkeyConfig,
   recordingControlKeys,
 } from "./recordingHotkeys";
 
@@ -10,8 +11,8 @@ describe("normalizeHotkey", () => {
   it("sorts and deduplicates keys", () => {
     expect(normalizeHotkey(["r", "ctrl-left", "r", "shift-left"])).toEqual([
       "ctrl-left",
-      "r",
       "shift-left",
+      "r",
     ]);
   });
 });
@@ -22,11 +23,46 @@ describe("recording control keys", () => {
       mode: "toggle" as const,
       start: ["f8"],
       stop: ["f8"],
+      sync: ["f9"],
     };
 
-    expect([...recordingControlKeys(config)]).toEqual(["f8"]);
+    expect([...recordingControlKeys(config)]).toEqual(["f8", "f9"]);
     expect(isRecordingControlKey("f8", config)).toBe(true);
+    expect(isRecordingControlKey("f9", config)).toBe(true);
     expect(isRecordingControlKey("w", config)).toBe(false);
+  });
+
+  it("still filters sync marker hotkey when start stop hotkeys are disabled", () => {
+    const config = normalizeRecordingHotkeyConfig({
+      mode: "disabled",
+      sync: ["f8"],
+    });
+
+    expect([...recordingControlKeys(config)]).toEqual(["f8"]);
+  });
+
+  it("defaults sync marker hotkey to f8 for old configs", () => {
+    expect(normalizeRecordingHotkeyConfig({
+      mode: "toggle",
+      start: [],
+      stop: [],
+    }).sync).toEqual(["f8"]);
+  });
+
+  it("defaults recording toggle hotkey to ctrl shift r", () => {
+    expect(normalizeRecordingHotkeyConfig(undefined)).toMatchObject({
+      mode: "toggle",
+      start: ["ctrl-left", "shift-left", "r"],
+      stop: ["ctrl-left", "shift-left", "r"],
+    });
+  });
+
+  it("defaults separate stop hotkey to ctrl shift t", () => {
+    expect(normalizeRecordingHotkeyConfig({ mode: "separate" })).toMatchObject({
+      mode: "separate",
+      start: ["ctrl-left", "shift-left", "r"],
+      stop: ["ctrl-left", "shift-left", "t"],
+    });
   });
 });
 

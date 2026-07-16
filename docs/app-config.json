@@ -157,9 +157,20 @@
     "outputDirectory": null,
     "silent": false,
     "hotkeys": {
-      "mode": "disabled",
-      "start": [],
-      "stop": []
+      "mode": "toggle",
+      "start": [
+        "ctrl-left",
+        "shift-left",
+        "r"
+      ],
+      "stop": [
+        "ctrl-left",
+        "shift-left",
+        "r"
+      ],
+      "sync": [
+        "f8"
+      ]
     }
   },
   "ui": {

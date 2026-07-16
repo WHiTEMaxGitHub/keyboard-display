@@ -79,7 +79,7 @@ const props = defineProps<{
   recordingInspectionError: string;
   overlayPosition: string;
   recordingHotkeys: RecordingHotkeyConfig;
-  hotkeyCaptureTarget: "start" | "stop" | null;
+  hotkeyCaptureTarget: "start" | "stop" | "sync" | null;
 }>();
 
 const layoutRows = computed(() => {
@@ -110,9 +110,10 @@ const emit = defineEmits<{
   "update-recording-config": [recording: RecordingConfig];
   "start-recording": [];
   "stop-recording": [];
+  "add-sync-marker": [];
   "inspect-recording-file": [];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
-  "begin-hotkey-capture": [target: "start" | "stop"];
+  "begin-hotkey-capture": [target: "start" | "stop" | "sync"];
   "move-overlay": [
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center",
   ];
@@ -229,6 +230,10 @@ function stopRecording() {
   emit("stop-recording");
 }
 
+function addSyncMarker() {
+  emit("add-sync-marker");
+}
+
 function inspectRecordingFile() {
   emit("inspect-recording-file");
 }
@@ -237,7 +242,7 @@ function updateRecordingHotkeyMode(event: Event) {
   emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
 }
 
-function beginHotkeyCapture(target: "start" | "stop") {
+function beginHotkeyCapture(target: "start" | "stop" | "sync") {
   emit("begin-hotkey-capture", target);
 }
 
@@ -530,6 +535,9 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             <button type="button" :disabled="!isRecording" @click="stopRecording">
               Stop recording
             </button>
+            <button type="button" :disabled="!isRecording" @click="addSyncMarker">
+              Add sync marker
+            </button>
           </div>
           <label class="toggle-row">
             <input
@@ -560,6 +568,13 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
               <strong>{{ formatHotkey(recordingHotkeys.stop) }}</strong>
               <button type="button" @click="beginHotkeyCapture('stop')">
                 {{ hotkeyCaptureTarget === "stop" ? "Press shortcut..." : "Set" }}
+              </button>
+            </div>
+            <div class="hotkey-row">
+              <span>Sync</span>
+              <strong>{{ formatHotkey(recordingHotkeys.sync) }}</strong>
+              <button type="button" @click="beginHotkeyCapture('sync')">
+                {{ hotkeyCaptureTarget === "sync" ? "Press shortcut..." : "Set" }}
               </button>
             </div>
           </div>

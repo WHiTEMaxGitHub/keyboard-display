@@ -130,15 +130,15 @@
   - Do not rely on wall-clock time for frame/event alignment.
   - Keep wall-clock time only for recording file names.
 
-- [ ] Add sync markers to the recording format.
+- [x] Add sync markers to the recording format.
   - Example event:
     - `{ "t": 18342, "type": "marker", "name": "sync" }`
   - Markers should be visible in the UI timeline/list.
 
-- [ ] Add a manual sync marker action.
+- [x] Add a manual sync marker action.
   - Button: `Add sync marker`.
-  - Hotkey candidate: `F8`.
-  - The marker should be written into the `.kbdrec` event stream.
+  - Hotkey defaults to `F8`.
+  - The marker should be written into the `.kbdrec` marker stream.
 
 - [ ] Add visible sync feedback.
   - Flash the POV overlay when a sync marker is inserted.

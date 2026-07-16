@@ -1,6 +1,6 @@
 import { createDefaultConfig, flattenRowKeys, type AppConfig, type OverlayRow } from "./defaultConfig";
 import { normalizeRecordingConfig } from "./recordingConfig";
-import type { RecordingHotkeyConfig } from "./recordingHotkeys";
+import { normalizeRecordingHotkeyConfig, type RecordingHotkeyConfig } from "./recordingHotkeys";
 
 export type RecentProfile = {
   name: string;
@@ -111,6 +111,10 @@ export function parseAppConfigFile(text: string): AppConfigFile {
         rows,
         keys: flattenRowKeys(rows),
       },
+    },
+    recording: {
+      ...config.recording,
+      hotkeys: normalizeRecordingHotkeyConfig(config.recording.hotkeys),
     },
   };
 }

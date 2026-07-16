@@ -35,6 +35,7 @@ import {
   isRecordingControlKey,
   isHotkeyMatch,
   normalizeHotkey,
+  normalizeRecordingHotkeyConfig,
   type RecordingHotkeyConfig,
   type RecordingHotkeyMode,
 } from "./domain/recordingHotkeys";
@@ -60,12 +61,8 @@ const recordingStatusMessage = ref("");
 const inspectedRecordingPath = ref("");
 const recordingInspection = ref<RecordingInspection | null>(null);
 const recordingInspectionError = ref("");
-const recordingHotkeys = ref<RecordingHotkeyConfig>({
-  mode: "disabled",
-  start: [],
-  stop: [],
-});
-const hotkeyCaptureTarget = ref<"start" | "stop" | null>(null);
+const recordingHotkeys = ref<RecordingHotkeyConfig>(normalizeRecordingHotkeyConfig(undefined));
+const hotkeyCaptureTarget = ref<"start" | "stop" | "sync" | null>(null);
 const capturedHotkeyKeys = ref(new Set<string>());
 const activeRecordingHotkeySignature = ref("");
 
@@ -556,7 +553,12 @@ function updateSilentRecording(value: boolean) {
 }
 
 function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
-  recordingHotkeys.value = { ...recordingHotkeys.value, mode };
+  recordingHotkeys.value = normalizeRecordingHotkeyConfig({
+    mode,
+    start: recordingHotkeys.value.start,
+    stop: mode === "separate" ? undefined : recordingHotkeys.value.start,
+    sync: recordingHotkeys.value.sync,
+  });
   scheduleAppConfigSave();
 }
 
@@ -565,7 +567,17 @@ function updateRecordingConfig(recording: RecordingConfig) {
   scheduleAppConfigSave();
 }
 
-function beginHotkeyCapture(target: "start" | "stop") {
+async function addSyncMarker() {
+  if (!isRecording.value) {
+    recordingStatusMessage.value = "Start recording before adding a sync marker.";
+    return;
+  }
+
+  await invoke("add_recording_marker", { name: "sync" });
+  recordingStatusMessage.value = "Sync marker added.";
+}
+
+function beginHotkeyCapture(target: "start" | "stop" | "sync") {
   capturedHotkeyKeys.value = new Set();
   hotkeyCaptureTarget.value = target;
 }
@@ -589,7 +601,7 @@ function finishHotkeyCapture() {
 }
 
 async function handleRecordingHotkeys() {
-  if (recordingHotkeys.value.mode === "disabled" || hotkeyCaptureTarget.value) {
+  if (hotkeyCaptureTarget.value) {
     return;
   }
 
@@ -600,8 +612,9 @@ async function handleRecordingHotkeys() {
 
   const matchesStart = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.start);
   const matchesStop = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.stop);
+  const matchesSync = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.sync);
 
-  if (!matchesStart && !matchesStop) {
+  if (!matchesStart && !matchesStop && !matchesSync) {
     if (activeSignature === "") {
       activeRecordingHotkeySignature.value = "";
     }
@@ -609,6 +622,15 @@ async function handleRecordingHotkeys() {
   }
 
   activeRecordingHotkeySignature.value = activeSignature;
+
+  if (matchesSync && isRecording.value) {
+    await addSyncMarker();
+    return;
+  }
+
+  if (recordingHotkeys.value.mode === "disabled") {
+    return;
+  }
 
   if (recordingHotkeys.value.mode === "toggle") {
     if (recordingCountdown.value > 0) {
@@ -807,6 +829,7 @@ onUnmounted(() => {
       @update-recording-config="updateRecordingConfig"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
+      @add-sync-marker="addSyncMarker"
       @inspect-recording-file="inspectRecordingFile"
       @update-recording-hotkey-mode="updateRecordingHotkeyMode"
       @begin-hotkey-capture="beginHotkeyCapture"

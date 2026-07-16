@@ -28,6 +28,7 @@ describe("app config", () => {
           mode: "toggle",
           start: ["ctrl-left", "r"],
           stop: ["ctrl-left", "r"],
+          sync: ["f8"],
         },
       },
     });
@@ -73,6 +74,7 @@ describe("app config", () => {
             mode: "disabled",
             start: [],
             stop: [],
+            sync: ["f8"],
           },
         },
         ui: {
@@ -125,5 +127,7 @@ describe("app config", () => {
 
     expect(appConfig.currentProfile.recording.fpsOptions).toEqual([30, 60, 120]);
     expect(appConfig.currentProfile.recording.maxFps).toBe(1000);
+    expect(appConfig.recording.hotkeys.sync).toEqual(["f8"]);
+    expect(appConfig.recording.hotkeys.start).toEqual(["ctrl-left", "shift-left", "r"]);
   });
 });
