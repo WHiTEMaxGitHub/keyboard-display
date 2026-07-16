@@ -1,5 +1,4 @@
-use super::{RecordingEvent, RecordingSnapshot};
-use std::collections::BTreeMap;
+use super::{sample_frames, RecordingEvent, RecordingFrame, RecordingSnapshot};
 
 const MAGIC: &[u8; 4] = b"KBDR";
 const VERSION: u8 = 1;
@@ -9,15 +8,16 @@ const FLAGS: u8 = 0;
 pub struct DecodedKbdrec {
     pub fps: u16,
     pub key_ids: Vec<String>,
-    pub events: Vec<DecodedFrameEvent>,
+    pub frame_count: u64,
+    pub runs: Vec<DecodedFrameRun>,
+    pub frames: Vec<RecordingFrame>,
     pub markers: Vec<DecodedMarker>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DecodedFrameEvent {
-    pub frame_delta: u64,
-    pub down: Vec<String>,
-    pub up: Vec<String>,
+pub struct DecodedFrameRun {
+    pub run_len: u64,
+    pub keys: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -26,39 +26,22 @@ pub struct DecodedMarker {
     pub name: String,
 }
 
-#[derive(Default)]
-struct FrameChanges {
-    down: Vec<String>,
-    up: Vec<String>,
-}
-
 pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
     if snapshot.fps == 0 {
         return Err("fps must be greater than zero".to_string());
     }
 
-    let mut frames = BTreeMap::<u64, FrameChanges>::new();
-    let mut key_ids = Vec::<String>::new();
-    let mut markers = Vec::<DecodedMarker>::new();
+    let mut events = Vec::new();
+    let mut markers = Vec::new();
+    let mut key_ids = Vec::new();
 
     for event in &snapshot.events {
         match event {
-            RecordingEvent::KeyDown { t, key_id } if is_recordable_key(key_id) => {
+            RecordingEvent::KeyDown { key_id, .. } | RecordingEvent::KeyUp { key_id, .. }
+                if is_recordable_key(key_id) =>
+            {
                 push_unique(&mut key_ids, key_id);
-                push_unique(
-                    &mut frames
-                        .entry(ms_to_frame(*t, snapshot.fps))
-                        .or_default()
-                        .down,
-                    key_id,
-                );
-            }
-            RecordingEvent::KeyUp { t, key_id } if is_recordable_key(key_id) => {
-                push_unique(&mut key_ids, key_id);
-                push_unique(
-                    &mut frames.entry(ms_to_frame(*t, snapshot.fps)).or_default().up,
-                    key_id,
-                );
+                events.push(event.clone());
             }
             RecordingEvent::Marker { t, name } => {
                 markers.push(DecodedMarker {
@@ -70,31 +53,48 @@ pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
         }
     }
 
-    let mut bytes = Vec::new();
+    let input_duration_ms = events.iter().map(event_time).max().unwrap_or(0);
+    let marker_duration_ms = markers.iter().map(|marker| marker.t_ms).max().unwrap_or(0);
+    let duration_ms = input_duration_ms.max(marker_duration_ms);
+    let frames = if key_ids.is_empty() {
+        Vec::new()
+    } else {
+        sample_frames(snapshot.fps, duration_ms, &events)
+    };
+    let bitset_len = key_ids.len().div_ceil(8);
+    let key_index = key_ids
+        .iter()
+        .enumerate()
+        .map(|(index, key_id)| (key_id.as_str(), index))
+        .collect::<std::collections::BTreeMap<_, _>>();
+    let frame_bitsets = frames
+        .iter()
+        .map(|frame| encode_frame_bits(frame, bitset_len, &key_index))
+        .collect::<Result<Vec<_>, _>>()?;
+    let runs = rle_bitsets(&frame_bitsets);
+
+    let mut bytes = Vec::with_capacity(estimated_buffer_size(
+        key_ids.len(),
+        bitset_len,
+        runs.len(),
+        markers.len(),
+    ));
     bytes.extend_from_slice(MAGIC);
     bytes.push(VERSION);
     bytes.push(FLAGS);
     bytes.extend_from_slice(&snapshot.fps.to_le_bytes());
     write_varint(key_ids.len() as u64, &mut bytes);
     write_varint(frames.len() as u64, &mut bytes);
+    write_varint(runs.len() as u64, &mut bytes);
     write_varint(markers.len() as u64, &mut bytes);
 
     for key_id in &key_ids {
         write_string(key_id, &mut bytes);
     }
 
-    let key_index = key_ids
-        .iter()
-        .enumerate()
-        .map(|(index, key_id)| (key_id.as_str(), index as u64))
-        .collect::<BTreeMap<_, _>>();
-    let mut previous_frame = 0;
-
-    for (frame, changes) in frames {
-        write_varint(frame.saturating_sub(previous_frame), &mut bytes);
-        previous_frame = frame;
-        write_key_ids(&changes.down, &key_index, &mut bytes)?;
-        write_key_ids(&changes.up, &key_index, &mut bytes)?;
+    for (run_len, bits) in &runs {
+        write_varint(*run_len, &mut bytes);
+        bytes.extend_from_slice(bits);
     }
 
     for marker in markers {
@@ -115,7 +115,8 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
     let _flags = reader.read_u8()?;
     let fps = reader.read_u16_le()?;
     let key_count = reader.read_varint()? as usize;
-    let event_count = reader.read_varint()? as usize;
+    let frame_count = reader.read_varint()?;
+    let run_count = reader.read_varint()? as usize;
     let marker_count = reader.read_varint()? as usize;
 
     let mut key_ids = Vec::with_capacity(key_count);
@@ -123,16 +124,25 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
         key_ids.push(reader.read_string()?);
     }
 
-    let mut events = Vec::with_capacity(event_count);
-    for _ in 0..event_count {
-        let frame_delta = reader.read_varint()?;
-        let down = reader.read_key_ids(&key_ids)?;
-        let up = reader.read_key_ids(&key_ids)?;
-        events.push(DecodedFrameEvent {
-            frame_delta,
-            down,
-            up,
-        });
+    let bitset_len = key_ids.len().div_ceil(8);
+    let mut runs = Vec::with_capacity(run_count);
+    let mut frames = Vec::new();
+    let mut frame_index = 0_u64;
+
+    for _ in 0..run_count {
+        let run_len = reader.read_varint()?;
+        let bits = reader.read_bytes(bitset_len)?;
+        let keys = decode_frame_bits(&bits, &key_ids)?;
+
+        for _ in 0..run_len {
+            frames.push(RecordingFrame {
+                t: frame_to_ms(frame_index, fps),
+                keys: keys.clone(),
+            });
+            frame_index += 1;
+        }
+
+        runs.push(DecodedFrameRun { run_len, keys });
     }
 
     let mut markers = Vec::with_capacity(marker_count);
@@ -148,7 +158,9 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
     Ok(DecodedKbdrec {
         fps,
         key_ids,
-        events,
+        frame_count,
+        runs,
+        frames,
         markers,
     })
 }
@@ -163,25 +175,79 @@ fn push_unique(values: &mut Vec<String>, value: &str) {
     }
 }
 
-fn ms_to_frame(t_ms: u64, fps: u16) -> u64 {
-    (t_ms * u64::from(fps) + 500) / 1000
-}
+fn encode_frame_bits(
+    frame: &RecordingFrame,
+    bitset_len: usize,
+    key_index: &std::collections::BTreeMap<&str, usize>,
+) -> Result<Vec<u8>, String> {
+    let mut bits = vec![0_u8; bitset_len];
 
-fn write_key_ids(
-    key_ids: &[String],
-    key_index: &BTreeMap<&str, u64>,
-    bytes: &mut Vec<u8>,
-) -> Result<(), String> {
-    write_varint(key_ids.len() as u64, bytes);
-
-    for key_id in key_ids {
+    for key_id in &frame.keys {
         let index = key_index
             .get(key_id.as_str())
             .ok_or_else(|| format!("missing key table entry: {key_id}"))?;
-        write_varint(*index, bytes);
+        bits[*index / 8] |= 1 << (*index % 8);
     }
 
-    Ok(())
+    Ok(bits)
+}
+
+fn decode_frame_bits(bits: &[u8], key_ids: &[String]) -> Result<Vec<String>, String> {
+    let mut keys = Vec::new();
+
+    for (index, key_id) in key_ids.iter().enumerate() {
+        if bits[index / 8] & (1 << (index % 8)) != 0 {
+            keys.push(key_id.clone());
+        }
+    }
+
+    Ok(keys)
+}
+
+fn rle_bitsets(bitsets: &[Vec<u8>]) -> Vec<(u64, Vec<u8>)> {
+    let mut runs = Vec::new();
+
+    for bits in bitsets {
+        if let Some((run_len, previous_bits)) = runs.last_mut() {
+            if previous_bits == bits {
+                *run_len += 1;
+                continue;
+            }
+        }
+
+        runs.push((1, bits.clone()));
+    }
+
+    runs
+}
+
+fn estimated_buffer_size(
+    key_count: usize,
+    bitset_len: usize,
+    run_count: usize,
+    marker_count: usize,
+) -> usize {
+    const HEADER_BYTES: usize = 32;
+    const AVERAGE_KEY_ID_BYTES: usize = 12;
+    const AVERAGE_MARKER_BYTES: usize = 24;
+    const MAX_VARINT_BYTES: usize = 10;
+
+    HEADER_BYTES
+        + key_count * (AVERAGE_KEY_ID_BYTES + MAX_VARINT_BYTES)
+        + run_count * (MAX_VARINT_BYTES + bitset_len)
+        + marker_count * AVERAGE_MARKER_BYTES
+}
+
+fn frame_to_ms(frame: u64, fps: u16) -> u64 {
+    frame * 1000 / u64::from(fps)
+}
+
+fn event_time(event: &RecordingEvent) -> u64 {
+    match event {
+        RecordingEvent::KeyDown { t, .. }
+        | RecordingEvent::KeyUp { t, .. }
+        | RecordingEvent::Marker { t, .. } => *t,
+    }
 }
 
 fn write_string(value: &str, bytes: &mut Vec<u8>) {
@@ -272,19 +338,14 @@ impl<'a> Reader<'a> {
         Ok(value)
     }
 
-    fn read_key_ids(&mut self, key_table: &[String]) -> Result<Vec<String>, String> {
-        let count = self.read_varint()? as usize;
-        let mut key_ids = Vec::with_capacity(count);
-
-        for _ in 0..count {
-            let index = self.read_varint()? as usize;
-            let key_id = key_table
-                .get(index)
-                .ok_or_else(|| format!("key index out of range: {index}"))?;
-            key_ids.push(key_id.clone());
+    fn read_bytes(&mut self, len: usize) -> Result<Vec<u8>, String> {
+        if self.remaining().len() < len {
+            return Err("unexpected end of file".to_string());
         }
 
-        Ok(key_ids)
+        let value = self.bytes[self.cursor..self.cursor + len].to_vec();
+        self.cursor += len;
+        Ok(value)
     }
 
     fn expect_end(&self) -> Result<(), String> {

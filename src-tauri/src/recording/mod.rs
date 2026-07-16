@@ -233,49 +233,22 @@ pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> V
 
 pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
     let decoded = binary::decode_kbdrec(bytes)?;
-    let mut events = Vec::new();
-    let mut current_frame = 0;
-
-    for frame_event in &decoded.events {
-        current_frame += frame_event.frame_delta;
-        let t = frame_to_ms(current_frame, decoded.fps);
-
-        for key_id in &frame_event.down {
-            events.push(RecordingEvent::KeyDown {
-                t,
-                key_id: key_id.clone(),
-            });
-        }
-
-        for key_id in &frame_event.up {
-            events.push(RecordingEvent::KeyUp {
-                t,
-                key_id: key_id.clone(),
-            });
-        }
-    }
-
-    for marker in &decoded.markers {
-        events.push(RecordingEvent::Marker {
+    let events = decoded
+        .markers
+        .iter()
+        .map(|marker| RecordingEvent::Marker {
             t: marker.t_ms,
             name: marker.name.clone(),
-        });
-    }
-
-    events.sort_by_key(event_time);
-    let duration_ms = events.iter().map(event_time).max().unwrap_or(0);
+        })
+        .collect::<Vec<_>>();
 
     Ok(RecordingInspection {
         version: 1,
         fps: decoded.fps,
         key_ids: decoded.key_ids,
-        frames: sample_frames(decoded.fps, duration_ms, &events),
+        frames: decoded.frames,
         events,
     })
-}
-
-fn frame_to_ms(frame: u64, fps: u16) -> u64 {
-    frame * 1000 / u64::from(fps)
 }
 
 fn event_time(event: &RecordingEvent) -> u64 {
@@ -434,14 +407,15 @@ mod tests {
         let decoded = decode_kbdrec(&contents).unwrap();
 
         assert_eq!(&contents[0..4], b"KBDR");
-        assert_eq!(decoded.events.len(), 1);
-        assert_eq!(decoded.events[0].down, vec!["w"]);
+        assert_eq!(decoded.frames.len(), 2);
+        assert!(decoded.frames[0].keys.is_empty());
+        assert_eq!(decoded.frames[1].keys, vec!["w"]);
 
         let _ = std::fs::remove_dir_all(output_dir);
     }
 
     #[test]
-    fn binary_recording_roundtrips_event_stream() {
+    fn binary_recording_roundtrips_frame_state_stream() {
         let snapshot = {
             let mut session = RecordingSession::new(60, 1000);
             session.record_input(1016, "w", true);
@@ -456,15 +430,13 @@ mod tests {
 
         assert_eq!(decoded.fps, 60);
         assert_eq!(decoded.key_ids, vec!["w", "shift-left"]);
-        assert_eq!(decoded.events.len(), 2);
-        assert_eq!(decoded.events[0].frame_delta, 1);
-        assert_eq!(decoded.events[0].down, vec!["w", "shift-left"]);
-        assert!(decoded.events[0].up.is_empty());
-        assert_eq!(decoded.events[1].frame_delta, 4);
-        assert!(decoded.events[1].down.is_empty());
-        assert_eq!(decoded.events[1].up, vec!["shift-left"]);
+        assert_eq!(decoded.frames.len(), 13);
+        assert!(decoded.frames[0].keys.is_empty());
+        assert_eq!(decoded.frames[1].keys, vec!["w", "shift-left"]);
+        assert_eq!(decoded.frames[6].keys, vec!["w"]);
         assert_eq!(decoded.markers[0].t_ms, 200);
         assert_eq!(decoded.markers[0].name, "sync");
+        assert!(decoded.runs.len() < decoded.frames.len());
     }
 
     #[test]
@@ -482,7 +454,7 @@ mod tests {
         let decoded = decode_kbdrec(&encode_kbdrec(&snapshot).unwrap()).unwrap();
 
         assert!(decoded.key_ids.is_empty());
-        assert!(decoded.events.is_empty());
+        assert!(decoded.frames.is_empty());
     }
 
     #[test]
@@ -502,20 +474,10 @@ mod tests {
         assert_eq!(inspection.key_ids, vec!["w"]);
         assert_eq!(
             inspection.events,
-            vec![
-                RecordingEvent::KeyDown {
-                    t: 100,
-                    key_id: "w".to_string(),
-                },
-                RecordingEvent::Marker {
-                    t: 200,
-                    name: "sync".to_string(),
-                },
-                RecordingEvent::KeyUp {
-                    t: 300,
-                    key_id: "w".to_string(),
-                },
-            ],
+            vec![RecordingEvent::Marker {
+                t: 200,
+                name: "sync".to_string(),
+            },],
         );
         assert!(inspection.frames[0].keys.is_empty());
         assert_eq!(inspection.frames[1].keys, vec!["w".to_string()]);

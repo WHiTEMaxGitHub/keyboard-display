@@ -60,13 +60,24 @@
 
 ## Recording sync
 
-- [x] Implement `.kbdrec` binary v1 as an event stream.
-  - Record input transitions per capture frame, not every rendered frame state.
-  - Use a simple event-stream format first, not Huffman.
+- [x] Convert `.kbdrec` binary v1 to a frame-state stream.
+  - Store the pressed-key state for sampled frames as a bitset.
+  - Prefer frame-state storage over event-stream storage because replay and
+    video export need final per-frame display state.
+  - Extreme case is acceptable: about 108 keys at 600fps is roughly 8KB/s
+    before headers or RLE.
+  - Use an in-memory write buffer so recording does not perform a filesystem
+    write per frame. A buffer below 10MiB is acceptable.
+    Current implementation encodes into a preallocated memory buffer and writes
+    the `.kbdrec` file once when recording stops.
+  - Apply RLE before writing when possible:
+    - `run_len varint + key_bits`
+    - identical consecutive key states collapse into one run.
+  - Keep input down/up events as the internal state-update source.
   - Format shape:
     - Header
     - Key table
-    - Event stream
+    - RLE frame-state stream
     - Marker stream
   - Header fields:
     - magic: `"KBDR"`
@@ -74,26 +85,24 @@
     - flags
     - fps
     - key_count
-    - event_count
+    - frame_count
+    - run_count
     - marker_count
   - Key table:
     - stores only real recordable keys
     - excludes virtual layout-only keys such as `void`
     - maps profile key id to compact numeric key id
-  - Event stream:
-    - each event stores changes that happened at one capture frame
-    - use `frame_delta varint` instead of absolute frame numbers
-    - event payload:
-      - `down_count varint + down_key_ids`
-      - `up_count varint + up_key_ids`
-    - playback reconstructs pressed state by applying `down` then `up`
+  - Frame-state stream:
+    - key state is a fixed-size bitset per sampled frame.
+    - bit order: `byte_index = key_index / 8`, `bit_index = key_index % 8`.
+    - RLE entries store `run_len varint + key_bits`.
   - Marker stream:
     - `marker_count varint`
     - each marker: `t_ms varint + name_len varint + utf8 name`
   - Future optional sections:
-    - periodic state checkpoints for fast seeking
-    - RLE state bitset stream for video export caches
-  - Keep the current JSON event stream as a debug / test format.
+    - richer metadata for profile/layout snapshots
+    - event debug stream if needed for diagnostics
+  - Keep JSON/debug inspection output as a development aid.
   - Consider Huffman only as a future v2 after collecting real samples.
 
 - [x] Add `.kbdrec` inspection / replay core.
