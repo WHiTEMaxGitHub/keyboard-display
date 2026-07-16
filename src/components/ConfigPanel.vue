@@ -10,7 +10,20 @@ import {
   Video,
 } from "@lucide/vue";
 import { computed, ref } from "vue";
-import { isKeyBinding, type AppConfig, type OverlayStyle } from "../domain/defaultConfig";
+import {
+  isKeyBinding,
+  type AppConfig,
+  type OverlayStyle,
+  type RecordingConfig,
+} from "../domain/defaultConfig";
+import {
+  effectiveRecordingFps,
+  clampRecordingFps,
+} from "../domain/recordingConfig";
+import {
+  estimateRawRecordingBytesPerSecond,
+  formatBytesPerSecond,
+} from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
 
@@ -71,6 +84,11 @@ const layoutRows = computed(() => {
   return props.config.rows.map((items, index) => ({ row: index + 1, items }));
 });
 
+const activeRecordingFps = computed(() => effectiveRecordingFps(props.config.recording));
+const estimatedRecordingBytesPerSecond = computed(() =>
+  estimateRawRecordingBytesPerSecond(props.config.keys.length, activeRecordingFps.value),
+);
+
 const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-visible": [visible: boolean];
@@ -79,6 +97,7 @@ const emit = defineEmits<{
   "overwrite-and-apply-config": [];
   "choose-recording-directory": [];
   "update-silent-recording": [value: boolean];
+  "update-recording-config": [recording: RecordingConfig];
   "start-recording": [];
   "stop-recording": [];
   "inspect-recording-file": [];
@@ -158,6 +177,33 @@ function chooseRecordingDirectory() {
 
 function updateSilentRecording(event: Event) {
   emit("update-silent-recording", (event.target as HTMLInputElement).checked);
+}
+
+function selectRecordingFps(fps: number) {
+  emit("update-recording-config", {
+    ...props.config.recording,
+    defaultFps: fps,
+    customFpsEnabled: false,
+  });
+}
+
+function updateCustomFpsEnabled(event: Event) {
+  emit("update-recording-config", {
+    ...props.config.recording,
+    customFpsEnabled: (event.target as HTMLInputElement).checked,
+  });
+}
+
+function updateCustomFps(event: Event) {
+  const customFps = clampRecordingFps(
+    Number((event.target as HTMLInputElement).value),
+    props.config.recording.maxFps,
+  );
+  emit("update-recording-config", {
+    ...props.config.recording,
+    customFps,
+    customFpsEnabled: true,
+  });
 }
 
 function startRecording() {
@@ -502,11 +548,34 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             <button
               v-for="fps in config.recording.fpsOptions"
               :key="fps"
-              :class="{ selected: fps === config.recording.defaultFps }"
+              :class="{ selected: !config.recording.customFpsEnabled && fps === config.recording.defaultFps }"
               type="button"
+              @click="selectRecordingFps(fps)"
             >
               {{ fps }}fps
             </button>
+          </div>
+          <div class="fps-config-row">
+            <label class="toggle-row">
+              <input
+                :checked="config.recording.customFpsEnabled"
+                type="checkbox"
+                @change="updateCustomFpsEnabled"
+              />
+              Custom FPS
+            </label>
+            <input
+              :disabled="!config.recording.customFpsEnabled"
+              :max="config.recording.maxFps"
+              :min="1"
+              :value="config.recording.customFps"
+              class="fps-input"
+              type="number"
+              @change="updateCustomFps"
+            />
+            <span class="write-estimate">
+              {{ activeRecordingFps }}fps · {{ formatBytesPerSecond(estimatedRecordingBytesPerSecond) }} raw
+            </span>
           </div>
           <div class="field-row">
             <span>Primary artifact</span>
@@ -1085,6 +1154,38 @@ select {
   border-color: rgba(37, 211, 102, 0.52);
   background: rgba(37, 211, 102, 0.14);
   color: #eafff0;
+}
+
+.fps-config-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.fps-config-row .toggle-row {
+  margin: 0;
+}
+
+.fps-input {
+  width: 96px;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  padding: 0 10px;
+}
+
+.fps-input:disabled {
+  opacity: 0.45;
+}
+
+.write-estimate {
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .quiet {

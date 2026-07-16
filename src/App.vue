@@ -21,6 +21,7 @@ import {
   type OverlayStyle,
 } from "./domain/defaultConfig";
 import { estimateOverlaySize } from "./domain/overlaySize";
+import { effectiveRecordingFps } from "./domain/recordingConfig";
 import {
   INPUT_STATE_EVENT,
   OVERLAY_CONFIG_EVENT,
@@ -37,6 +38,7 @@ import {
   type RecordingHotkeyConfig,
   type RecordingHotkeyMode,
 } from "./domain/recordingHotkeys";
+import type { RecordingConfig } from "./domain/defaultConfig";
 
 type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
@@ -134,6 +136,10 @@ function applyOverlayLayout(layout: typeof config.layout) {
 function applyOverlayRows(rows: typeof config.rows) {
   config.rows = rows.map((row) => row.map((item) => ({ ...item })));
   config.keys = flattenRowKeys(config.rows);
+}
+
+function applyRecordingConfig(recording: RecordingConfig) {
+  config.recording = { ...recording };
 }
 
 async function updateOverlayStyle(style: OverlayStyle) {
@@ -268,6 +274,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   applyOverlayLayout(loadedConfig.overlay.layout);
   applyOverlayRows(loadedConfig.overlay.rows);
   applyOverlayStyle(loadedConfig.overlay.style);
+  applyRecordingConfig(loadedConfig.recording);
   await resizeOverlayWindow();
 
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
@@ -315,6 +322,7 @@ async function restoreAppConfig() {
   applyOverlayLayout(appConfig.currentProfile.overlay.layout);
   applyOverlayRows(appConfig.currentProfile.overlay.rows);
   applyOverlayStyle(appConfig.currentProfile.overlay.style);
+  applyRecordingConfig(appConfig.currentProfile.recording);
 
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
     layout: appConfig.currentProfile.overlay.layout,
@@ -350,6 +358,7 @@ async function saveAppConfig() {
       name: profileName.value,
       sourcePath: profileSourcePath.value,
       dirty: true,
+      recording: config.recording,
       overlay: {
         visible: isOverlayVisible.value,
         position: overlayPosition.value,
@@ -449,7 +458,7 @@ async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manua
 
     if (recordingCountdown.value <= 0) {
       cancelRecordingCountdown();
-      await invoke("start_recording", { fps: config.recording.defaultFps });
+      await invoke("start_recording", { fps: effectiveRecordingFps(config.recording) });
       restoreOverlayAfterRecording.value = isOverlayVisible.value;
       if (silentRecording.value) {
         await destroyOverlayWindow();
@@ -524,6 +533,11 @@ function updateSilentRecording(value: boolean) {
 
 function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
   recordingHotkeys.value = { ...recordingHotkeys.value, mode };
+  scheduleAppConfigSave();
+}
+
+function updateRecordingConfig(recording: RecordingConfig) {
+  applyRecordingConfig(recording);
   scheduleAppConfigSave();
 }
 
@@ -764,6 +778,7 @@ onUnmounted(() => {
       @overwrite-and-apply-config="overwriteAndApplyConfig"
       @choose-recording-directory="chooseRecordingDirectory"
       @update-silent-recording="updateSilentRecording"
+      @update-recording-config="updateRecordingConfig"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
       @inspect-recording-file="inspectRecordingFile"

@@ -52,7 +52,8 @@ overlay video as the primary artifact. Instead, it should save a compact binary
 recording file made of input frames.
 
 The user chooses a capture frame rate, such as `30fps`, `60fps`, or `120fps`.
-Each captured frame stores the current input state:
+Profiles may also enable a custom capture frame rate up to `1000fps`. Each
+captured frame stores the current input state:
 
 - key states as bitsets;
 - mouse button states as bitsets;

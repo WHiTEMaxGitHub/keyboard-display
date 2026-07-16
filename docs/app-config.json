@@ -138,6 +138,19 @@
         "unitPx": 54,
         "gapUnit": 0.15
       }
+    },
+    "recording": {
+      "defaultFps": 60,
+      "fpsOptions": [
+        30,
+        60,
+        120
+      ],
+      "formatExtension": ".kbdrec",
+      "primaryArtifact": "input-binary",
+      "customFpsEnabled": false,
+      "customFps": 600,
+      "maxFps": 1000
     }
   },
   "recording": {

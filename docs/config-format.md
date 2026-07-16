@@ -179,6 +179,9 @@ profile files should prefer `gap` for clarity.
 {
   "defaultFps": 60,
   "fpsOptions": [30, 60, 120],
+  "customFpsEnabled": false,
+  "customFps": 600,
+  "maxFps": 1000,
   "formatExtension": ".kbdrec",
   "primaryArtifact": "input-binary"
 }
@@ -187,7 +190,10 @@ profile files should prefer `gap` for clarity.
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `defaultFps` | number | Default capture frame rate. |
-| `fpsOptions` | number[] | Frame rates shown in the UI. |
+| `fpsOptions` | number[] | Preset frame rates shown in the UI. |
+| `customFpsEnabled` | boolean | Whether to use `customFps` instead of `defaultFps`. |
+| `customFps` | number | User-defined capture frame rate. |
+| `maxFps` | number | Maximum allowed capture frame rate. Current default is `1000`. |
 | `formatExtension` | string | Recording extension. Current value is `.kbdrec`. |
 | `primaryArtifact` | string | Recording strategy. Current value is `input-binary`. |
 
@@ -223,7 +229,7 @@ recording format; `.kbdrec` is the source of truth.
 | `profiles.defaultProfilePath` | string | Default profile path used by the app. |
 | `profiles.lastProfilePath` | string or null | Last loaded profile file path. |
 | `profiles.recentProfiles` | array | Recent profile list for future quick switching. |
-| `currentProfile` | object | Current active profile state. Its `overlay` uses the same `rows`, `style`, and `layout` schema as profile configs. |
+| `currentProfile` | object | Current active profile state. Its `overlay` and `recording` use the same schema as profile configs. |
 | `recording.outputDirectory` | string or null | Folder for new `.kbdrec` recordings. |
 | `recording.silent` | boolean | Whether recording should destroy the POV overlay window while recording. |
 | `recording.hotkeys` | object | Recording hotkey settings. |
@@ -271,6 +277,9 @@ config may contain local absolute paths.
   "recording": {
     "defaultFps": 60,
     "fpsOptions": [30, 60, 120],
+    "customFpsEnabled": false,
+    "customFps": 600,
+    "maxFps": 1000,
     "formatExtension": ".kbdrec",
     "primaryArtifact": "input-binary"
   },

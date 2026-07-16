@@ -265,7 +265,10 @@
       120
     ],
     "formatExtension": ".kbdrec",
-    "primaryArtifact": "input-binary"
+    "primaryArtifact": "input-binary",
+    "customFpsEnabled": false,
+    "customFps": 600,
+    "maxFps": 1000
   },
   "export": {
     "defaultFormat": "webm",

@@ -39,6 +39,15 @@ describe("parseConfigFile", () => {
             },
           ],
         },
+        recording: {
+          defaultFps: 60,
+          fpsOptions: [30, 60, 120],
+          customFpsEnabled: true,
+          customFps: 1200,
+          maxFps: 1000,
+          formatExtension: ".kbdrec",
+          primaryArtifact: "input-binary",
+        },
       }),
     );
 
@@ -51,6 +60,10 @@ describe("parseConfigFile", () => {
       row: 0,
       widthUnit: 1.23,
     });
+    expect(config.recording.defaultFps).toBe(60);
+    expect(config.recording.customFpsEnabled).toBe(true);
+    expect(config.recording.customFps).toBe(1000);
+    expect(config.recording.maxFps).toBe(1000);
   });
 
   it("loads row layout with custom gaps", () => {

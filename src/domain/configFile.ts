@@ -1,4 +1,5 @@
 import {
+  createDefaultConfig,
   flattenRowKeys,
   isKeyBinding,
   type AppConfig,
@@ -9,6 +10,7 @@ import {
   type OverlayStyle,
 } from "./defaultConfig";
 import { normalizeUnit } from "./layoutUnits";
+import { normalizeRecordingConfig } from "./recordingConfig";
 
 export type OverlayConfigFile = {
   version: number;
@@ -21,11 +23,14 @@ export type OverlayConfigFile = {
     rows: OverlayRow[];
     keys: KeyBinding[];
   };
+  recording: AppConfig["recording"];
 };
 
 export function parseConfigFile(text: string): OverlayConfigFile {
   const config = JSON.parse(text) as OverlayConfigFile;
+  const defaultConfig = createDefaultConfig();
   const rows = normalizeRows(config.overlay.rows ?? rowsFromLegacyKeys(config.overlay.keys ?? []));
+  const recording = normalizeRecordingConfig(config.recording ?? defaultConfig.recording);
 
   return {
     ...config,
@@ -38,6 +43,7 @@ export function parseConfigFile(text: string): OverlayConfigFile {
       rows,
       keys: flattenRowKeys(rows),
     },
+    recording,
   };
 }
 

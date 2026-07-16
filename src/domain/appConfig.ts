@@ -10,6 +10,7 @@ export type CurrentProfile = {
   name: string;
   sourcePath: string | null;
   dirty: boolean;
+  recording: AppConfig["recording"];
   overlay: {
     visible: boolean;
     position: string;
@@ -68,6 +69,7 @@ export function buildAppConfigFile({
     },
     currentProfile: {
       ...currentProfile,
+      recording: currentProfile.recording,
       overlay: {
         visible: currentProfile.overlay.visible,
         position: currentProfile.overlay.position,

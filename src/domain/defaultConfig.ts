@@ -54,6 +54,9 @@ export type OverlayStyle = {
 export type RecordingConfig = {
   defaultFps: number;
   fpsOptions: number[];
+  customFpsEnabled: boolean;
+  customFps: number;
+  maxFps: number;
   formatExtension: ".kbdrec";
   primaryArtifact: "input-binary";
 };
@@ -221,6 +224,9 @@ export function createDefaultConfig(): AppConfig {
     recording: {
       defaultFps: 60,
       fpsOptions: [30, 60, 120],
+      customFpsEnabled: false,
+      customFps: 600,
+      maxFps: 1000,
       formatExtension: ".kbdrec",
       primaryArtifact: "input-binary",
     },
