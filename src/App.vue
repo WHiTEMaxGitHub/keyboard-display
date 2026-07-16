@@ -62,6 +62,7 @@ const inspectedRecordingPath = ref("");
 const recordingInspection = ref<RecordingInspection | null>(null);
 const recordingInspectionError = ref("");
 const recordingHotkeys = ref<RecordingHotkeyConfig>(normalizeRecordingHotkeyConfig(undefined));
+const activeRecordingHotkeys = ref<RecordingHotkeyConfig | null>(null);
 const hotkeyCaptureTarget = ref<"start" | "stop" | "sync" | null>(null);
 const capturedHotkeyKeys = ref(new Set<string>());
 const activeRecordingHotkeySignature = ref("");
@@ -117,11 +118,15 @@ async function recordInputIfNeeded(keyId: string, pressed: boolean) {
     return;
   }
 
-  if (isRecordingControlKey(keyId, recordingHotkeys.value)) {
+  if (isRecordingControlKey(keyId, effectiveRecordingHotkeys())) {
     return;
   }
 
   await invoke("record_input_event", { keyId, pressed });
+}
+
+function effectiveRecordingHotkeys(): RecordingHotkeyConfig {
+  return activeRecordingHotkeys.value ?? recordingHotkeys.value;
 }
 
 function applyOverlayStyle(style: OverlayStyle) {
@@ -477,6 +482,7 @@ async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manua
 
     if (recordingCountdown.value <= 0) {
       cancelRecordingCountdown();
+      activeRecordingHotkeys.value = { ...recordingHotkeys.value };
       await invoke("start_recording", { fps: effectiveRecordingFps(config.recording) });
       restoreOverlayAfterRecording.value = isOverlayVisible.value;
       if (silentRecording.value) {
@@ -513,6 +519,7 @@ async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
     outputDir: await resolveRecordingDirectory(),
   });
   isRecording.value = false;
+  activeRecordingHotkeys.value = null;
   lastRecordingPath.value = result.path;
   recordingStatusMessage.value = `Recording saved: ${result.path}`;
 
@@ -610,9 +617,10 @@ async function handleRecordingHotkeys() {
     return;
   }
 
-  const matchesStart = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.start);
-  const matchesStop = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.stop);
-  const matchesSync = isHotkeyMatch(activeKeyIds.value, recordingHotkeys.value.sync);
+  const hotkeys = effectiveRecordingHotkeys();
+  const matchesStart = isHotkeyMatch(activeKeyIds.value, hotkeys.start);
+  const matchesStop = isHotkeyMatch(activeKeyIds.value, hotkeys.stop);
+  const matchesSync = isHotkeyMatch(activeKeyIds.value, hotkeys.sync);
 
   if (!matchesStart && !matchesStop && !matchesSync) {
     if (activeSignature === "") {
@@ -628,11 +636,11 @@ async function handleRecordingHotkeys() {
     return;
   }
 
-  if (recordingHotkeys.value.mode === "disabled") {
+  if (hotkeys.mode === "disabled") {
     return;
   }
 
-  if (recordingHotkeys.value.mode === "toggle") {
+  if (hotkeys.mode === "toggle") {
     if (recordingCountdown.value > 0) {
       cancelRecordingCountdown();
       return;
@@ -646,7 +654,7 @@ async function handleRecordingHotkeys() {
     return;
   }
 
-  if (recordingHotkeys.value.mode === "separate") {
+  if (hotkeys.mode === "separate") {
     if (!isRecording.value && matchesStart) {
       await startRecordingWithCountdown("hotkey");
     } else if (isRecording.value && matchesStop) {
