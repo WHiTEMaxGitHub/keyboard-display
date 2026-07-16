@@ -68,6 +68,7 @@ const props = defineProps<{
   overlayVisible: boolean;
   profileName: string;
   recordingDirectory: string;
+  defaultRecordingDirectory: string;
   silentRecording: boolean;
   isRecording: boolean;
   recordingCountdown: number;
@@ -513,7 +514,9 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
           <h2>Recording</h2>
           <div class="field-row">
             <span>Save folder</span>
-            <strong>{{ recordingDirectory || "Default app folder" }}</strong>
+            <strong>
+              {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
+            </strong>
           </div>
           <div class="recording-actions">
             <button type="button" @click="chooseRecordingDirectory">Choose folder</button>
@@ -919,6 +922,12 @@ h2 {
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.field-row strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
 }
 
 .layout-line-list {

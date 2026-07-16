@@ -49,6 +49,7 @@ const profileName = ref("CS POV");
 const profileSourcePath = ref<string | null>(null);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const recordingDirectory = ref("");
+const defaultRecordingDirectory = ref("");
 const silentRecording = ref(false);
 const restoreOverlayAfterRecording = ref(false);
 const isRecording = ref(false);
@@ -307,6 +308,7 @@ async function loadConfig() {
 }
 
 async function restoreAppConfig() {
+  defaultRecordingDirectory.value = await invoke<string>("default_recording_dir");
   const savedConfig = await invoke<string | null>("load_app_config");
   if (!savedConfig) {
     return;
@@ -453,7 +455,9 @@ async function resolveRecordingDirectory(): Promise<string> {
     return recordingDirectory.value;
   }
 
-  const defaultDirectory = await invoke<string>("default_recording_dir");
+  const defaultDirectory =
+    defaultRecordingDirectory.value || (await invoke<string>("default_recording_dir"));
+  defaultRecordingDirectory.value = defaultDirectory;
   recordingDirectory.value = defaultDirectory;
   recordingStatusMessage.value = `Using default save folder: ${defaultDirectory}`;
   scheduleAppConfigSave();
@@ -781,6 +785,7 @@ onUnmounted(() => {
       :overlay-visible="isOverlayVisible"
       :profile-name="profileName"
       :recording-directory="recordingDirectory"
+      :default-recording-directory="defaultRecordingDirectory"
       :silent-recording="silentRecording"
       :is-recording="isRecording"
       :recording-countdown="recordingCountdown"
