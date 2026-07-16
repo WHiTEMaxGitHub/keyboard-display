@@ -90,6 +90,8 @@ This project uses Tauri, Vue, TypeScript, and Vite.
 The default POV profile shape is documented in
 [`docs/default-config.json`](docs/default-config.json). The app-level
 configuration shape is documented in [`docs/app-config.json`](docs/app-config.json).
+For hand-written profile files, see
+[`docs/config-format.md`](docs/config-format.md).
 
 Layout sizes use project-defined units. `overlay.layout.unitPx` defines the
 pixel size of one unit, while each key's `widthUnit` and the layout `gapUnit`

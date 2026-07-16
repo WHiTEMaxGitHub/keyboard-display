@@ -29,6 +29,19 @@
   - Backplate opacity controls only the backplate.
   - Key color alpha can be added later if the custom picker supports it.
 
+## Profile editor
+
+- [ ] Add a visual profile/config editor window.
+  - Users should be able to edit `overlay.rows` without hand-writing JSON.
+  - Support adding, deleting, and reordering rows.
+  - Support adding, deleting, and reordering key and gap items within a row.
+  - Support editing key `id`, `label`, `group`, `widthUnit`, and
+    `platformLabels`.
+  - Support editing gap `widthUnit`.
+  - Show a live preview using the same renderer as the POV overlay.
+  - Export the result as the documented profile JSON format.
+  - Keep hand-written JSON support as a first-class workflow.
+
 ## Internationalization
 
 - [ ] Add multi-language support for the configuration UI and user-facing text.
