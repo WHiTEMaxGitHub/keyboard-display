@@ -51,7 +51,11 @@ fn app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String>
 
 #[tauri::command]
 fn start_recording(state: tauri::State<'_, RecordingManager>, fps: u16) -> Result<(), String> {
-    state.start(fps, recording::now_ms()?)
+    state.start(
+        fps,
+        recording::unix_now_ms()?,
+        recording::monotonic_now_ms(),
+    )
 }
 
 #[tauri::command]
@@ -60,7 +64,7 @@ fn record_input_event(
     key_id: String,
     pressed: bool,
 ) -> Result<(), String> {
-    state.record_input(recording::now_ms()?, key_id, pressed)
+    state.record_input(recording::monotonic_now_ms(), key_id, pressed)
 }
 
 #[tauri::command]
@@ -68,7 +72,7 @@ fn add_recording_marker(
     state: tauri::State<'_, RecordingManager>,
     name: String,
 ) -> Result<(), String> {
-    state.add_marker(recording::now_ms()?, name)
+    state.add_marker(recording::monotonic_now_ms(), name)
 }
 
 #[tauri::command]
@@ -76,7 +80,7 @@ fn stop_recording(
     state: tauri::State<'_, RecordingManager>,
     output_dir: std::path::PathBuf,
 ) -> Result<recording::StopRecordingResult, String> {
-    state.stop(output_dir, recording::now_ms()?)
+    state.stop(output_dir, recording::unix_now_ms()?)
 }
 
 #[tauri::command]

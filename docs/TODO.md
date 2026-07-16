@@ -125,9 +125,10 @@
   - Add tests proving a non-profile hotkey can start/stop recording without
     being recorded as input.
 
-- [ ] Use monotonic timestamps for input recordings.
+- [x] Use monotonic timestamps for input recordings.
   - Store event time as `t = now_monotonic - record_start_monotonic`.
   - Do not rely on wall-clock time for frame/event alignment.
+  - Keep wall-clock time only for recording file names.
 
 - [ ] Add sync markers to the recording format.
   - Example event:

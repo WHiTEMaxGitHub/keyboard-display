@@ -6,8 +6,8 @@ use serde::Serialize;
 use std::{
     collections::HashSet,
     path::PathBuf,
-    sync::Mutex,
-    time::{SystemTime, UNIX_EPOCH},
+    sync::{Mutex, OnceLock},
+    time::{Instant, SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -132,12 +132,17 @@ impl RecordingManager {
         }
     }
 
-    pub fn start(&self, fps: u16, now_ms: u64) -> Result<(), String> {
+    pub fn start(
+        &self,
+        fps: u16,
+        start_unix_ms: u64,
+        start_monotonic_ms: u64,
+    ) -> Result<(), String> {
         let mut session = self.session.lock().map_err(|error| error.to_string())?;
 
         *session = Some(ActiveRecordingSession {
-            start_unix_ms: now_ms,
-            session: RecordingSession::new(fps, now_ms),
+            start_unix_ms,
+            session: RecordingSession::new(fps, start_monotonic_ms),
         });
 
         Ok(())
@@ -189,7 +194,7 @@ impl RecordingManager {
     }
 }
 
-pub fn now_ms() -> Result<u64, String> {
+pub fn unix_now_ms() -> Result<u64, String> {
     let duration = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| error.to_string())?;
@@ -197,16 +202,22 @@ pub fn now_ms() -> Result<u64, String> {
     Ok(duration.as_millis() as u64)
 }
 
+pub fn monotonic_now_ms() -> u64 {
+    static START: OnceLock<Instant> = OnceLock::new();
+
+    START.get_or_init(Instant::now).elapsed().as_millis() as u64
+}
+
 pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> Vec<RecordingFrame> {
-    let frame_duration_ms = 1000 / u64::from(fps);
     let mut sorted_events = events.to_vec();
     sorted_events.sort_by_key(event_time);
 
     let mut active_keys = HashSet::<String>::new();
     let mut frames = Vec::new();
     let mut event_index = 0;
-    let mut t = 0;
+    let mut frame_index = 0;
 
+    let mut t = frame_time_ms(frame_index, fps);
     while t <= duration_ms {
         while event_index < sorted_events.len() && event_time(&sorted_events[event_index]) <= t {
             match &sorted_events[event_index] {
@@ -225,10 +236,15 @@ pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> V
         let mut keys = active_keys.iter().cloned().collect::<Vec<_>>();
         keys.sort();
         frames.push(RecordingFrame { t, keys });
-        t += frame_duration_ms;
+        frame_index += 1;
+        t = frame_time_ms(frame_index, fps);
     }
 
     frames
+}
+
+fn frame_time_ms(frame_index: u64, fps: u16) -> u64 {
+    frame_index * 1000 / u64::from(fps)
 }
 
 pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
@@ -336,7 +352,7 @@ mod tests {
     fn manager_adds_markers_to_active_session() {
         let manager = RecordingManager::new();
 
-        manager.start(60, 1000).unwrap();
+        manager.start(60, 1000, 1000).unwrap();
         manager.add_marker(1250, "hotkey-start").unwrap();
 
         let session = manager.session.lock().unwrap();
@@ -392,6 +408,15 @@ mod tests {
     }
 
     #[test]
+    fn samples_frames_without_integer_millisecond_drift() {
+        let frames = sample_frames(60, 120, &[]);
+
+        assert_eq!(frames[0].t, 0);
+        assert_eq!(frames[3].t, 50);
+        assert_eq!(frames[6].t, 100);
+    }
+
+    #[test]
     fn manager_writes_binary_kbdrec_file() {
         let output_dir = std::env::temp_dir().join(format!(
             "keyboard-display-recording-test-{}",
@@ -400,7 +425,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&output_dir);
         let manager = RecordingManager::new();
 
-        manager.start(60, 1000).unwrap();
+        manager.start(60, 1000, 1000).unwrap();
         manager.record_input(1016, "w", true).unwrap();
         let result = manager.stop(output_dir.clone(), 1200).unwrap();
         let contents = std::fs::read(&result.path).unwrap();
