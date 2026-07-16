@@ -15,6 +15,11 @@ fn save_config_file(path: std::path::PathBuf, contents: String) -> Result<(), St
 }
 
 #[tauri::command]
+fn read_config_file(path: std::path::PathBuf) -> Result<String, String> {
+    std::fs::read_to_string(path).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn load_app_config(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let path = app_config_path(&app)?;
 
@@ -82,6 +87,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             save_config_file,
+            read_config_file,
             load_app_config,
             save_app_config,
             start_recording,

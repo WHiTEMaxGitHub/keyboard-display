@@ -37,6 +37,7 @@ const props = defineProps<{
   overlayVisible: boolean;
   profileName: string;
   recordingDirectory: string;
+  silentRecording: boolean;
   isRecording: boolean;
   recordingCountdown: number;
   lastRecordingPath: string;
@@ -65,9 +66,11 @@ const layoutRows = computed(() => {
 const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-visible": [visible: boolean];
-  "load-config": [text: string, fileName: string];
-  "save-and-apply-config": [];
+  "load-config": [];
+  "export-and-apply-config": [];
+  "overwrite-and-apply-config": [];
   "choose-recording-directory": [];
+  "update-silent-recording": [value: boolean];
   "start-recording": [];
   "stop-recording": [];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
@@ -128,24 +131,24 @@ function moveOverlay(
   emit("move-overlay", position);
 }
 
-async function loadConfigFile(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-
-  if (!file) {
-    return;
-  }
-
-  emit("load-config", await file.text(), file.name);
-  input.value = "";
+function loadConfigFile() {
+  emit("load-config");
 }
 
-function saveAndApplyConfig() {
-  emit("save-and-apply-config");
+function exportAndApplyConfig() {
+  emit("export-and-apply-config");
+}
+
+function overwriteAndApplyConfig() {
+  emit("overwrite-and-apply-config");
 }
 
 function chooseRecordingDirectory() {
   emit("choose-recording-directory");
+}
+
+function updateSilentRecording(event: Event) {
+  emit("update-silent-recording", (event.target as HTMLInputElement).checked);
 }
 
 function startRecording() {
@@ -201,13 +204,15 @@ function formatHotkey(keys: string[]) {
           <h1>POV overlay control panel</h1>
         </div>
         <div class="topbar-actions">
-          <label class="load-config-button">
+          <button class="load-config-button" type="button" @click="loadConfigFile">
             <SlidersHorizontal :size="15" aria-hidden="true" />
             Load config
-            <input accept="application/json,.json" type="file" @change="loadConfigFile" />
-          </label>
-          <button class="save-apply-button" type="button" @click="saveAndApplyConfig">
-            Save & Apply
+          </button>
+          <button class="save-apply-button" type="button" @click="exportAndApplyConfig">
+            Export & Apply
+          </button>
+          <button class="save-apply-button" type="button" @click="overwriteAndApplyConfig">
+            Overwrite & Apply
           </button>
         </div>
       </header>
@@ -431,6 +436,14 @@ function formatHotkey(keys: string[]) {
               Stop recording
             </button>
           </div>
+          <label class="toggle-row">
+            <input
+              :checked="silentRecording"
+              type="checkbox"
+              @change="updateSilentRecording"
+            />
+            Silent recording
+          </label>
           <div class="hotkey-panel">
             <label>
               Hotkey mode
