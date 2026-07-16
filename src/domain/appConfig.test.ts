@@ -86,4 +86,44 @@ describe("app config", () => {
     expect(appConfig.currentProfile.overlay.position).toBe("center");
     expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
   });
+
+  it("fills profile recording config when loading older app config", () => {
+    const appConfig = parseAppConfigFile(
+      JSON.stringify({
+        version: 1,
+        profiles: {
+          defaultProfilePath: "docs/default-config.json",
+          lastProfilePath: null,
+          recentProfiles: [],
+        },
+        currentProfile: {
+          name: "Old config",
+          sourcePath: null,
+          dirty: true,
+          overlay: {
+            visible: true,
+            position: "center",
+            layout: createDefaultConfig().layout,
+            style: createDefaultConfig().style,
+            rows: createDefaultConfig().rows,
+          },
+        },
+        recording: {
+          outputDirectory: null,
+          silent: false,
+          hotkeys: {
+            mode: "disabled",
+            start: [],
+            stop: [],
+          },
+        },
+        ui: {
+          language: "system",
+        },
+      }),
+    );
+
+    expect(appConfig.currentProfile.recording.fpsOptions).toEqual([30, 60, 120]);
+    expect(appConfig.currentProfile.recording.maxFps).toBe(1000);
+  });
 });

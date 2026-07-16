@@ -9,7 +9,7 @@ import {
   SlidersHorizontal,
   Video,
 } from "@lucide/vue";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import {
   isKeyBinding,
   type AppConfig,
@@ -87,6 +87,14 @@ const layoutRows = computed(() => {
 const activeRecordingFps = computed(() => effectiveRecordingFps(props.config.recording));
 const estimatedRecordingBytesPerSecond = computed(() =>
   estimateRawRecordingBytesPerSecond(props.config.keys.length, activeRecordingFps.value),
+);
+const customFpsDraft = ref(String(props.config.recording.customFps));
+
+watch(
+  () => props.config.recording.customFps,
+  (customFps) => {
+    customFpsDraft.value = String(customFps);
+  },
 );
 
 const emit = defineEmits<{
@@ -195,10 +203,15 @@ function updateCustomFpsEnabled(event: Event) {
 }
 
 function updateCustomFps(event: Event) {
+  customFpsDraft.value = (event.target as HTMLInputElement).value;
+}
+
+function commitCustomFps() {
   const customFps = clampRecordingFps(
-    Number((event.target as HTMLInputElement).value),
+    Number(customFpsDraft.value),
     props.config.recording.maxFps,
   );
+  customFpsDraft.value = String(customFps);
   emit("update-recording-config", {
     ...props.config.recording,
     customFps,
@@ -568,10 +581,12 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
               :disabled="!config.recording.customFpsEnabled"
               :max="config.recording.maxFps"
               :min="1"
-              :value="config.recording.customFps"
+              :value="customFpsDraft"
               class="fps-input"
               type="number"
-              @change="updateCustomFps"
+              @blur="commitCustomFps"
+              @change="commitCustomFps"
+              @input="updateCustomFps"
             />
             <span class="write-estimate">
               {{ activeRecordingFps }}fps · {{ formatBytesPerSecond(estimatedRecordingBytesPerSecond) }} raw

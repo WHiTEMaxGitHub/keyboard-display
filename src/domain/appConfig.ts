@@ -1,4 +1,5 @@
-import { flattenRowKeys, type AppConfig, type OverlayRow } from "./defaultConfig";
+import { createDefaultConfig, flattenRowKeys, type AppConfig, type OverlayRow } from "./defaultConfig";
+import { normalizeRecordingConfig } from "./recordingConfig";
 import type { RecordingHotkeyConfig } from "./recordingHotkeys";
 
 export type RecentProfile = {
@@ -96,11 +97,15 @@ export function parseAppConfigFile(text: string): AppConfigFile {
   };
   const rows =
     config.currentProfile.overlay.rows ?? rowsFromKeys(config.currentProfile.overlay.keys ?? []);
+  const profileRecording = normalizeRecordingConfig(
+    config.currentProfile.recording ?? createDefaultConfig().recording,
+  );
 
   return {
     ...config,
     currentProfile: {
       ...config.currentProfile,
+      recording: profileRecording,
       overlay: {
         ...config.currentProfile.overlay,
         rows,
