@@ -114,25 +114,33 @@
 
 ## App configuration
 
-- [ ] Implement app-level configuration persistence.
-  - Shape is drafted in `docs/app-config.json`.
+- [x] Implement app-level configuration persistence.
   - App config is separate from POV profile config.
-  - Keep this file small. It should only store values users actually need to
-    persist outside an individual POV profile:
-    - default/last profile path
-    - recent profiles
+  - Current app config stores the active profile state directly so unsaved
+    profile edits survive app restart.
+  - Persisted recording state currently includes:
     - recording output directory
-    - UI language
+    - recording hotkeys
+    - silent recording
 
-- [ ] Load app config on startup.
-  - Load default profile if no last profile exists.
-  - Keep recent profile paths available in the config UI.
-  - Restore the last recording output directory.
+- [x] Load app config on startup.
+  - Restores the active profile state.
+  - Restores the last recording output directory.
+  - Restores recording hotkeys and silent recording.
 
-- [ ] Save app config when user changes app-level state.
-  - Profile path changes.
-  - Recording output directory changes.
-  - Language changes.
+- [x] Save app config when user changes app-level state.
+  - Current profile state.
+  - Profile source path.
+  - Recording output directory.
+  - Recording hotkeys.
+  - Silent recording.
+
+- [ ] Add recent profile list.
+  - Keep only real user-selected profile paths.
+  - Use it for quick switching in the config UI.
+
+- [ ] Add UI language setting after i18n exists.
+  - Store only the selected language code in app config.
 
 ## Cross-platform gaps
 
