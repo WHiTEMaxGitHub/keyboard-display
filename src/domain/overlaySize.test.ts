@@ -60,4 +60,12 @@ describe("estimateOverlaySize", () => {
 
     expect(size.width).toBe(278);
   });
+
+  it("keeps a stable minimum size for empty row layouts", () => {
+    const config = createDefaultConfig();
+    const size = estimateOverlaySize(config.layout, [], config.style);
+
+    expect(size.width).toBeGreaterThan(0);
+    expect(size.height).toBeGreaterThan(0);
+  });
 });

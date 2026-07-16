@@ -870,7 +870,7 @@ h2 {
 
 .preview-viewport {
   display: grid;
-  justify-content: end;
+  justify-content: start;
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;

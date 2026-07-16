@@ -100,6 +100,32 @@ describe("parseConfigFile", () => {
     expect(config.overlay.keys.map((key) => key.id)).toEqual(["q", "w"]);
     expect(config.overlay.keys[1].row).toBe(0);
   });
+
+  it("uses row array position over legacy row fields inside row layouts", () => {
+    const config = parseConfigFile(
+      JSON.stringify({
+        version: 1,
+        overlay: {
+          layout: createDefaultConfig().layout,
+          style: createDefaultConfig().style,
+          rows: [
+            [
+              {
+                type: "key",
+                id: "w",
+                label: "W",
+                group: "movement",
+                row: 99,
+                widthUnit: 1,
+              },
+            ],
+          ],
+        },
+      }),
+    );
+
+    expect(config.overlay.keys[0].row).toBe(0);
+  });
 });
 
 describe("buildConfigFileJson", () => {

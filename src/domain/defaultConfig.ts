@@ -81,7 +81,7 @@ export function flattenRowKeys(rows: OverlayRow[]): KeyBinding[] {
       .map((key) => ({
         ...key,
         type: "key" as const,
-        row: key.row ?? rowIndex,
+        row: rowIndex,
         widthUnit: key.widthUnit,
       })),
   );

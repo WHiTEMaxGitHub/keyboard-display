@@ -18,10 +18,11 @@ export function estimateOverlaySize(
   const gap = unit * normalizeUnit(layout.gapUnit);
   const padding = style.backgroundMode === "panel" ? 18 * 2 : 0;
   const widthUnits = Math.max(...rows.map((row) => rowWidthUnits(row, layout.gapUnit)), 1);
+  const rowCount = Math.max(rows.length, 1);
 
   return {
     width: ceilStable(widthUnits * unit + padding + OVERLAY_WINDOW_PADDING),
-    height: ceilStable(rows.length * unit + (rows.length - 1) * gap + padding + OVERLAY_WINDOW_PADDING),
+    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding + OVERLAY_WINDOW_PADDING),
   };
 }
 
