@@ -52,6 +52,41 @@ describe("parseConfigFile", () => {
       widthUnit: 1.23,
     });
   });
+
+  it("loads row layout with custom gaps", () => {
+    const config = parseConfigFile(
+      JSON.stringify({
+        version: 1,
+        name: "Rows",
+        overlay: {
+          visible: true,
+          position: "bottom-left",
+          layout: {
+            unitPx: 60,
+            gapUnit: 0.15,
+          },
+          style: createDefaultConfig().style,
+          rows: [
+            [
+              { type: "key", id: "q", label: "Q", group: "action", widthUnit: 1 },
+              { type: "gap", widthUnit: 0.5 },
+              { type: "key", id: "w", label: "W", group: "movement", widthUnit: 1.234 },
+            ],
+          ],
+        },
+      }),
+    );
+
+    expect(config.overlay.rows).toEqual([
+      [
+        { type: "key", id: "q", label: "Q", group: "action", widthUnit: 1 },
+        { type: "gap", widthUnit: 0.5 },
+        { type: "key", id: "w", label: "W", group: "movement", widthUnit: 1.23 },
+      ],
+    ]);
+    expect(config.overlay.keys.map((key) => key.id)).toEqual(["q", "w"]);
+    expect(config.overlay.keys[1].row).toBe(0);
+  });
 });
 
 describe("buildConfigFileJson", () => {
@@ -70,6 +105,7 @@ describe("buildConfigFileJson", () => {
     expect(parsed.overlay.position).toBe("center");
     expect(parsed.overlay.layout).toEqual(config.layout);
     expect(parsed.overlay.style).toEqual(config.style);
-    expect(parsed.overlay.keys).toEqual(config.keys);
+    expect(parsed.overlay.rows).toEqual(config.rows);
+    expect(parsed.overlay.keys).toBeUndefined();
   });
 });

@@ -3,10 +3,10 @@ import { createDefaultConfig } from "./defaultConfig";
 import { estimateOverlaySize } from "./overlaySize";
 
 describe("estimateOverlaySize", () => {
-  it("scales default grid overlay dimensions", () => {
+  it("scales default row overlay dimensions", () => {
     const config = createDefaultConfig();
-    const normal = estimateOverlaySize(config.layout, config.keys, config.style);
-    const large = estimateOverlaySize(config.layout, config.keys, {
+    const normal = estimateOverlaySize(config.layout, config.rows, config.style);
+    const large = estimateOverlaySize(config.layout, config.rows, {
       ...config.style,
       scale: 2,
     });
@@ -17,22 +17,47 @@ describe("estimateOverlaySize", () => {
 
   it("includes the transparent window padding", () => {
     const config = createDefaultConfig();
-    const size = estimateOverlaySize(config.layout, config.keys, config.style);
+    const size = estimateOverlaySize(config.layout, config.rows, config.style);
 
     expect(size.height).toBeGreaterThan(5 * config.layout.unitPx);
   });
 
-  it("uses row layout width units", () => {
+  it("uses default gap only between adjacent keys", () => {
     const config = createDefaultConfig();
     const size = estimateOverlaySize(
-      config.layout,
+      {
+        unitPx: 100,
+        gapUnit: 0.2,
+      },
       [
-        { id: "a", label: "A", group: "movement", row: 0, widthUnit: 1 },
-        { id: "space", label: "Space", group: "modifier", row: 0, widthUnit: 4 },
+        [
+          { type: "key", id: "a", label: "A", group: "movement", widthUnit: 1 },
+          { type: "key", id: "s", label: "S", group: "movement", widthUnit: 1 },
+        ],
       ],
       config.style,
     );
 
-    expect(size.width).toBeGreaterThan(config.layout.unitPx * 5);
+    expect(size.width).toBe(248);
+  });
+
+  it("uses custom gap item instead of adding default gap around it", () => {
+    const config = createDefaultConfig();
+    const size = estimateOverlaySize(
+      {
+        unitPx: 100,
+        gapUnit: 0.2,
+      },
+      [
+        [
+          { type: "key", id: "a", label: "A", group: "movement", widthUnit: 1 },
+          { type: "gap", widthUnit: 0.5 },
+          { type: "key", id: "s", label: "S", group: "movement", widthUnit: 1 },
+        ],
+      ],
+      config.style,
+    );
+
+    expect(size.width).toBe(278);
   });
 });

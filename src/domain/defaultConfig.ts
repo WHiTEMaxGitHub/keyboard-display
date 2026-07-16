@@ -7,10 +7,10 @@ export type AppSurface = {
 };
 
 export type KeyBinding = {
+  type?: "key";
   id: string;
   label: string;
   group: "mouse" | "movement" | "modifier" | "action";
-  gridArea?: string;
   row?: number;
   widthUnit: number;
   platformLabels?: {
@@ -18,6 +18,14 @@ export type KeyBinding = {
     windows?: string;
   };
 };
+
+export type GapBinding = {
+  type: "gap" | "void";
+  widthUnit: number;
+};
+
+export type OverlayRowItem = KeyBinding | GapBinding;
+export type OverlayRow = OverlayRowItem[];
 
 export type OverlayLayout = {
   unitPx: number;
@@ -53,12 +61,130 @@ export type RecordingConfig = {
 export type AppConfig = {
   surfaces: AppSurface[];
   layout: OverlayLayout;
+  rows: OverlayRow[];
   keys: KeyBinding[];
   style: OverlayStyle;
   recording: RecordingConfig;
 };
 
+export function isKeyBinding(item: OverlayRowItem): item is KeyBinding {
+  return item.type === undefined || item.type === "key";
+}
+
+export function flattenRowKeys(rows: OverlayRow[]): KeyBinding[] {
+  return rows.flatMap((row, rowIndex) =>
+    row
+      .filter(isKeyBinding)
+      .map((key) => ({
+        ...key,
+        type: "key" as const,
+        row: key.row ?? rowIndex,
+        widthUnit: key.widthUnit,
+      })),
+  );
+}
+
 export function createDefaultConfig(): AppConfig {
+  const rows: OverlayRow[] = [
+    [
+      {
+        type: "key",
+        id: "mouse-left",
+        label: "M1",
+        group: "mouse",
+        widthUnit: 1.35,
+      },
+      {
+        type: "key",
+        id: "mouse-right",
+        label: "M2",
+        group: "mouse",
+        widthUnit: 1.35,
+      },
+    ],
+    [
+      { type: "gap", widthUnit: 1 },
+      {
+        type: "key",
+        id: "w",
+        label: "W",
+        group: "movement",
+        widthUnit: 1,
+      },
+      { type: "gap", widthUnit: 1 },
+      {
+        type: "key",
+        id: "r",
+        label: "R",
+        group: "action",
+        widthUnit: 1,
+      },
+    ],
+    [
+      {
+        type: "key",
+        id: "a",
+        label: "A",
+        group: "movement",
+        widthUnit: 1,
+      },
+      {
+        type: "key",
+        id: "s",
+        label: "S",
+        group: "movement",
+        widthUnit: 1,
+      },
+      {
+        type: "key",
+        id: "d",
+        label: "D",
+        group: "movement",
+        widthUnit: 1,
+      },
+      {
+        type: "key",
+        id: "q",
+        label: "Q",
+        group: "action",
+        widthUnit: 1,
+      },
+    ],
+    [
+      {
+        type: "key",
+        id: "shift-left",
+        label: "Shift",
+        group: "modifier",
+        widthUnit: 1,
+      },
+      {
+        type: "key",
+        id: "ctrl-left",
+        label: "Ctrl",
+        group: "modifier",
+        widthUnit: 1,
+      },
+      {
+        type: "key",
+        id: "e",
+        label: "E",
+        group: "action",
+        widthUnit: 1,
+      },
+      { type: "gap", widthUnit: 1 },
+    ],
+    [
+      {
+        type: "key",
+        id: "space",
+        label: "Space",
+        group: "modifier",
+        widthUnit: 4,
+      },
+    ],
+  ];
+
   return {
     surfaces: [
       {
@@ -76,92 +202,8 @@ export function createDefaultConfig(): AppConfig {
       unitPx: 54,
       gapUnit: 0.15,
     },
-    keys: [
-      {
-        id: "mouse-left",
-        label: "M1",
-        group: "mouse",
-        gridArea: "mouseLeft",
-        widthUnit: 1.35,
-      },
-      {
-        id: "mouse-right",
-        label: "M2",
-        group: "mouse",
-        gridArea: "mouseRight",
-        widthUnit: 1.35,
-      },
-      {
-        id: "w",
-        label: "W",
-        group: "movement",
-        gridArea: "w",
-        widthUnit: 1,
-      },
-      {
-        id: "a",
-        label: "A",
-        group: "movement",
-        gridArea: "a",
-        widthUnit: 1,
-      },
-      {
-        id: "s",
-        label: "S",
-        group: "movement",
-        gridArea: "s",
-        widthUnit: 1,
-      },
-      {
-        id: "d",
-        label: "D",
-        group: "movement",
-        gridArea: "d",
-        widthUnit: 1,
-      },
-      {
-        id: "shift-left",
-        label: "Shift",
-        group: "modifier",
-        gridArea: "shift",
-        widthUnit: 1,
-      },
-      {
-        id: "ctrl-left",
-        label: "Ctrl",
-        group: "modifier",
-        gridArea: "ctrl",
-        widthUnit: 1,
-      },
-      {
-        id: "space",
-        label: "Space",
-        group: "modifier",
-        gridArea: "space",
-        widthUnit: 4,
-      },
-      {
-        id: "r",
-        label: "R",
-        group: "action",
-        gridArea: "r",
-        widthUnit: 1,
-      },
-      {
-        id: "q",
-        label: "Q",
-        group: "action",
-        gridArea: "q",
-        widthUnit: 1,
-      },
-      {
-        id: "e",
-        label: "E",
-        group: "action",
-        gridArea: "e",
-        widthUnit: 1,
-      },
-    ],
+    rows,
+    keys: flattenRowKeys(rows),
     style: {
       scale: 1,
       opacity: 0.92,

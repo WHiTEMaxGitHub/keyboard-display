@@ -15,7 +15,11 @@ import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
 import { buildAppConfigFile, parseAppConfigFile } from "./domain/appConfig";
 import { buildConfigFileJson, parseConfigFile } from "./domain/configFile";
-import { createDefaultConfig, type OverlayStyle } from "./domain/defaultConfig";
+import {
+  createDefaultConfig,
+  flattenRowKeys,
+  type OverlayStyle,
+} from "./domain/defaultConfig";
 import { estimateOverlaySize } from "./domain/overlaySize";
 import {
   INPUT_STATE_EVENT,
@@ -68,6 +72,7 @@ let stopAppConfigWatch: WatchStopHandle | undefined;
 
 type OverlayRuntimeConfig = {
   layout: typeof config.layout;
+  rows: typeof config.rows;
   keys: typeof config.keys;
   style: OverlayStyle;
 };
@@ -112,8 +117,9 @@ function applyOverlayLayout(layout: typeof config.layout) {
   config.layout = { ...layout };
 }
 
-function applyOverlayKeys(keys: typeof config.keys) {
-  config.keys = [...keys];
+function applyOverlayRows(rows: typeof config.rows) {
+  config.rows = rows.map((row) => row.map((item) => ({ ...item })));
+  config.keys = flattenRowKeys(config.rows);
 }
 
 async function updateOverlayStyle(style: OverlayStyle) {
@@ -131,7 +137,7 @@ async function resizeOverlayWindow(overlayWindow?: Window | null) {
     return;
   }
 
-  const size = estimateOverlaySize(config.layout, config.keys, config.style);
+  const size = estimateOverlaySize(config.layout, config.rows, config.style);
   await targetWindow.setSize(new LogicalSize(size.width, size.height));
 }
 
@@ -141,7 +147,7 @@ async function ensureOverlayWindow(): Promise<Window | null> {
     return existingWindow;
   }
 
-  const size = estimateOverlaySize(config.layout, config.keys, config.style);
+  const size = estimateOverlaySize(config.layout, config.rows, config.style);
   const createdWindow = new WebviewWindow("pov", {
     url: "/?surface=pov",
     title: "POV Overlay",
@@ -176,6 +182,7 @@ async function syncOverlayWindow(overlayWindow?: Window | null) {
   await targetWindow.setAlwaysOnTop(config.style.alwaysOnTop);
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
     layout: config.layout,
+    rows: config.rows,
     keys: config.keys,
     style: config.style,
   });
@@ -245,12 +252,13 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   overlayPosition.value = (loadedConfig.overlay.position as OverlayPosition) ?? "bottom-right";
 
   applyOverlayLayout(loadedConfig.overlay.layout);
-  applyOverlayKeys(loadedConfig.overlay.keys);
+  applyOverlayRows(loadedConfig.overlay.rows);
   applyOverlayStyle(loadedConfig.overlay.style);
   await resizeOverlayWindow();
 
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
     layout: loadedConfig.overlay.layout,
+    rows: loadedConfig.overlay.rows,
     keys: loadedConfig.overlay.keys,
     style: loadedConfig.overlay.style,
   });
@@ -291,11 +299,12 @@ async function restoreAppConfig() {
   recordingHotkeys.value = appConfig.recording.hotkeys;
 
   applyOverlayLayout(appConfig.currentProfile.overlay.layout);
-  applyOverlayKeys(appConfig.currentProfile.overlay.keys);
+  applyOverlayRows(appConfig.currentProfile.overlay.rows);
   applyOverlayStyle(appConfig.currentProfile.overlay.style);
 
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
     layout: appConfig.currentProfile.overlay.layout,
+    rows: appConfig.currentProfile.overlay.rows,
     keys: appConfig.currentProfile.overlay.keys,
     style: appConfig.currentProfile.overlay.style,
   });
@@ -332,6 +341,7 @@ async function saveAppConfig() {
         position: overlayPosition.value,
         layout: config.layout,
         style: config.style,
+        rows: config.rows,
         keys: config.keys,
       },
     },
@@ -351,6 +361,7 @@ async function applyConfigToOverlay() {
   await resizeOverlayWindow();
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
     layout: config.layout,
+    rows: config.rows,
     keys: config.keys,
     style: config.style,
   });
@@ -634,7 +645,7 @@ onMounted(async () => {
       OVERLAY_CONFIG_EVENT,
       (event) => {
         applyOverlayLayout(event.payload.layout);
-        applyOverlayKeys(event.payload.keys);
+        applyOverlayRows(event.payload.rows);
         applyOverlayStyle(event.payload.style);
       },
     );
@@ -685,6 +696,7 @@ onUnmounted(() => {
     <div v-if="isOverlayWindow" class="overlay-window">
       <OverlayWindow
         :layout="config.layout"
+        :rows="config.rows"
         :keys="config.keys"
         :active-keys="activeKeyIds"
         :overlay-style="config.style"

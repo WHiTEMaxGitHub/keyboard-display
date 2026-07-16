@@ -26,91 +26,113 @@
         "idleTextColor": "#f5f7fa",
         "activeTextColor": "#ffffff"
       },
-      "keys": [
-        {
-          "id": "mouse-left",
-          "label": "M1",
-          "group": "mouse",
-          "gridArea": "mouseLeft",
-          "widthUnit": 1.35
-        },
-        {
-          "id": "mouse-right",
-          "label": "M2",
-          "group": "mouse",
-          "gridArea": "mouseRight",
-          "widthUnit": 1.35
-        },
-        {
-          "id": "w",
-          "label": "W",
-          "group": "movement",
-          "gridArea": "w",
-          "widthUnit": 1
-        },
-        {
-          "id": "a",
-          "label": "A",
-          "group": "movement",
-          "gridArea": "a",
-          "widthUnit": 1
-        },
-        {
-          "id": "s",
-          "label": "S",
-          "group": "movement",
-          "gridArea": "s",
-          "widthUnit": 1
-        },
-        {
-          "id": "d",
-          "label": "D",
-          "group": "movement",
-          "gridArea": "d",
-          "widthUnit": 1
-        },
-        {
-          "id": "shift-left",
-          "label": "Shift",
-          "group": "modifier",
-          "gridArea": "shift",
-          "widthUnit": 1
-        },
-        {
-          "id": "ctrl-left",
-          "label": "Ctrl",
-          "group": "modifier",
-          "gridArea": "ctrl",
-          "widthUnit": 1
-        },
-        {
-          "id": "space",
-          "label": "Space",
-          "group": "modifier",
-          "gridArea": "space",
-          "widthUnit": 4
-        },
-        {
-          "id": "r",
-          "label": "R",
-          "group": "action",
-          "gridArea": "r",
-          "widthUnit": 1
-        },
-        {
-          "id": "q",
-          "label": "Q",
-          "group": "action",
-          "gridArea": "q",
-          "widthUnit": 1
-        },
-        {
-          "id": "e",
-          "label": "E",
-          "group": "action",
-          "gridArea": "e",
-          "widthUnit": 1
-        }
+      "rows": [
+        [
+          {
+            "type": "key",
+            "id": "mouse-left",
+            "label": "M1",
+            "group": "mouse",
+            "widthUnit": 1.35
+          },
+          {
+            "type": "key",
+            "id": "mouse-right",
+            "label": "M2",
+            "group": "mouse",
+            "widthUnit": 1.35
+          }
+        ],
+        [
+          {
+            "type": "gap",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "w",
+            "label": "W",
+            "group": "movement",
+            "widthUnit": 1
+          },
+          {
+            "type": "gap",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "r",
+            "label": "R",
+            "group": "action",
+            "widthUnit": 1
+          }
+        ],
+        [
+          {
+            "type": "key",
+            "id": "a",
+            "label": "A",
+            "group": "movement",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "s",
+            "label": "S",
+            "group": "movement",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "d",
+            "label": "D",
+            "group": "movement",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "q",
+            "label": "Q",
+            "group": "action",
+            "widthUnit": 1
+          }
+        ],
+        [
+          {
+            "type": "key",
+            "id": "shift-left",
+            "label": "Shift",
+            "group": "modifier",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "ctrl-left",
+            "label": "Ctrl",
+            "group": "modifier",
+            "widthUnit": 1
+          },
+          {
+            "type": "key",
+            "id": "e",
+            "label": "E",
+            "group": "action",
+            "widthUnit": 1
+          },
+          {
+            "type": "gap",
+            "widthUnit": 1
+          }
+        ],
+        [
+          {
+            "type": "key",
+            "id": "space",
+            "label": "Space",
+            "group": "modifier",
+            "widthUnit": 4
+          }
+        ]
       ],
       "layout": {
         "unitPx": 54,

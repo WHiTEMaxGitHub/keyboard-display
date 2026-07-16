@@ -27,22 +27,28 @@ describe("createDefaultConfig", () => {
       "mouse-left",
       "mouse-right",
       "w",
+      "r",
       "a",
       "s",
       "d",
+      "q",
       "shift-left",
       "ctrl-left",
-      "space",
-      "r",
-      "q",
       "e",
+      "space",
     ]);
 
     expect(config.layout.unitPx).toBe(54);
     expect(config.layout.gapUnit).toBe(0.15);
+    expect(config.rows).toHaveLength(5);
+    expect(config.rows[1][0]).toMatchObject({
+      type: "gap",
+      widthUnit: 1,
+    });
     expect(config.keys.find((key) => key.id === "w")?.widthUnit).toBe(1);
     expect(config.keys.find((key) => key.id === "space")?.widthUnit).toBe(4);
     expect(config.keys.find((key) => key.id === "mouse-left")?.widthUnit).toBe(1.35);
+    expect(JSON.stringify(config.keys)).not.toContain("gridArea");
   });
 
   it("stores recording as input frames instead of rendered video", () => {

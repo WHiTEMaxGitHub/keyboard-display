@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { onMounted } from "vue";
-import type { KeyBinding, OverlayLayout, OverlayStyle } from "../domain/defaultConfig";
+import type { KeyBinding, OverlayLayout, OverlayRow, OverlayStyle } from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
 
 defineProps<{
   layout: OverlayLayout;
+  rows: OverlayRow[];
   keys: KeyBinding[];
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
@@ -22,6 +23,7 @@ onMounted(async () => {
   <main class="overlay-root">
     <PovOverlay
       :layout="layout"
+      :rows="rows"
       :keys="keys"
       :active-keys="activeKeys"
       :overlay-style="overlayStyle"

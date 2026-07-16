@@ -10,7 +10,7 @@ import {
   Video,
 } from "@lucide/vue";
 import { computed, ref } from "vue";
-import type { AppConfig, KeyBinding, OverlayStyle } from "../domain/defaultConfig";
+import { isKeyBinding, type AppConfig, type OverlayStyle } from "../domain/defaultConfig";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
 
@@ -47,20 +47,7 @@ const props = defineProps<{
 }>();
 
 const layoutRows = computed(() => {
-  if (props.config.keys.some((key) => key.row !== undefined)) {
-    const rowMap = new Map<number, KeyBinding[]>();
-
-    for (const key of props.config.keys) {
-      const row = key.row ?? 0;
-      rowMap.set(row, [...(rowMap.get(row) ?? []), key]);
-    }
-
-    return [...rowMap.entries()]
-      .sort(([left], [right]) => left - right)
-      .map(([row, keys]) => ({ row, keys }));
-  }
-
-  return [{ row: 1, keys: props.config.keys }];
+  return props.config.rows.map((items, index) => ({ row: index + 1, items }));
 });
 
 const emit = defineEmits<{
@@ -225,6 +212,7 @@ function formatHotkey(keys: string[]) {
           </div>
           <PovOverlay
             :layout="config.layout"
+            :rows="config.rows"
             :keys="config.keys"
             :active-keys="activeKeys"
             :overlay-style="config.style"
@@ -285,8 +273,12 @@ function formatHotkey(keys: string[]) {
             <div v-for="line in layoutRows" :key="line.row" class="layout-line">
               <span class="line-label">Line {{ line.row }}:</span>
               <span class="line-keys">
-                <span v-for="key in line.keys" :key="key.id" class="line-key">
-                  {{ key.label }} · {{ key.widthUnit }}u
+                <span
+                  v-for="(item, index) in line.items"
+                  :key="`${line.row}-${index}`"
+                  :class="['line-key', { 'line-gap': !isKeyBinding(item) }]"
+                >
+                  {{ isKeyBinding(item) ? item.label : "Gap" }} · {{ item.widthUnit }}u
                 </span>
               </span>
             </div>

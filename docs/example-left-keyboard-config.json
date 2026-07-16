@@ -22,229 +22,239 @@
       "idleTextColor": "#f5f7fa",
       "activeTextColor": "#ffffff"
     },
-    "keys": [
-      {
-        "id": "escape",
-        "label": "Esc",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "digit-1",
-        "label": "1",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "digit-2",
-        "label": "2",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "digit-3",
-        "label": "3",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "digit-4",
-        "label": "4",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "digit-5",
-        "label": "5",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "digit-6",
-        "label": "6",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "backquote",
-        "label": "`",
-        "group": "action",
-        "row": 1,
-        "widthUnit": 1
-      },
-      {
-        "id": "tab",
-        "label": "Tab",
-        "group": "modifier",
-        "row": 2,
-        "widthUnit": 1.5
-      },
-      {
-        "id": "q",
-        "label": "Q",
-        "group": "action",
-        "row": 2,
-        "widthUnit": 1
-      },
-      {
-        "id": "w",
-        "label": "W",
-        "group": "movement",
-        "row": 2,
-        "widthUnit": 1
-      },
-      {
-        "id": "e",
-        "label": "E",
-        "group": "action",
-        "row": 2,
-        "widthUnit": 1
-      },
-      {
-        "id": "r",
-        "label": "R",
-        "group": "action",
-        "row": 2,
-        "widthUnit": 1
-      },
-      {
-        "id": "t",
-        "label": "T",
-        "group": "action",
-        "row": 2,
-        "widthUnit": 1
-      },
-      {
-        "id": "caps-lock",
-        "label": "Caps",
-        "group": "modifier",
-        "row": 3,
-        "widthUnit": 1.75
-      },
-      {
-        "id": "a",
-        "label": "A",
-        "group": "movement",
-        "row": 3,
-        "widthUnit": 1
-      },
-      {
-        "id": "s",
-        "label": "S",
-        "group": "movement",
-        "row": 3,
-        "widthUnit": 1
-      },
-      {
-        "id": "d",
-        "label": "D",
-        "group": "movement",
-        "row": 3,
-        "widthUnit": 1
-      },
-      {
-        "id": "f",
-        "label": "F",
-        "group": "action",
-        "row": 3,
-        "widthUnit": 1
-      },
-      {
-        "id": "g",
-        "label": "G",
-        "group": "action",
-        "row": 3,
-        "widthUnit": 1
-      },
-      {
-        "id": "shift-left",
-        "label": "Shift",
-        "group": "modifier",
-        "row": 4,
-        "widthUnit": 2.25
-      },
-      {
-        "id": "z",
-        "label": "Z",
-        "group": "action",
-        "row": 4,
-        "widthUnit": 1
-      },
-      {
-        "id": "x",
-        "label": "X",
-        "group": "action",
-        "row": 4,
-        "widthUnit": 1
-      },
-      {
-        "id": "c",
-        "label": "C",
-        "group": "action",
-        "row": 4,
-        "widthUnit": 1
-      },
-      {
-        "id": "v",
-        "label": "V",
-        "group": "action",
-        "row": 4,
-        "widthUnit": 1
-      },
-      {
-        "id": "b",
-        "label": "B",
-        "group": "action",
-        "row": 4,
-        "widthUnit": 1
-      },
-      {
-        "id": "ctrl-left",
-        "label": "Ctrl",
-        "group": "modifier",
-        "row": 5,
-        "widthUnit": 1.25,
-        "platformLabels": {
-          "macos": "Ctrl",
-          "windows": "Ctrl"
+    "rows": [
+      [
+        {
+          "id": "escape",
+          "label": "Esc",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "digit-1",
+          "label": "1",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "digit-2",
+          "label": "2",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "digit-3",
+          "label": "3",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "digit-4",
+          "label": "4",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "digit-5",
+          "label": "5",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "digit-6",
+          "label": "6",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "backquote",
+          "label": "`",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
         }
-      },
-      {
-        "id": "meta-left",
-        "label": "Meta",
-        "group": "modifier",
-        "row": 5,
-        "widthUnit": 1.25,
-        "platformLabels": {
-          "macos": "Cmd",
-          "windows": "Win"
+      ],
+      [
+        {
+          "id": "tab",
+          "label": "Tab",
+          "group": "modifier",
+          "widthUnit": 1.5,
+          "type": "key"
+        },
+        {
+          "id": "q",
+          "label": "Q",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "w",
+          "label": "W",
+          "group": "movement",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "e",
+          "label": "E",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "r",
+          "label": "R",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "t",
+          "label": "T",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
         }
-      },
-      {
-        "id": "alt-left",
-        "label": "Alt",
-        "group": "modifier",
-        "row": 5,
-        "widthUnit": 1.25,
-        "platformLabels": {
-          "macos": "Opt",
-          "windows": "Alt"
+      ],
+      [
+        {
+          "id": "caps-lock",
+          "label": "Caps",
+          "group": "modifier",
+          "widthUnit": 1.75,
+          "type": "key"
+        },
+        {
+          "id": "a",
+          "label": "A",
+          "group": "movement",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "s",
+          "label": "S",
+          "group": "movement",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "d",
+          "label": "D",
+          "group": "movement",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "f",
+          "label": "F",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "g",
+          "label": "G",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
         }
-      },
-      {
-        "id": "space",
-        "label": "Space",
-        "group": "modifier",
-        "row": 5,
-        "widthUnit": 4
-      }
+      ],
+      [
+        {
+          "id": "shift-left",
+          "label": "Shift",
+          "group": "modifier",
+          "widthUnit": 2.25,
+          "type": "key"
+        },
+        {
+          "id": "z",
+          "label": "Z",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "x",
+          "label": "X",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "c",
+          "label": "C",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "v",
+          "label": "V",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        },
+        {
+          "id": "b",
+          "label": "B",
+          "group": "action",
+          "widthUnit": 1,
+          "type": "key"
+        }
+      ],
+      [
+        {
+          "id": "ctrl-left",
+          "label": "Ctrl",
+          "group": "modifier",
+          "widthUnit": 1.25,
+          "platformLabels": {
+            "macos": "Ctrl",
+            "windows": "Ctrl"
+          },
+          "type": "key"
+        },
+        {
+          "id": "meta-left",
+          "label": "Meta",
+          "group": "modifier",
+          "widthUnit": 1.25,
+          "platformLabels": {
+            "macos": "Cmd",
+            "windows": "Win"
+          },
+          "type": "key"
+        },
+        {
+          "id": "alt-left",
+          "label": "Alt",
+          "group": "modifier",
+          "widthUnit": 1.25,
+          "platformLabels": {
+            "macos": "Opt",
+            "windows": "Alt"
+          },
+          "type": "key"
+        },
+        {
+          "id": "space",
+          "label": "Space",
+          "group": "modifier",
+          "widthUnit": 4,
+          "type": "key"
+        }
+      ]
     ]
   },
   "recording": {

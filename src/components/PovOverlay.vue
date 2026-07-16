@@ -1,31 +1,24 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { KeyBinding, OverlayLayout, OverlayStyle } from "../domain/defaultConfig";
+import {
+  isKeyBinding,
+  type KeyBinding,
+  type OverlayLayout,
+  type OverlayRow,
+  type OverlayStyle,
+} from "../domain/defaultConfig";
 import { detectPlatformKey, displayLabelForKey } from "../domain/keyLabels";
 import { normalizeUnit } from "../domain/layoutUnits";
 
 const props = defineProps<{
   layout: OverlayLayout;
+  rows: OverlayRow[];
   keys: KeyBinding[];
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
 }>();
 
-const usesRowLayout = computed(() => props.keys.some((key) => key.row !== undefined));
 const platformKey = computed(() => detectPlatformKey());
-
-const rowLayoutKeys = computed(() => {
-  const rowMap = new Map<number, KeyBinding[]>();
-
-  for (const key of props.keys) {
-    const row = key.row ?? 0;
-    rowMap.set(row, [...(rowMap.get(row) ?? []), key]);
-  }
-
-  return [...rowMap.entries()]
-    .sort(([left], [right]) => left - right)
-    .map(([, keys]) => keys);
-});
 
 function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: OverlayStyle) {
   return overlayStyle.idleKeyVisibility !== "hidden" || activeKeys.has(keyId);
@@ -59,46 +52,24 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
     >
       <div class="backplate" aria-hidden="true"></div>
 
-      <div v-if="usesRowLayout" class="row-layout" aria-label="Configured keyboard rows">
-        <div v-for="(rowKeys, index) in rowLayoutKeys" :key="index" class="key-row">
-          <span
-            v-for="key in rowKeys"
-            :key="key.id"
-            class="key"
-            :style="{ '--key-width-unit': normalizeUnit(key.widthUnit) }"
-            :class="{ active: activeKeys.has(key.id), hidden: !isKeyVisible(key.id, activeKeys, overlayStyle) }"
-          >
-            {{ displayLabelForKey(key, platformKey) }}
-          </span>
-        </div>
-      </div>
-
-      <div v-else>
-        <div class="mouse-row" aria-label="Mouse buttons">
-          <span
-            v-for="key in keys.filter((item) => item.group === 'mouse')"
-            :key="key.id"
-            class="key mouse-key"
-            :style="{ '--key-width-unit': normalizeUnit(key.widthUnit) }"
-            :class="{ active: activeKeys.has(key.id), hidden: !isKeyVisible(key.id, activeKeys, overlayStyle) }"
-          >
-            {{ displayLabelForKey(key, platformKey) }}
-          </span>
-        </div>
-
-        <div class="keyboard-grid" aria-label="Keyboard keys">
-          <span
-            v-for="key in keys.filter((item) => item.group !== 'mouse')"
-            :key="key.id"
-            class="key"
-            :style="{ '--key-width-unit': normalizeUnit(key.widthUnit) }"
-            :class="[
-              key.gridArea ? `area-${key.gridArea}` : '',
-              { active: activeKeys.has(key.id), hidden: !isKeyVisible(key.id, activeKeys, overlayStyle) },
-            ]"
-          >
-            {{ displayLabelForKey(key, platformKey) }}
-          </span>
+      <div class="row-layout" aria-label="Configured keyboard rows">
+        <div v-for="(rowItems, rowIndex) in rows" :key="rowIndex" class="key-row">
+          <template v-for="(item, itemIndex) in rowItems" :key="`${rowIndex}-${itemIndex}`">
+            <span
+              v-if="isKeyBinding(item)"
+              class="key"
+              :style="{ '--key-width-unit': normalizeUnit(item.widthUnit) }"
+              :class="{ active: activeKeys.has(item.id), hidden: !isKeyVisible(item.id, activeKeys, overlayStyle) }"
+            >
+              {{ displayLabelForKey(item, platformKey) }}
+            </span>
+            <span
+              v-else
+              class="key-gap"
+              :style="{ '--key-width-unit': normalizeUnit(item.widthUnit) }"
+              aria-hidden="true"
+            ></span>
+          </template>
         </div>
       </div>
     </div>
@@ -141,8 +112,7 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
   opacity: var(--overlay-bg-opacity);
 }
 
-.key-cluster.background-panel .mouse-row,
-.key-cluster.background-panel .keyboard-grid {
+.key-cluster.background-panel .row-layout {
   position: relative;
   z-index: 1;
   opacity: 1;
@@ -154,13 +124,6 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
   background: transparent;
 }
 
-.mouse-row {
-  display: grid;
-  grid-template-columns: repeat(2, calc(var(--unit) * 1.35));
-  gap: var(--gap);
-  margin-bottom: var(--gap);
-}
-
 .row-layout {
   display: grid;
   gap: var(--gap);
@@ -168,19 +131,10 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
 
 .key-row {
   display: flex;
-  gap: var(--gap);
 }
 
-.keyboard-grid {
-  display: grid;
-  grid-template-areas:
-    ". w . r"
-    "a s d q"
-    "shift ctrl e ."
-    "space space space space";
-  grid-template-columns: repeat(4, var(--unit));
-  grid-auto-rows: var(--unit);
-  gap: var(--gap);
+.key-row > .key + .key {
+  margin-left: var(--gap);
 }
 
 .key {
@@ -205,6 +159,13 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
     transform 90ms ease;
 }
 
+.key-gap {
+  display: block;
+  width: calc(var(--unit) * var(--key-width-unit, 1));
+  height: var(--unit);
+  flex: 0 0 auto;
+}
+
 .key.active {
   border-color: rgba(255, 255, 255, 0.5);
   background: var(--key-active);
@@ -227,48 +188,4 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
   visibility: hidden;
 }
 
-.mouse-key {
-  width: calc(var(--unit) * var(--key-width-unit));
-}
-
-.area-w {
-  grid-area: w;
-}
-
-.area-a {
-  grid-area: a;
-}
-
-.area-s {
-  grid-area: s;
-}
-
-.area-d {
-  grid-area: d;
-}
-
-.area-shift {
-  grid-area: shift;
-}
-
-.area-ctrl {
-  grid-area: ctrl;
-}
-
-.area-space {
-  grid-area: space;
-  width: calc(var(--unit) * var(--key-width-unit));
-}
-
-.area-r {
-  grid-area: r;
-}
-
-.area-q {
-  grid-area: q;
-}
-
-.area-e {
-  grid-area: e;
-}
 </style>

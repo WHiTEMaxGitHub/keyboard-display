@@ -16,6 +16,7 @@ describe("app config", () => {
           position: "bottom-right",
           layout: config.layout,
           style: config.style,
+          rows: config.rows,
           keys: config.keys,
         },
       },
@@ -35,6 +36,8 @@ describe("app config", () => {
       { name: "CS POV", path: "/tmp/cs-pov.json" },
     ]);
     expect(appConfig.currentProfile.overlay.position).toBe("bottom-right");
+    expect(appConfig.currentProfile.overlay.rows).toEqual(config.rows);
+    expect("keys" in appConfig.currentProfile.overlay).toBe(false);
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
     expect(appConfig.recording.silent).toBe(true);
   });
@@ -57,7 +60,7 @@ describe("app config", () => {
             position: "center",
             layout: createDefaultConfig().layout,
             style: createDefaultConfig().style,
-            keys: createDefaultConfig().keys,
+            rows: createDefaultConfig().rows,
           },
         },
         recording: {
@@ -77,5 +80,6 @@ describe("app config", () => {
 
     expect(appConfig.currentProfile.name).toBe("Unsaved");
     expect(appConfig.currentProfile.overlay.position).toBe("center");
+    expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
   });
 });
