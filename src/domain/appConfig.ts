@@ -29,6 +29,7 @@ export type AppConfigFile = {
   currentProfile: CurrentProfile;
   recording: {
     outputDirectory: string | null;
+    silent?: boolean;
     hotkeys: RecordingHotkeyConfig;
   };
   ui: {

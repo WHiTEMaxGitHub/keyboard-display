@@ -21,6 +21,7 @@ describe("app config", () => {
       },
       recording: {
         outputDirectory: "/tmp/recordings",
+        silent: true,
         hotkeys: {
           mode: "toggle",
           start: ["ctrl-left", "r"],
@@ -35,6 +36,7 @@ describe("app config", () => {
     ]);
     expect(appConfig.currentProfile.overlay.position).toBe("bottom-right");
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
+    expect(appConfig.recording.silent).toBe(true);
   });
 
   it("parses app config json", () => {
@@ -60,6 +62,7 @@ describe("app config", () => {
         },
         recording: {
           outputDirectory: null,
+          silent: false,
           hotkeys: {
             mode: "disabled",
             start: [],

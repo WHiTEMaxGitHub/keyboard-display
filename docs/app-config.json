@@ -120,6 +120,7 @@
   },
   "recording": {
     "outputDirectory": null,
+    "silent": false,
     "hotkeys": {
       "mode": "disabled",
       "start": [],
