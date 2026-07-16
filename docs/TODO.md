@@ -96,10 +96,15 @@
   - Keep the current JSON event stream as a debug / test format.
   - Consider Huffman only as a future v2 after collecting real samples.
 
-- [ ] Add `.kbdrec` inspection / replay tooling.
+- [x] Add `.kbdrec` inspection / replay core.
   - Decode binary recordings into a human-readable debug view.
   - Reconstruct pressed-state frames by applying event stream changes.
   - Use this before adding video export.
+
+- [ ] Add a `.kbdrec` inspection UI or CLI entry point.
+  - Choose a `.kbdrec` file.
+  - Show decoded key table, events, markers, and reconstructed frames.
+  - Use the same Rust inspection command as the source of truth.
 
 - [ ] Use monotonic timestamps for input recordings.
   - Store event time as `t = now_monotonic - record_start_monotonic`.

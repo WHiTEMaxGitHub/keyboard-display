@@ -38,10 +38,19 @@ pub struct RecordingSnapshot {
     pub events: Vec<RecordingEvent>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RecordingFrame {
     pub t: u64,
     pub keys: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct RecordingInspection {
+    pub version: u8,
+    pub fps: u16,
+    pub key_ids: Vec<String>,
+    pub events: Vec<RecordingEvent>,
+    pub frames: Vec<RecordingFrame>,
 }
 
 pub struct RecordingSession {
@@ -222,6 +231,53 @@ pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> V
     frames
 }
 
+pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
+    let decoded = binary::decode_kbdrec(bytes)?;
+    let mut events = Vec::new();
+    let mut current_frame = 0;
+
+    for frame_event in &decoded.events {
+        current_frame += frame_event.frame_delta;
+        let t = frame_to_ms(current_frame, decoded.fps);
+
+        for key_id in &frame_event.down {
+            events.push(RecordingEvent::KeyDown {
+                t,
+                key_id: key_id.clone(),
+            });
+        }
+
+        for key_id in &frame_event.up {
+            events.push(RecordingEvent::KeyUp {
+                t,
+                key_id: key_id.clone(),
+            });
+        }
+    }
+
+    for marker in &decoded.markers {
+        events.push(RecordingEvent::Marker {
+            t: marker.t_ms,
+            name: marker.name.clone(),
+        });
+    }
+
+    events.sort_by_key(event_time);
+    let duration_ms = events.iter().map(event_time).max().unwrap_or(0);
+
+    Ok(RecordingInspection {
+        version: 1,
+        fps: decoded.fps,
+        key_ids: decoded.key_ids,
+        frames: sample_frames(decoded.fps, duration_ms, &events),
+        events,
+    })
+}
+
+fn frame_to_ms(frame: u64, fps: u16) -> u64 {
+    frame * 1000 / u64::from(fps)
+}
+
 fn event_time(event: &RecordingEvent) -> u64 {
     match event {
         RecordingEvent::KeyDown { t, .. }
@@ -234,7 +290,8 @@ fn event_time(event: &RecordingEvent) -> u64 {
 mod tests {
     use super::{
         binary::{decode_kbdrec, encode_kbdrec},
-        sample_frames, RecordingEvent, RecordingManager, RecordingSession, RecordingSnapshot,
+        inspect_kbdrec, sample_frames, RecordingEvent, RecordingManager, RecordingSession,
+        RecordingSnapshot,
     };
 
     #[test]
@@ -426,5 +483,43 @@ mod tests {
 
         assert!(decoded.key_ids.is_empty());
         assert!(decoded.events.is_empty());
+    }
+
+    #[test]
+    fn inspects_binary_kbdrec_as_human_readable_events_and_frames() {
+        let snapshot = {
+            let mut session = RecordingSession::new(10, 1000);
+            session.record_input(1100, "w", true);
+            session.record_input(1300, "w", false);
+            session.add_marker(1200, "sync");
+            session.snapshot()
+        };
+
+        let inspection = inspect_kbdrec(&encode_kbdrec(&snapshot).unwrap()).unwrap();
+
+        assert_eq!(inspection.version, 1);
+        assert_eq!(inspection.fps, 10);
+        assert_eq!(inspection.key_ids, vec!["w"]);
+        assert_eq!(
+            inspection.events,
+            vec![
+                RecordingEvent::KeyDown {
+                    t: 100,
+                    key_id: "w".to_string(),
+                },
+                RecordingEvent::Marker {
+                    t: 200,
+                    name: "sync".to_string(),
+                },
+                RecordingEvent::KeyUp {
+                    t: 300,
+                    key_id: "w".to_string(),
+                },
+            ],
+        );
+        assert!(inspection.frames[0].keys.is_empty());
+        assert_eq!(inspection.frames[1].keys, vec!["w".to_string()]);
+        assert_eq!(inspection.frames[2].keys, vec!["w".to_string()]);
+        assert!(inspection.frames[3].keys.is_empty());
     }
 }

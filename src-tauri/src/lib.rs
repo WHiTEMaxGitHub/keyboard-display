@@ -79,6 +79,14 @@ fn stop_recording(
     state.stop(output_dir, recording::now_ms()?)
 }
 
+#[tauri::command]
+fn inspect_recording_file(
+    path: std::path::PathBuf,
+) -> Result<recording::RecordingInspection, String> {
+    let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
+    recording::inspect_kbdrec(&bytes)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(RecordingManager::new())
@@ -93,7 +101,8 @@ pub fn run() {
             start_recording,
             record_input_event,
             add_recording_marker,
-            stop_recording
+            stop_recording,
+            inspect_recording_file
         ])
         .setup(|app| {
             input::start_native_input_backend(app.handle().clone());
