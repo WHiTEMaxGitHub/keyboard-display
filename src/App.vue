@@ -52,6 +52,9 @@ const isRecording = ref(false);
 const recordingCountdown = ref(0);
 const recordingCountdownTimer = ref<number | null>(null);
 const lastRecordingPath = ref("");
+const inspectedRecordingPath = ref("");
+const recordingInspection = ref<RecordingInspection | null>(null);
+const recordingInspectionError = ref("");
 const recordingHotkeys = ref<RecordingHotkeyConfig>({
   mode: "disabled",
   start: [],
@@ -75,6 +78,24 @@ type OverlayRuntimeConfig = {
   rows: typeof config.rows;
   keys: typeof config.keys;
   style: OverlayStyle;
+};
+
+type RecordingInspectionEvent =
+  | { t: number; down: string }
+  | { t: number; up: string }
+  | { t: number; marker: string };
+
+type RecordingInspectionFrame = {
+  t: number;
+  keys: string[];
+};
+
+type RecordingInspection = {
+  version: number;
+  fps: number;
+  keyIds: string[];
+  events: RecordingInspectionEvent[];
+  frames: RecordingInspectionFrame[];
 };
 
 function updateActiveKey(keyId: string, pressed: boolean) {
@@ -479,6 +500,30 @@ async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
   restoreOverlayAfterRecording.value = false;
 }
 
+async function inspectRecordingFile() {
+  const selectedPath = await open({
+    title: "Inspect keyboard recording",
+    filters: [{ name: "Keyboard recording", extensions: ["kbdrec"] }],
+    multiple: false,
+  });
+
+  if (typeof selectedPath !== "string") {
+    return;
+  }
+
+  inspectedRecordingPath.value = selectedPath;
+  recordingInspection.value = null;
+  recordingInspectionError.value = "";
+
+  try {
+    recordingInspection.value = await invoke<RecordingInspection>("inspect_recording_file", {
+      path: selectedPath,
+    });
+  } catch (error) {
+    recordingInspectionError.value = String(error);
+  }
+}
+
 function updateSilentRecording(value: boolean) {
   silentRecording.value = value;
   scheduleAppConfigSave();
@@ -713,6 +758,9 @@ onUnmounted(() => {
       :is-recording="isRecording"
       :recording-countdown="recordingCountdown"
       :last-recording-path="lastRecordingPath"
+      :inspected-recording-path="inspectedRecordingPath"
+      :recording-inspection="recordingInspection"
+      :recording-inspection-error="recordingInspectionError"
       :overlay-position="overlayPosition"
       :recording-hotkeys="recordingHotkeys"
       :hotkey-capture-target="hotkeyCaptureTarget"
@@ -725,6 +773,7 @@ onUnmounted(() => {
       @update-silent-recording="updateSilentRecording"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
+      @inspect-recording-file="inspectRecordingFile"
       @update-recording-hotkey-mode="updateRecordingHotkeyMode"
       @begin-hotkey-capture="beginHotkeyCapture"
       @move-overlay="moveOverlay"

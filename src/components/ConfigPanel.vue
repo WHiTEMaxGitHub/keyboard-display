@@ -16,6 +16,24 @@ import PovOverlay from "./PovOverlay.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
 
+type RecordingInspectionEvent =
+  | { t: number; down: string }
+  | { t: number; up: string }
+  | { t: number; marker: string };
+
+type RecordingInspectionFrame = {
+  t: number;
+  keys: string[];
+};
+
+type RecordingInspection = {
+  version: number;
+  fps: number;
+  keyIds: string[];
+  events: RecordingInspectionEvent[];
+  frames: RecordingInspectionFrame[];
+};
+
 const activePage = ref<ConfigPage>("overview");
 
 const navItems: Array<{
@@ -41,6 +59,9 @@ const props = defineProps<{
   isRecording: boolean;
   recordingCountdown: number;
   lastRecordingPath: string;
+  inspectedRecordingPath: string;
+  recordingInspection: RecordingInspection | null;
+  recordingInspectionError: string;
   overlayPosition: string;
   recordingHotkeys: RecordingHotkeyConfig;
   hotkeyCaptureTarget: "start" | "stop" | null;
@@ -60,6 +81,7 @@ const emit = defineEmits<{
   "update-silent-recording": [value: boolean];
   "start-recording": [];
   "stop-recording": [];
+  "inspect-recording-file": [];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
   "begin-hotkey-capture": [target: "start" | "stop"];
   "move-overlay": [
@@ -146,6 +168,10 @@ function stopRecording() {
   emit("stop-recording");
 }
 
+function inspectRecordingFile() {
+  emit("inspect-recording-file");
+}
+
 function updateRecordingHotkeyMode(event: Event) {
   emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
 }
@@ -156,6 +182,18 @@ function beginHotkeyCapture(target: "start" | "stop") {
 
 function formatHotkey(keys: string[]) {
   return keys.length > 0 ? keys.join(" + ") : "Not set";
+}
+
+function formatInspectionEvent(event: RecordingInspectionEvent) {
+  if ("down" in event) {
+    return `${event.t}ms down ${event.down}`;
+  }
+
+  if ("up" in event) {
+    return `${event.t}ms up ${event.up}`;
+  }
+
+  return `${event.t}ms marker ${event.marker}`;
 }
 </script>
 
@@ -481,6 +519,76 @@ function formatHotkey(keys: string[]) {
           <p v-if="lastRecordingPath" class="quiet">
             Last recording: {{ lastRecordingPath }}
           </p>
+          <div class="inspection-panel">
+            <div class="section-header">
+              <h3>Recording inspection</h3>
+              <button type="button" @click="inspectRecordingFile">
+                Inspect .kbdrec
+              </button>
+            </div>
+            <p v-if="inspectedRecordingPath" class="quiet">
+              File: {{ inspectedRecordingPath }}
+            </p>
+            <p v-if="recordingInspectionError" class="error-text">
+              {{ recordingInspectionError }}
+            </p>
+            <div v-if="recordingInspection" class="inspection-grid">
+              <div class="field-row">
+                <span>Version</span>
+                <strong>{{ recordingInspection.version }}</strong>
+              </div>
+              <div class="field-row">
+                <span>FPS</span>
+                <strong>{{ recordingInspection.fps }}</strong>
+              </div>
+              <div class="field-row">
+                <span>Keys</span>
+                <strong>{{ recordingInspection.keyIds.length }}</strong>
+              </div>
+              <div class="field-row">
+                <span>Events</span>
+                <strong>{{ recordingInspection.events.length }}</strong>
+              </div>
+              <div class="field-row">
+                <span>Frames</span>
+                <strong>{{ recordingInspection.frames.length }}</strong>
+              </div>
+              <div class="field-row">
+                <span>Markers</span>
+                <strong>
+                  {{ recordingInspection.events.filter((event) => "marker" in event).length }}
+                </strong>
+              </div>
+            </div>
+            <div v-if="recordingInspection" class="inspection-lists">
+              <div>
+                <h4>Key table</h4>
+                <p class="quiet">{{ recordingInspection.keyIds.join(", ") || "None" }}</p>
+              </div>
+              <div>
+                <h4>Events</h4>
+                <ol>
+                  <li
+                    v-for="(event, index) in recordingInspection.events.slice(0, 8)"
+                    :key="index"
+                  >
+                    {{ formatInspectionEvent(event) }}
+                  </li>
+                </ol>
+              </div>
+              <div>
+                <h4>Frames</h4>
+                <ol>
+                  <li
+                    v-for="frame in recordingInspection.frames.slice(0, 8)"
+                    :key="frame.t"
+                  >
+                    {{ frame.t }}ms: {{ frame.keys.join(", ") || "none" }}
+                  </li>
+                </ol>
+              </div>
+            </div>
+          </div>
         </article>
       </section>
 
@@ -800,7 +908,8 @@ label {
   margin: 16px 0;
 }
 
-.recording-actions button {
+.recording-actions button,
+.inspection-panel button {
   min-height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
@@ -818,6 +927,66 @@ label {
 
 .recording-actions button:not(:disabled):hover {
   background: #29313d;
+}
+
+.inspection-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 18px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.section-header h3,
+.inspection-lists h4 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.section-header h3 {
+  font-size: 16px;
+  line-height: 22px;
+}
+
+.inspection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 18px;
+}
+
+.inspection-lists {
+  display: grid;
+  gap: 14px;
+}
+
+.inspection-lists h4 {
+  margin-bottom: 6px;
+  color: #c9d1da;
+  font-size: 13px;
+}
+
+.inspection-lists ol {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+  color: #dfe5ec;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.error-text {
+  margin: 0;
+  color: #ff8f8f;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .hotkey-panel {
