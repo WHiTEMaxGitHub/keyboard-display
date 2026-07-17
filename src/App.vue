@@ -684,8 +684,6 @@ function handleKeydown(event: KeyboardEvent) {
     updateActiveKey(keyId, true);
     if (hotkeyCaptureTarget.value) {
       capturedHotkeyKeys.value = new Set([...capturedHotkeyKeys.value, keyId]);
-    } else {
-      void handleRecordingHotkeys();
     }
   }
 }
@@ -697,8 +695,6 @@ function handleKeyup(event: KeyboardEvent) {
     updateActiveKey(keyId, false);
     if (hotkeyCaptureTarget.value) {
       finishHotkeyCapture();
-    } else {
-      void handleRecordingHotkeys();
     }
   }
 }
