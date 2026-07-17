@@ -8,7 +8,6 @@
   "currentProfile": {
     "name": "CS POV",
     "sourcePath": "docs/default-config.json",
-    "dirty": false,
     "overlay": {
       "visible": true,
       "position": "bottom-right",
@@ -153,7 +152,8 @@
       "maxFps": 1000,
       "syncFeedbackEnabled": true,
       "syncFeedbackDurationMs": 420
-    }
+    },
+    "changed": false
   },
   "recording": {
     "outputDirectory": null,

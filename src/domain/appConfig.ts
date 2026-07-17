@@ -10,7 +10,7 @@ export type RecentProfile = {
 export type CurrentProfile = {
   name: string;
   sourcePath: string | null;
-  dirty: boolean;
+  changed: boolean;
   recording: AppConfig["recording"];
   overlay: {
     visible: boolean;
@@ -89,6 +89,8 @@ export function buildAppConfigFile({
 export function parseAppConfigFile(text: string): AppConfigFile {
   const config = JSON.parse(text) as PersistedAppConfigFile & {
     currentProfile: {
+      dirty?: boolean;
+      changed?: boolean;
       overlay: {
         rows?: OverlayRow[];
         keys?: AppConfig["keys"];
@@ -105,6 +107,7 @@ export function parseAppConfigFile(text: string): AppConfigFile {
     ...config,
     currentProfile: {
       ...config.currentProfile,
+      changed: config.currentProfile.changed ?? config.currentProfile.dirty ?? false,
       recording: profileRecording,
       overlay: {
         ...config.currentProfile.overlay,

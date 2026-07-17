@@ -67,6 +67,7 @@ const props = defineProps<{
   activeKeys: Set<string>;
   overlayVisible: boolean;
   profileName: string;
+  profileChanged: boolean;
   recordingDirectory: string;
   defaultRecordingDirectory: string;
   silentRecording: boolean;
@@ -362,6 +363,10 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             <div class="field-row">
               <span>Name</span>
               <strong>{{ profileName }}</strong>
+            </div>
+            <div class="field-row">
+              <span>Status</span>
+              <strong>{{ profileChanged ? "Unsaved changes" : "Saved" }}</strong>
             </div>
             <div class="field-row">
               <span>Visible keys</span>

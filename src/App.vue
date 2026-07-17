@@ -48,6 +48,7 @@ const activeKeyIds = ref(new Set<string>());
 const isOverlayVisible = ref(true);
 const profileName = ref("CS POV");
 const profileSourcePath = ref<string | null>(null);
+const profileChanged = ref(false);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const recordingDirectory = ref("");
 const defaultRecordingDirectory = ref("");
@@ -146,6 +147,7 @@ function applyRecordingConfig(recording: RecordingConfig) {
 
 async function updateOverlayStyle(style: OverlayStyle) {
   applyOverlayStyle(style);
+  markProfileChanged();
   const overlayWindow = await Window.getByLabel("pov");
   await resizeOverlayWindow(overlayWindow);
   await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
@@ -215,7 +217,11 @@ async function destroyOverlayWindow() {
   await overlayWindow?.destroy();
 }
 
-async function setOverlayVisible(visible: boolean) {
+function markProfileChanged() {
+  profileChanged.value = true;
+}
+
+async function setOverlayVisible(visible: boolean, markChanged = true) {
   const overlayWindow = visible ? await ensureOverlayWindow() : await Window.getByLabel("pov");
 
   if (!overlayWindow) {
@@ -231,11 +237,17 @@ async function setOverlayVisible(visible: boolean) {
   }
 
   isOverlayVisible.value = visible;
+  if (markChanged) {
+    markProfileChanged();
+  }
   await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, visible);
 }
 
-async function moveOverlay(position: OverlayPosition) {
+async function moveOverlay(position: OverlayPosition, markChanged = true) {
   overlayPosition.value = position;
+  if (markChanged) {
+    markProfileChanged();
+  }
   const overlayWindow = await ensureOverlayWindow();
   const monitor = (await currentMonitor()) ?? (await primaryMonitor());
 
@@ -271,6 +283,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   const loadedConfig = parseConfigFile(text);
   profileName.value = loadedConfig.name || profileNameFromFileName(fileName);
   profileSourcePath.value = sourcePath;
+  profileChanged.value = false;
   overlayPosition.value = (loadedConfig.overlay.position as OverlayPosition) ?? "bottom-right";
 
   applyOverlayLayout(loadedConfig.overlay.layout);
@@ -286,9 +299,9 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
     style: loadedConfig.overlay.style,
   });
   const visible = loadedConfig.overlay.visible ?? true;
-  await setOverlayVisible(visible);
+  await setOverlayVisible(visible, false);
   if (visible) {
-    await moveOverlay(overlayPosition.value);
+    await moveOverlay(overlayPosition.value, false);
   }
 }
 
@@ -317,6 +330,7 @@ async function restoreAppConfig() {
   const appConfig = parseAppConfigFile(savedConfig);
   profileName.value = appConfig.currentProfile.name;
   profileSourcePath.value = appConfig.currentProfile.sourcePath;
+  profileChanged.value = appConfig.currentProfile.changed;
   overlayPosition.value = appConfig.currentProfile.overlay.position as OverlayPosition;
   recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
   silentRecording.value = appConfig.recording.silent ?? false;
@@ -334,9 +348,9 @@ async function restoreAppConfig() {
     style: appConfig.currentProfile.overlay.style,
   });
 
-  await setOverlayVisible(appConfig.currentProfile.overlay.visible);
+  await setOverlayVisible(appConfig.currentProfile.overlay.visible, false);
   if (appConfig.currentProfile.overlay.visible) {
-    await moveOverlay(overlayPosition.value);
+    await moveOverlay(overlayPosition.value, false);
   }
 }
 
@@ -360,7 +374,7 @@ async function saveAppConfig() {
     currentProfile: {
       name: profileName.value,
       sourcePath: profileSourcePath.value,
-      dirty: true,
+      changed: profileChanged.value,
       recording: config.recording,
       overlay: {
         visible: isOverlayVisible.value,
@@ -415,6 +429,7 @@ async function exportAndApplyConfig() {
 
   await invoke("save_config_file", { path, contents: json });
   profileSourcePath.value = path;
+  profileChanged.value = false;
   scheduleAppConfigSave();
 }
 
@@ -433,6 +448,7 @@ async function overwriteAndApplyConfig() {
     position: overlayPosition.value,
   });
   await invoke("save_config_file", { path: profileSourcePath.value, contents: json });
+  profileChanged.value = false;
   scheduleAppConfigSave();
 }
 
@@ -570,6 +586,7 @@ function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
 
 function updateRecordingConfig(recording: RecordingConfig) {
   applyRecordingConfig(recording);
+  markProfileChanged();
   scheduleAppConfigSave();
 }
 
@@ -810,7 +827,9 @@ onMounted(async () => {
 
   if (!isOverlayWindow.value) {
     stopAppConfigWatch = watch(
-      [config, isOverlayVisible, profileName, profileSourcePath, overlayPosition],
+      [config, isOverlayVisible, profileName, profileSourcePath, profileChanged, overlayPosition],
+      // profileChanged is separate from config because it tracks whether the
+      // current profile differs from sourcePath rather than the profile data.
       scheduleAppConfigSave,
       { deep: true },
     );
@@ -852,6 +871,7 @@ onUnmounted(() => {
       :active-keys="activeKeyIds"
       :overlay-visible="isOverlayVisible"
       :profile-name="profileName"
+      :profile-changed="profileChanged"
       :recording-directory="recordingDirectory"
       :default-recording-directory="defaultRecordingDirectory"
       :silent-recording="silentRecording"

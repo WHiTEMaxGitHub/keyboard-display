@@ -10,7 +10,7 @@ describe("app config", () => {
       currentProfile: {
         name: "CS POV",
         sourcePath: "/tmp/cs-pov.json",
-        dirty: true,
+        changed: true,
         recording: config.recording,
         overlay: {
           visible: true,
@@ -38,6 +38,8 @@ describe("app config", () => {
       { name: "CS POV", path: "/tmp/cs-pov.json" },
     ]);
     expect(appConfig.currentProfile.overlay.position).toBe("bottom-right");
+    expect(appConfig.currentProfile.changed).toBe(true);
+    expect("dirty" in appConfig.currentProfile).toBe(false);
     expect(appConfig.currentProfile.recording).toEqual(config.recording);
     expect(appConfig.currentProfile.overlay.rows).toEqual(config.rows);
     expect("keys" in appConfig.currentProfile.overlay).toBe(false);
@@ -57,7 +59,7 @@ describe("app config", () => {
         currentProfile: {
           name: "Unsaved",
           sourcePath: null,
-          dirty: true,
+          changed: true,
           recording: createDefaultConfig().recording,
           overlay: {
             visible: true,
@@ -84,6 +86,7 @@ describe("app config", () => {
     );
 
     expect(appConfig.currentProfile.name).toBe("Unsaved");
+    expect(appConfig.currentProfile.changed).toBe(true);
     expect(appConfig.currentProfile.recording).toEqual(createDefaultConfig().recording);
     expect(appConfig.currentProfile.overlay.position).toBe("center");
     expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
@@ -126,6 +129,7 @@ describe("app config", () => {
     );
 
     expect(appConfig.currentProfile.recording.fpsOptions).toEqual([30, 60, 120]);
+    expect(appConfig.currentProfile.changed).toBe(true);
     expect(appConfig.currentProfile.recording.maxFps).toBe(1000);
     expect(appConfig.recording.hotkeys.sync).toEqual(["f8"]);
     expect(appConfig.recording.hotkeys.start).toEqual(["ctrl-left", "shift-left", "r"]);
