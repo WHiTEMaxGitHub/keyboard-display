@@ -10,6 +10,7 @@ defineProps<{
   keys: KeyBinding[];
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
+  syncFeedbackActive?: boolean;
 }>();
 
 onMounted(async () => {
@@ -27,6 +28,7 @@ onMounted(async () => {
       :keys="keys"
       :active-keys="activeKeys"
       :overlay-style="overlayStyle"
+      :sync-feedback-active="syncFeedbackActive"
     />
   </main>
 </template>

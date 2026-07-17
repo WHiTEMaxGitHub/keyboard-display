@@ -3,7 +3,7 @@
   "name": "Left keyboard",
   "overlay": {
     "visible": true,
-    "position": "bottom-right",
+    "position": "bottom-left",
     "layout": {
       "unitPx": 54,
       "gapUnit": 0.15
@@ -258,7 +258,7 @@
     ]
   },
   "recording": {
-    "defaultFps": 60,
+    "defaultFps": 120,
     "fpsOptions": [
       30,
       60,
@@ -267,8 +267,10 @@
     "formatExtension": ".kbdrec",
     "primaryArtifact": "input-binary",
     "customFpsEnabled": false,
-    "customFps": 600,
-    "maxFps": 1000
+    "customFps": 300,
+    "maxFps": 1000,
+    "syncFeedbackEnabled": true,
+    "syncFeedbackDurationMs": 420
   },
   "export": {
     "defaultFormat": "webm",

@@ -205,6 +205,24 @@ function updateCustomFpsEnabled(event: Event) {
   });
 }
 
+function updateSyncFeedbackEnabled(event: Event) {
+  emit("update-recording-config", {
+    ...props.config.recording,
+    syncFeedbackEnabled: (event.target as HTMLInputElement).checked,
+  });
+}
+
+function updateSyncFeedbackDuration(event: Event) {
+  const syncFeedbackDurationMs = Math.max(
+    100,
+    Math.round(Number((event.target as HTMLInputElement).value)),
+  );
+  emit("update-recording-config", {
+    ...props.config.recording,
+    syncFeedbackDurationMs,
+  });
+}
+
 function updateCustomFps(event: Event) {
   customFpsDraft.value = (event.target as HTMLInputElement).value;
 }
@@ -555,6 +573,25 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             />
             Silent recording
           </label>
+          <div class="fps-config-row">
+            <label class="toggle-row">
+              <input
+                :checked="config.recording.syncFeedbackEnabled"
+                type="checkbox"
+                @change="updateSyncFeedbackEnabled"
+              />
+              Sync border flash
+            </label>
+            <input
+              :disabled="!config.recording.syncFeedbackEnabled"
+              :min="100"
+              :value="config.recording.syncFeedbackDurationMs"
+              class="fps-input"
+              type="number"
+              @change="updateSyncFeedbackDuration"
+            />
+            <span class="write-estimate">ms</span>
+          </div>
           <div class="hotkey-panel">
             <label class="settings-row">
               <span>Hotkey mode</span>

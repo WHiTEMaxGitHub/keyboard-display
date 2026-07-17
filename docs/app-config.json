@@ -150,7 +150,9 @@
       "primaryArtifact": "input-binary",
       "customFpsEnabled": false,
       "customFps": 600,
-      "maxFps": 1000
+      "maxFps": 1000,
+      "syncFeedbackEnabled": true,
+      "syncFeedbackDurationMs": 420
     }
   },
   "recording": {

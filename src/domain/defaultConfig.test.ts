@@ -59,6 +59,8 @@ describe("createDefaultConfig", () => {
     expect(config.recording.customFpsEnabled).toBe(false);
     expect(config.recording.customFps).toBe(600);
     expect(config.recording.maxFps).toBe(1000);
+    expect(config.recording.syncFeedbackEnabled).toBe(true);
+    expect(config.recording.syncFeedbackDurationMs).toBe(420);
     expect(config.recording.formatExtension).toBe(".kbdrec");
     expect(config.recording.primaryArtifact).toBe("input-binary");
   });

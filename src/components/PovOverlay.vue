@@ -16,6 +16,7 @@ const props = defineProps<{
   keys: KeyBinding[];
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
+  syncFeedbackActive?: boolean;
 }>();
 
 const platformKey = computed(() => detectPlatformKey());
@@ -48,6 +49,7 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
       :class="[
         'key-cluster',
         `background-${overlayStyle.backgroundMode}`,
+        { 'sync-feedback-active': syncFeedbackActive },
       ]"
     >
       <div class="backplate" aria-hidden="true"></div>
@@ -89,6 +91,7 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
 .key-cluster {
   position: relative;
   width: max-content;
+  border-radius: var(--overlay-bg-radius);
 }
 
 .key-cluster.background-panel {
@@ -122,6 +125,19 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
   padding: 0;
   border: 0;
   background: transparent;
+}
+
+.key-cluster.sync-feedback-active::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border: 2px solid color-mix(in srgb, var(--key-active), white 16%);
+  border-radius: var(--overlay-bg-radius);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--key-active), transparent 48%),
+    0 0 22px color-mix(in srgb, var(--key-active), transparent 18%);
+  content: "";
+  pointer-events: none;
 }
 
 .row-layout {

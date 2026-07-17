@@ -26,6 +26,7 @@ import {
   INPUT_STATE_EVENT,
   OVERLAY_CONFIG_EVENT,
   OVERLAY_STYLE_EVENT,
+  OVERLAY_SYNC_FEEDBACK_EVENT,
   OVERLAY_VISIBLE_EVENT,
   keyIdFromKeyboardCode,
   keyIdFromMouseButton,
@@ -60,6 +61,7 @@ const recordingStatusMessage = ref("");
 const inspectedRecordingPath = ref("");
 const recordingInspection = ref<RecordingInspection | null>(null);
 const recordingInspectionError = ref("");
+const syncFeedbackActive = ref(false);
 const recordingHotkeys = ref<RecordingHotkeyConfig>(normalizeRecordingHotkeyConfig(undefined));
 const activeRecordingHotkeys = ref<RecordingHotkeyConfig | null>(null);
 const hotkeyCaptureTarget = ref<"start" | "stop" | "sync" | null>(null);
@@ -72,6 +74,7 @@ const isOverlayWindow = computed(() => {
 
 let unlistenInputState: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
+let syncFeedbackTimer: number | undefined;
 let appConfigSaveTimer: number | undefined;
 let stopAppConfigWatch: WatchStopHandle | undefined;
 
@@ -576,6 +579,11 @@ async function addSyncMarker() {
   }
 
   await invoke("add_recording_marker", { name: "sync" });
+  if (config.recording.syncFeedbackEnabled) {
+    await emitTo("pov", OVERLAY_SYNC_FEEDBACK_EVENT, {
+      durationMs: config.recording.syncFeedbackDurationMs,
+    });
+  }
   recordingStatusMessage.value = "Sync marker added.";
 }
 
@@ -766,10 +774,24 @@ onMounted(async () => {
         applyOverlayStyle(event.payload.style);
       },
     );
+    const unlistenSyncFeedback = await listen<{ durationMs: number }>(
+      OVERLAY_SYNC_FEEDBACK_EVENT,
+      (event) => {
+        syncFeedbackActive.value = true;
+        if (syncFeedbackTimer !== undefined) {
+          window.clearTimeout(syncFeedbackTimer);
+        }
+        syncFeedbackTimer = window.setTimeout(() => {
+          syncFeedbackActive.value = false;
+          syncFeedbackTimer = undefined;
+        }, event.payload.durationMs);
+      },
+    );
     const originalUnlistenOverlayStyle = unlistenOverlayStyle;
     unlistenOverlayStyle = () => {
       originalUnlistenOverlayStyle();
       unlistenOverlayConfig();
+      unlistenSyncFeedback();
     };
   } else {
     unlistenOverlayStyle = await listen<boolean>(
@@ -798,6 +820,9 @@ onUnmounted(() => {
   if (appConfigSaveTimer !== undefined) {
     window.clearTimeout(appConfigSaveTimer);
   }
+  if (syncFeedbackTimer !== undefined) {
+    window.clearTimeout(syncFeedbackTimer);
+  }
   stopAppConfigWatch?.();
   unlistenInputState?.();
   unlistenOverlayStyle?.();
@@ -817,6 +842,7 @@ onUnmounted(() => {
         :keys="config.keys"
         :active-keys="activeKeyIds"
         :overlay-style="config.style"
+        :sync-feedback-active="syncFeedbackActive"
       />
     </div>
     <ConfigPanel

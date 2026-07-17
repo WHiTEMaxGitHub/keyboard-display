@@ -140,10 +140,12 @@
   - Hotkey defaults to `F8`.
   - The marker should be written into the `.kbdrec` marker stream.
 
-- [ ] Add visible sync feedback.
-  - Flash the POV overlay when a sync marker is inserted.
-  - Optionally play a short beep.
-  - This gives the video timeline a visible/audio cue for alignment.
+- [x] Add visible sync feedback.
+  - Flash the POV overlay border when a sync marker is inserted.
+  - Keep the feedback small so it does not cover key states.
+  - Let users disable the feedback or adjust its duration in profile recording
+    config.
+  - This gives the video timeline a visible cue for alignment.
 
 - [ ] Support export offset.
   - Export overlay video with an `offsetMs` option.

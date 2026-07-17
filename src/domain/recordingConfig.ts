@@ -20,5 +20,7 @@ export function normalizeRecordingConfig(recording: RecordingConfig): RecordingC
     customFpsEnabled: recording.customFpsEnabled ?? false,
     customFps: clampRecordingFps(recording.customFps ?? 600, maxFps),
     maxFps,
+    syncFeedbackEnabled: recording.syncFeedbackEnabled ?? true,
+    syncFeedbackDurationMs: Math.max(100, Math.round(recording.syncFeedbackDurationMs ?? 420)),
   };
 }
