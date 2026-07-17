@@ -418,16 +418,24 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             />
             <span class="hint">Controls the whole POV overlay opacity.</span>
           </label>
-          <label>
-            Background
-            <select :value="config.style.backgroundMode" @change="updateBackgroundMode">
+          <label class="settings-row">
+            <span>Background</span>
+            <select
+              class="select-control compact-select"
+              :value="config.style.backgroundMode"
+              @change="updateBackgroundMode"
+            >
               <option value="transparent">Transparent</option>
               <option value="panel">Rounded panel</option>
             </select>
           </label>
-          <label>
-            Idle keys
-            <select :value="config.style.idleKeyVisibility" @change="updateIdleKeyVisibility">
+          <label class="settings-row">
+            <span>Idle keys</span>
+            <select
+              class="select-control compact-select"
+              :value="config.style.idleKeyVisibility"
+              @change="updateIdleKeyVisibility"
+            >
               <option value="visible">Visible</option>
               <option value="faint">Faint</option>
               <option value="hidden">Hidden until pressed</option>
@@ -1141,7 +1149,7 @@ label {
 
 .settings-row {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
+  grid-template-columns: minmax(112px, 1fr) minmax(180px, 240px);
   align-items: center;
   gap: 10px;
   margin: 0;
@@ -1189,7 +1197,7 @@ input[type="range"] {
 }
 
 select {
-  min-height: 36px;
+  min-height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
   appearance: none;
@@ -1206,11 +1214,19 @@ select {
     6px 6px;
   color: #dfe5ec;
   cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
   padding: 0 34px 0 10px;
 }
 
 .select-control {
-  width: 100%;
+  justify-self: end;
+  width: min(240px, 100%);
+}
+
+.compact-select {
+  min-height: 34px;
 }
 
 select:focus {
