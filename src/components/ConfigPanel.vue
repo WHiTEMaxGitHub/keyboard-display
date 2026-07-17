@@ -30,12 +30,12 @@ import PovOverlay from "./PovOverlay.vue";
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
 
 type RecordingInspectionEvent =
-  | { t: number; down: string }
-  | { t: number; up: string }
-  | { t: number; marker: string };
+  | { frame: number; down: string }
+  | { frame: number; up: string }
+  | { frame: number; marker: string };
 
 type RecordingInspectionFrame = {
-  t: number;
+  frame: number;
   keys: string[];
 };
 
@@ -252,14 +252,14 @@ function formatHotkey(keys: string[]) {
 
 function formatInspectionEvent(event: RecordingInspectionEvent) {
   if ("down" in event) {
-    return `${event.t}ms down ${event.down}`;
+    return `frame ${event.frame} down ${event.down}`;
   }
 
   if ("up" in event) {
-    return `${event.t}ms up ${event.up}`;
+    return `frame ${event.frame} up ${event.up}`;
   }
 
-  return `${event.t}ms marker ${event.marker}`;
+  return `frame ${event.frame} marker ${event.marker}`;
 }
 </script>
 
@@ -548,9 +548,13 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             Silent recording
           </label>
           <div class="hotkey-panel">
-            <label>
-              Hotkey mode
-              <select :value="recordingHotkeys.mode" @change="updateRecordingHotkeyMode">
+            <label class="settings-row">
+              <span>Hotkey mode</span>
+              <select
+                class="select-control"
+                :value="recordingHotkeys.mode"
+                @change="updateRecordingHotkeyMode"
+              >
                 <option value="disabled">Disabled</option>
                 <option value="toggle">Toggle start/stop</option>
                 <option value="separate">Separate start/stop</option>
@@ -689,9 +693,9 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
                 <ol>
                   <li
                     v-for="frame in recordingInspection.frames.slice(0, 8)"
-                    :key="frame.t"
+                    :key="frame.frame"
                   >
-                    {{ frame.t }}ms: {{ frame.keys.join(", ") || "none" }}
+                    frame {{ frame.frame }}: {{ frame.keys.join(", ") || "none" }}
                   </li>
                 </ol>
               </div>
@@ -1135,6 +1139,20 @@ label {
   margin: 16px 0;
 }
 
+.settings-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+}
+
+.settings-row span {
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .hotkey-row {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr) auto;
@@ -1174,9 +1192,31 @@ select {
   min-height: 36px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
+  appearance: none;
   background: #202630;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9ca7b4 50%),
+    linear-gradient(135deg, #9ca7b4 50%, transparent 50%);
+  background-position:
+    calc(100% - 17px) 15px,
+    calc(100% - 11px) 15px;
+  background-repeat: no-repeat;
+  background-size:
+    6px 6px,
+    6px 6px;
   color: #dfe5ec;
-  padding: 0 10px;
+  cursor: pointer;
+  padding: 0 34px 0 10px;
+}
+
+.select-control {
+  width: 100%;
+}
+
+select:focus {
+  border-color: rgba(37, 211, 102, 0.55);
+  outline: 2px solid rgba(37, 211, 102, 0.14);
+  outline-offset: 0;
 }
 
 .color-grid,

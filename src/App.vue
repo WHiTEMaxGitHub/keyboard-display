@@ -83,12 +83,12 @@ type OverlayRuntimeConfig = {
 };
 
 type RecordingInspectionEvent =
-  | { t: number; down: string }
-  | { t: number; up: string }
-  | { t: number; marker: string };
+  | { frame: number; down: string }
+  | { frame: number; up: string }
+  | { frame: number; marker: string };
 
 type RecordingInspectionFrame = {
-  t: number;
+  frame: number;
   keys: string[];
 };
 

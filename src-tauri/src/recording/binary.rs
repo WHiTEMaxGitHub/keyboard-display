@@ -23,7 +23,6 @@ pub struct DecodedFrameRun {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DecodedMarker {
     pub frame: u64,
-    pub t_ms: u64,
     pub name: String,
 }
 
@@ -44,12 +43,11 @@ pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
                 push_unique(&mut key_ids, key_id);
                 events.push(event.clone());
             }
-            RecordingEvent::Marker { t, name } => {
+            RecordingEvent::Marker { frame, name } => {
                 push_marker_unique(
                     &mut markers,
                     DecodedMarker {
-                        frame: ms_to_frame(*t, snapshot.fps),
-                        t_ms: *t,
+                        frame: *frame,
                         name: name.clone(),
                     },
                 );
@@ -58,13 +56,13 @@ pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
         }
     }
 
-    let input_duration_ms = events.iter().map(event_time).max().unwrap_or(0);
-    let marker_duration_ms = markers.iter().map(|marker| marker.t_ms).max().unwrap_or(0);
-    let duration_ms = input_duration_ms.max(marker_duration_ms);
+    let input_duration_frame = events.iter().map(event_frame).max().unwrap_or(0);
+    let marker_duration_frame = markers.iter().map(|marker| marker.frame).max().unwrap_or(0);
+    let duration_frame = input_duration_frame.max(marker_duration_frame);
     let frames = if key_ids.is_empty() {
         Vec::new()
     } else {
-        sample_frames(snapshot.fps, duration_ms, &events)
+        sample_frames(snapshot.fps, duration_frame, &events)
     };
     let bitset_len = key_ids.len().div_ceil(8);
     let key_index = key_ids
@@ -141,7 +139,7 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
 
         for _ in 0..run_len {
             frames.push(RecordingFrame {
-                t: frame_to_ms(frame_index, fps),
+                frame: frame_index,
                 keys: keys.clone(),
             });
             frame_index += 1;
@@ -155,7 +153,6 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
         let frame = reader.read_varint()?;
         markers.push(DecodedMarker {
             frame,
-            t_ms: frame_to_ms(frame, fps),
             name: reader.read_string()?,
         });
     }
@@ -189,10 +186,6 @@ fn push_marker_unique(markers: &mut Vec<DecodedMarker>, marker: DecodedMarker) {
     {
         markers.push(marker);
     }
-}
-
-fn ms_to_frame(t_ms: u64, fps: u16) -> u64 {
-    (t_ms * u64::from(fps) + 500) / 1000
 }
 
 fn encode_frame_bits(
@@ -258,15 +251,11 @@ fn estimated_buffer_size(
         + marker_count * AVERAGE_MARKER_BYTES
 }
 
-fn frame_to_ms(frame: u64, fps: u16) -> u64 {
-    frame * 1000 / u64::from(fps)
-}
-
-fn event_time(event: &RecordingEvent) -> u64 {
+fn event_frame(event: &RecordingEvent) -> u64 {
     match event {
-        RecordingEvent::KeyDown { t, .. }
-        | RecordingEvent::KeyUp { t, .. }
-        | RecordingEvent::Marker { t, .. } => *t,
+        RecordingEvent::KeyDown { frame, .. }
+        | RecordingEvent::KeyUp { frame, .. }
+        | RecordingEvent::Marker { frame, .. } => *frame,
     }
 }
 

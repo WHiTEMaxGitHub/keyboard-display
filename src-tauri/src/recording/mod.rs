@@ -14,17 +14,17 @@ use std::{
 #[serde(untagged)]
 pub enum RecordingEvent {
     KeyDown {
-        t: u64,
+        frame: u64,
         #[serde(rename = "down")]
         key_id: String,
     },
     KeyUp {
-        t: u64,
+        frame: u64,
         #[serde(rename = "up")]
         key_id: String,
     },
     Marker {
-        t: u64,
+        frame: u64,
         #[serde(rename = "marker")]
         name: String,
     },
@@ -40,7 +40,7 @@ pub struct RecordingSnapshot {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct RecordingFrame {
-    pub t: u64,
+    pub frame: u64,
     pub keys: Vec<String>,
 }
 
@@ -85,7 +85,7 @@ impl RecordingSession {
     }
 
     pub fn record_input(&mut self, now_ms: u64, key_id: impl Into<String>, pressed: bool) {
-        let t = self.relative_time(now_ms);
+        let frame = self.frame_at(now_ms);
         let key_id = key_id.into();
 
         if pressed {
@@ -94,19 +94,19 @@ impl RecordingSession {
             }
 
             self.active_keys.insert(key_id.clone());
-            self.events.push(RecordingEvent::KeyDown { t, key_id });
+            self.events.push(RecordingEvent::KeyDown { frame, key_id });
         } else {
             if !self.active_keys.remove(&key_id) {
                 return;
             }
 
-            self.events.push(RecordingEvent::KeyUp { t, key_id });
+            self.events.push(RecordingEvent::KeyUp { frame, key_id });
         }
     }
 
     pub fn add_marker(&mut self, now_ms: u64, name: impl Into<String>) {
         self.events.push(RecordingEvent::Marker {
-            t: self.relative_time(now_ms),
+            frame: self.frame_at(now_ms),
             name: name.into(),
         });
     }
@@ -114,15 +114,15 @@ impl RecordingSession {
     pub fn suppress_recent_keys(&mut self, key_ids: &[String]) {
         let Some(suppress_since) = key_ids
             .iter()
-            .filter_map(|key_id| self.last_key_down_time(key_id))
+            .filter_map(|key_id| self.last_key_down_frame(key_id))
             .min()
         else {
             return;
         };
 
         self.events.retain(|event| match event {
-            RecordingEvent::KeyDown { t, key_id } | RecordingEvent::KeyUp { t, key_id } => {
-                !key_ids.iter().any(|target| target == key_id) || *t < suppress_since
+            RecordingEvent::KeyDown { frame, key_id } | RecordingEvent::KeyUp { frame, key_id } => {
+                !key_ids.iter().any(|target| target == key_id) || *frame < suppress_since
             }
             RecordingEvent::Marker { .. } => true,
         });
@@ -132,9 +132,9 @@ impl RecordingSession {
         }
     }
 
-    fn last_key_down_time(&self, target_key_id: &str) -> Option<u64> {
+    fn last_key_down_frame(&self, target_key_id: &str) -> Option<u64> {
         self.events.iter().rev().find_map(|event| match event {
-            RecordingEvent::KeyDown { t, key_id } if key_id == target_key_id => Some(*t),
+            RecordingEvent::KeyDown { frame, key_id } if key_id == target_key_id => Some(*frame),
             _ => None,
         })
     }
@@ -148,8 +148,8 @@ impl RecordingSession {
         }
     }
 
-    fn relative_time(&self, now_ms: u64) -> u64 {
-        now_ms.saturating_sub(self.start_time_ms)
+    fn frame_at(&self, now_ms: u64) -> u64 {
+        ms_to_frame(now_ms.saturating_sub(self.start_time_ms), self.fps)
     }
 }
 
@@ -246,18 +246,22 @@ pub fn monotonic_now_ms() -> u64 {
     START.get_or_init(Instant::now).elapsed().as_millis() as u64
 }
 
-pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> Vec<RecordingFrame> {
+pub fn sample_frames(
+    _fps: u16,
+    duration_frame: u64,
+    events: &[RecordingEvent],
+) -> Vec<RecordingFrame> {
     let mut sorted_events = events.to_vec();
-    sorted_events.sort_by_key(event_time);
+    sorted_events.sort_by_key(event_frame);
 
     let mut active_keys = HashSet::<String>::new();
     let mut frames = Vec::new();
     let mut event_index = 0;
-    let mut frame_index = 0;
+    let mut frame = 0;
 
-    let mut t = frame_time_ms(frame_index, fps);
-    while t <= duration_ms {
-        while event_index < sorted_events.len() && event_time(&sorted_events[event_index]) <= t {
+    while frame <= duration_frame {
+        while event_index < sorted_events.len() && event_frame(&sorted_events[event_index]) <= frame
+        {
             match &sorted_events[event_index] {
                 RecordingEvent::KeyDown { key_id, .. } => {
                     active_keys.insert(key_id.clone());
@@ -273,16 +277,15 @@ pub fn sample_frames(fps: u16, duration_ms: u64, events: &[RecordingEvent]) -> V
 
         let mut keys = active_keys.iter().cloned().collect::<Vec<_>>();
         keys.sort();
-        frames.push(RecordingFrame { t, keys });
-        frame_index += 1;
-        t = frame_time_ms(frame_index, fps);
+        frames.push(RecordingFrame { frame, keys });
+        frame += 1;
     }
 
     frames
 }
 
-fn frame_time_ms(frame_index: u64, fps: u16) -> u64 {
-    frame_index * 1000 / u64::from(fps)
+fn ms_to_frame(ms: u64, fps: u16) -> u64 {
+    (ms * u64::from(fps) + 500) / 1000
 }
 
 pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
@@ -291,7 +294,7 @@ pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
         .markers
         .iter()
         .map(|marker| RecordingEvent::Marker {
-            t: marker.t_ms,
+            frame: marker.frame,
             name: marker.name.clone(),
         })
         .collect::<Vec<_>>();
@@ -305,11 +308,11 @@ pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
     })
 }
 
-fn event_time(event: &RecordingEvent) -> u64 {
+fn event_frame(event: &RecordingEvent) -> u64 {
     match event {
-        RecordingEvent::KeyDown { t, .. }
-        | RecordingEvent::KeyUp { t, .. }
-        | RecordingEvent::Marker { t, .. } => *t,
+        RecordingEvent::KeyDown { frame, .. }
+        | RecordingEvent::KeyUp { frame, .. }
+        | RecordingEvent::Marker { frame, .. } => *frame,
     }
 }
 
@@ -332,11 +335,11 @@ mod tests {
             session.snapshot().events,
             vec![
                 RecordingEvent::KeyDown {
-                    t: 120,
+                    frame: 7,
                     key_id: "w".to_string(),
                 },
                 RecordingEvent::KeyUp {
-                    t: 190,
+                    frame: 11,
                     key_id: "w".to_string(),
                 },
             ],
@@ -356,11 +359,11 @@ mod tests {
             session.snapshot().events,
             vec![
                 RecordingEvent::KeyDown {
-                    t: 100,
+                    frame: 6,
                     key_id: "tab".to_string(),
                 },
                 RecordingEvent::KeyUp {
-                    t: 120,
+                    frame: 7,
                     key_id: "tab".to_string(),
                 },
             ],
@@ -386,11 +389,11 @@ mod tests {
             session.snapshot().events,
             vec![
                 RecordingEvent::KeyDown {
-                    t: 10,
+                    frame: 1,
                     key_id: "ctrl-left".to_string(),
                 },
                 RecordingEvent::KeyUp {
-                    t: 20,
+                    frame: 1,
                     key_id: "ctrl-left".to_string(),
                 },
             ],
@@ -416,7 +419,7 @@ mod tests {
         assert_eq!(
             session.snapshot().events,
             vec![RecordingEvent::Marker {
-                t: 500,
+                frame: 30,
                 name: "sync".to_string(),
             }],
         );
@@ -438,7 +441,7 @@ mod tests {
         assert_eq!(
             active_session.session.snapshot().events,
             vec![RecordingEvent::Marker {
-                t: 250,
+                frame: 15,
                 name: "hotkey-start".to_string(),
             }],
         );
@@ -455,7 +458,7 @@ mod tests {
         assert_eq!(serialized["version"], 1);
         assert_eq!(serialized["fps"], 60);
         assert_eq!(serialized["timebase"], "monotonic");
-        assert_eq!(serialized["events"][0]["t"], 16);
+        assert_eq!(serialized["events"][0]["frame"], 1);
         assert_eq!(serialized["events"][0]["down"], "space");
         assert!(serialized["events"][0].get("type").is_none());
         assert!(serialized["events"][0].get("pressed").is_none());
@@ -468,17 +471,17 @@ mod tests {
             300,
             &[
                 RecordingEvent::KeyDown {
-                    t: 50,
+                    frame: 1,
                     key_id: "w".to_string(),
                 },
                 RecordingEvent::KeyUp {
-                    t: 250,
+                    frame: 3,
                     key_id: "w".to_string(),
                 },
             ],
         );
 
-        assert_eq!(frames[0].t, 0);
+        assert_eq!(frames[0].frame, 0);
         assert!(frames[0].keys.is_empty());
         assert_eq!(frames[1].keys, vec!["w".to_string()]);
         assert_eq!(frames[2].keys, vec!["w".to_string()]);
@@ -487,11 +490,11 @@ mod tests {
 
     #[test]
     fn samples_frames_without_integer_millisecond_drift() {
-        let frames = sample_frames(60, 120, &[]);
+        let frames = sample_frames(60, 6, &[]);
 
-        assert_eq!(frames[0].t, 0);
-        assert_eq!(frames[3].t, 50);
-        assert_eq!(frames[6].t, 100);
+        assert_eq!(frames[0].frame, 0);
+        assert_eq!(frames[3].frame, 3);
+        assert_eq!(frames[6].frame, 6);
     }
 
     #[test]
@@ -538,7 +541,6 @@ mod tests {
         assert_eq!(decoded.frames[1].keys, vec!["w", "shift-left"]);
         assert_eq!(decoded.frames[6].keys, vec!["w"]);
         assert_eq!(decoded.markers[0].frame, 12);
-        assert_eq!(decoded.markers[0].t_ms, 200);
         assert_eq!(decoded.markers[0].name, "sync");
         assert!(decoded.runs.len() < decoded.frames.len());
     }
@@ -551,11 +553,11 @@ mod tests {
             timebase: "monotonic",
             events: vec![
                 RecordingEvent::Marker {
-                    t: 11343,
+                    frame: 1361,
                     name: "sync".to_string(),
                 },
                 RecordingEvent::Marker {
-                    t: 11344,
+                    frame: 1361,
                     name: "sync".to_string(),
                 },
             ],
@@ -574,7 +576,7 @@ mod tests {
             fps: 60,
             timebase: "monotonic",
             events: vec![RecordingEvent::KeyDown {
-                t: 0,
+                frame: 0,
                 key_id: "void".to_string(),
             }],
         };
@@ -603,7 +605,7 @@ mod tests {
         assert_eq!(
             inspection.events,
             vec![RecordingEvent::Marker {
-                t: 200,
+                frame: 2,
                 name: "sync".to_string(),
             },],
         );
