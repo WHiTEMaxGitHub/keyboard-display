@@ -472,7 +472,8 @@ async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manua
     return;
   }
 
-  recordingStatusMessage.value = "";
+  const recordingFps = effectiveRecordingFps(config.recording);
+  recordingStatusMessage.value = `Recording will start at ${recordingFps}fps.`;
   recordingCountdown.value = 3;
 
   recordingCountdownTimer.value = window.setInterval(async () => {
@@ -481,7 +482,7 @@ async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manua
     if (recordingCountdown.value <= 0) {
       cancelRecordingCountdown();
       activeRecordingHotkeys.value = { ...recordingHotkeys.value };
-      await invoke("start_recording", { fps: effectiveRecordingFps(config.recording) });
+      await invoke("start_recording", { fps: recordingFps });
       restoreOverlayAfterRecording.value = isOverlayVisible.value;
       if (silentRecording.value) {
         await destroyOverlayWindow();
@@ -491,7 +492,7 @@ async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manua
       }
       isRecording.value = true;
       lastRecordingPath.value = "";
-      recordingStatusMessage.value = "Recording started.";
+      recordingStatusMessage.value = `Recording started at ${recordingFps}fps.`;
     }
   }, 1000);
 }
