@@ -91,11 +91,19 @@ const estimatedRecordingBytesPerSecond = computed(() =>
   estimateRawRecordingBytesPerSecond(props.config.keys.length, activeRecordingFps.value),
 );
 const customFpsDraft = ref(String(props.config.recording.customFps));
+const syncFeedbackDurationDraft = ref(String(props.config.recording.syncFeedbackDurationMs));
 
 watch(
   () => props.config.recording.customFps,
   (customFps) => {
     customFpsDraft.value = String(customFps);
+  },
+);
+
+watch(
+  () => props.config.recording.syncFeedbackDurationMs,
+  (durationMs) => {
+    syncFeedbackDurationDraft.value = String(durationMs);
   },
 );
 
@@ -213,10 +221,15 @@ function updateSyncFeedbackEnabled(event: Event) {
 }
 
 function updateSyncFeedbackDuration(event: Event) {
+  syncFeedbackDurationDraft.value = (event.target as HTMLInputElement).value;
+}
+
+function commitSyncFeedbackDuration() {
   const syncFeedbackDurationMs = Math.max(
     100,
-    Math.round(Number((event.target as HTMLInputElement).value)),
+    Math.round(Number(syncFeedbackDurationDraft.value)),
   );
+  syncFeedbackDurationDraft.value = String(syncFeedbackDurationMs);
   emit("update-recording-config", {
     ...props.config.recording,
     syncFeedbackDurationMs,
@@ -585,10 +598,12 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
             <input
               :disabled="!config.recording.syncFeedbackEnabled"
               :min="100"
-              :value="config.recording.syncFeedbackDurationMs"
+              :value="syncFeedbackDurationDraft"
               class="fps-input"
               type="number"
-              @change="updateSyncFeedbackDuration"
+              @blur="commitSyncFeedbackDuration"
+              @change="commitSyncFeedbackDuration"
+              @input="updateSyncFeedbackDuration"
             />
             <span class="write-estimate">ms</span>
           </div>
