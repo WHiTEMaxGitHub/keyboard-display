@@ -537,9 +537,34 @@ mod tests {
         assert!(decoded.frames[0].keys.is_empty());
         assert_eq!(decoded.frames[1].keys, vec!["w", "shift-left"]);
         assert_eq!(decoded.frames[6].keys, vec!["w"]);
+        assert_eq!(decoded.markers[0].frame, 12);
         assert_eq!(decoded.markers[0].t_ms, 200);
         assert_eq!(decoded.markers[0].name, "sync");
         assert!(decoded.runs.len() < decoded.frames.len());
+    }
+
+    #[test]
+    fn binary_recording_deduplicates_markers_by_frame_and_name() {
+        let snapshot = RecordingSnapshot {
+            version: 1,
+            fps: 120,
+            timebase: "monotonic",
+            events: vec![
+                RecordingEvent::Marker {
+                    t: 11343,
+                    name: "sync".to_string(),
+                },
+                RecordingEvent::Marker {
+                    t: 11344,
+                    name: "sync".to_string(),
+                },
+            ],
+        };
+
+        let decoded = decode_kbdrec(&encode_kbdrec(&snapshot).unwrap()).unwrap();
+
+        assert_eq!(decoded.markers.len(), 1);
+        assert_eq!(decoded.markers[0].frame, 1361);
     }
 
     #[test]

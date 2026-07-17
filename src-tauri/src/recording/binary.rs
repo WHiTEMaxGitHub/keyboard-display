@@ -22,6 +22,7 @@ pub struct DecodedFrameRun {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DecodedMarker {
+    pub frame: u64,
     pub t_ms: u64,
     pub name: String,
 }
@@ -44,10 +45,14 @@ pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
                 events.push(event.clone());
             }
             RecordingEvent::Marker { t, name } => {
-                markers.push(DecodedMarker {
-                    t_ms: *t,
-                    name: name.clone(),
-                });
+                push_marker_unique(
+                    &mut markers,
+                    DecodedMarker {
+                        frame: ms_to_frame(*t, snapshot.fps),
+                        t_ms: *t,
+                        name: name.clone(),
+                    },
+                );
             }
             RecordingEvent::KeyDown { .. } | RecordingEvent::KeyUp { .. } => {}
         }
@@ -98,7 +103,7 @@ pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
     }
 
     for marker in markers {
-        write_varint(marker.t_ms, &mut bytes);
+        write_varint(marker.frame, &mut bytes);
         write_string(&marker.name, &mut bytes);
     }
 
@@ -147,8 +152,10 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
 
     let mut markers = Vec::with_capacity(marker_count);
     for _ in 0..marker_count {
+        let frame = reader.read_varint()?;
         markers.push(DecodedMarker {
-            t_ms: reader.read_varint()?,
+            frame,
+            t_ms: frame_to_ms(frame, fps),
             name: reader.read_string()?,
         });
     }
@@ -173,6 +180,19 @@ fn push_unique(values: &mut Vec<String>, value: &str) {
     if !values.iter().any(|existing| existing == value) {
         values.push(value.to_string());
     }
+}
+
+fn push_marker_unique(markers: &mut Vec<DecodedMarker>, marker: DecodedMarker) {
+    if !markers
+        .iter()
+        .any(|existing| existing.frame == marker.frame && existing.name == marker.name)
+    {
+        markers.push(marker);
+    }
+}
+
+fn ms_to_frame(t_ms: u64, fps: u16) -> u64 {
+    (t_ms * u64::from(fps) + 500) / 1000
 }
 
 fn encode_frame_bits(
