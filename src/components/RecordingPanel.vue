@@ -180,6 +180,30 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
 
   return `frame ${event.frame} marker ${event.marker}`;
 }
+
+function markerEvents(events: RecordingInspectionEvent[]) {
+  return events.filter((event): event is Extract<RecordingInspectionEvent, { marker: string }> =>
+    "marker" in event
+  );
+}
+
+function formatFrameTimecode(frame: number, fps: number) {
+  const totalSeconds = Math.floor(frame / fps);
+  const frameInSecond = frame % fps;
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}:${padFrame(frameInSecond, fps)} @ ${fps}fps`;
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function padFrame(frame: number, fps: number) {
+  return String(frame).padStart(String(Math.max(fps - 1, 0)).length, "0");
+}
 </script>
 
 <template>
@@ -362,6 +386,20 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
         </div>
       </div>
       <div v-if="recordingInspection" class="inspection-lists">
+        <div>
+          <h4>Markers</h4>
+          <div class="marker-metadata-list">
+            <div
+              v-for="(event, index) in markerEvents(recordingInspection.events)"
+              :key="`${event.frame}-${event.marker}-${index}`"
+              class="marker-metadata"
+            >
+              <strong>marker {{ event.marker }}</strong>
+              <span>frame {{ event.frame }}</span>
+              <span>time {{ formatFrameTimecode(event.frame, recordingInspection.fps) }}</span>
+            </div>
+          </div>
+        </div>
         <div>
           <h4>Key table</h4>
           <p class="quiet">{{ recordingInspection.keyIds.join(", ") || "None" }}</p>
@@ -654,6 +692,28 @@ select:focus {
 .inspection-lists {
   display: grid;
   gap: 14px;
+}
+
+.marker-metadata-list {
+  display: grid;
+  gap: 8px;
+}
+
+.marker-metadata {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.1fr) minmax(100px, 0.7fr) minmax(180px, 1.2fr);
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: #151a20;
+  padding: 8px 10px;
+  color: #dfe5ec;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.marker-metadata strong {
+  color: #eafff0;
 }
 
 .inspection-lists h4 {

@@ -35,13 +35,15 @@ should be rendered later.
 6. Press `Add sync marker` or the sync hotkey at visible moments that can be
    found in the game footage.
 7. Stop Keyboard Display recording.
-8. Inspect the `.kbdrec` file and use marker frames to align the future overlay
-   export with the gameplay footage.
+8. Inspect the `.kbdrec` file and use marker metadata to align the future
+   overlay export with the gameplay footage.
 
 In this workflow, `.kbdrec` remains the source of truth. A later export tool
 should render the overlay from frame-state data. Marker frames should be shown
 visually in an editor/timeline so users can align the generated overlay with
 external footage without doing manual offset math in the inspection view.
+The current inspection view already shows marker name, frame, and a
+timecode-style value such as `00:00:19:48 @ 120fps`.
 
 ## Marker behavior
 

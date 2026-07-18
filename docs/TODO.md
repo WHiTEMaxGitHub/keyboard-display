@@ -115,6 +115,11 @@
   - Show decoded key table, events, markers, and reconstructed frames.
   - Use the same Rust inspection command as the source of truth.
 
+- [x] Show marker metadata for editing workflows.
+  - Display marker name, frame index, and timecode-style position.
+  - Format marker time as `HH:MM:SS:FF @ <fps>fps`.
+  - Prefer this practical metadata view before building a richer timeline.
+
 - [x] Support recording hotkeys outside the POV profile layout.
   - Hotkey capture should not require keys to exist in `overlay.rows`.
   - Extend normalized key mapping for common non-display hotkeys such as
