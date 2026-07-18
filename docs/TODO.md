@@ -120,6 +120,49 @@
   - Format marker time as `HH:MM:SS:FF @ <fps>fps`.
   - Prefer this practical metadata view before building a richer timeline.
 
+- [ ] Add a recording files browser.
+  - Read the current recording save folder directly.
+  - List `.kbdrec` files in a browser-style panel.
+  - Show basic file information:
+    - file name
+    - file size
+    - recording start/end time derived from the fixed filename format
+    - fps
+    - frame count
+    - marker count
+  - Click a file to expand decoded metadata.
+  - Expanded metadata should include marker information in the same useful
+    format as inspection:
+    - marker name
+    - frame index
+    - `HH:MM:SS:FF @ <fps>fps`
+  - Reuse the Rust `.kbdrec` inspection command as the parser.
+
+- [ ] Add sidecar metadata for recordings.
+  - Store user-facing metadata outside `.kbdrec` first, likely as a JSON
+    sidecar next to the recording file.
+  - Candidate fields:
+    - display name
+    - description
+    - tags
+    - notes per marker
+  - The actual `.kbdrec` filename should keep the fixed machine-friendly
+    `recording-start-recording-end.kbdrec` format.
+
+- [ ] Add configurable recording display names.
+  - Display name is for the browser UI only.
+  - It should not rename the underlying `.kbdrec` file.
+  - Use the sidecar metadata file as the storage location.
+
+- [ ] Add configurable recording filename templates later.
+  - Support a VS Code-like `${...}` template style.
+  - Candidate variables:
+    - `${start}`
+    - `${end}`
+    - `${profileName}`
+    - `${fps}`
+  - Keep this lower priority than the browser and sidecar metadata.
+
 - [x] Support recording hotkeys outside the POV profile layout.
   - Hotkey capture should not require keys to exist in `overlay.rows`.
   - Extend normalized key mapping for common non-display hotkeys such as
