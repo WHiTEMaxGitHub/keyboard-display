@@ -9,35 +9,27 @@ import {
   SlidersHorizontal,
   Video,
 } from "@lucide/vue";
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   isKeyBinding,
   type AppConfig,
   type OverlayStyle,
-  type RecordingConfig,
 } from "../domain/defaultConfig";
-import {
-  effectiveRecordingFps,
-  clampRecordingFps,
-} from "../domain/recordingConfig";
-import {
-  estimateRawRecordingBytesPerSecond,
-  formatBytesPerSecond,
-} from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
+import RecordingPanel from "./RecordingPanel.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
-
-type RecordingInspectionEvent =
-  | { frame: number; down: string }
-  | { frame: number; up: string }
-  | { frame: number; marker: string };
 
 type RecordingInspectionFrame = {
   frame: number;
   keys: string[];
 };
+
+type RecordingInspectionEvent =
+  | { frame: number; down: string }
+  | { frame: number; up: string }
+  | { frame: number; marker: string };
 
 type RecordingInspection = {
   version: number;
@@ -87,27 +79,6 @@ const layoutRows = computed(() => {
   return props.config.rows.map((items, index) => ({ row: index + 1, items }));
 });
 
-const activeRecordingFps = computed(() => effectiveRecordingFps(props.config.recording));
-const estimatedRecordingBytesPerSecond = computed(() =>
-  estimateRawRecordingBytesPerSecond(props.config.keys.length, activeRecordingFps.value),
-);
-const customFpsDraft = ref(String(props.config.recording.customFps));
-const syncFeedbackDurationDraft = ref(String(props.config.recording.syncFeedbackDurationMs));
-
-watch(
-  () => props.config.recording.customFps,
-  (customFps) => {
-    customFpsDraft.value = String(customFps);
-  },
-);
-
-watch(
-  () => props.config.recording.syncFeedbackDurationMs,
-  (durationMs) => {
-    syncFeedbackDurationDraft.value = String(durationMs);
-  },
-);
-
 const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-visible": [visible: boolean];
@@ -116,7 +87,7 @@ const emit = defineEmits<{
   "overwrite-and-apply-config": [];
   "choose-recording-directory": [];
   "update-silent-recording": [value: boolean];
-  "update-recording-config": [recording: RecordingConfig];
+  "update-recording-config": [recording: AppConfig["recording"]];
   "start-recording": [];
   "stop-recording": [];
   "add-sync-marker": [];
@@ -191,108 +162,6 @@ function overwriteAndApplyConfig() {
   emit("overwrite-and-apply-config");
 }
 
-function chooseRecordingDirectory() {
-  emit("choose-recording-directory");
-}
-
-function updateSilentRecording(event: Event) {
-  emit("update-silent-recording", (event.target as HTMLInputElement).checked);
-}
-
-function selectRecordingFps(fps: number) {
-  emit("update-recording-config", {
-    ...props.config.recording,
-    defaultFps: fps,
-    customFpsEnabled: false,
-  });
-}
-
-function updateCustomFpsEnabled(event: Event) {
-  emit("update-recording-config", {
-    ...props.config.recording,
-    customFpsEnabled: (event.target as HTMLInputElement).checked,
-  });
-}
-
-function updateSyncFeedbackEnabled(event: Event) {
-  emit("update-recording-config", {
-    ...props.config.recording,
-    syncFeedbackEnabled: (event.target as HTMLInputElement).checked,
-  });
-}
-
-function updateSyncFeedbackDuration(event: Event) {
-  syncFeedbackDurationDraft.value = (event.target as HTMLInputElement).value;
-}
-
-function commitSyncFeedbackDuration() {
-  const syncFeedbackDurationMs = Math.max(
-    100,
-    Math.round(Number(syncFeedbackDurationDraft.value)),
-  );
-  syncFeedbackDurationDraft.value = String(syncFeedbackDurationMs);
-  emit("update-recording-config", {
-    ...props.config.recording,
-    syncFeedbackDurationMs,
-  });
-}
-
-function updateCustomFps(event: Event) {
-  customFpsDraft.value = (event.target as HTMLInputElement).value;
-}
-
-function commitCustomFps() {
-  const customFps = clampRecordingFps(
-    Number(customFpsDraft.value),
-    props.config.recording.maxFps,
-  );
-  customFpsDraft.value = String(customFps);
-  emit("update-recording-config", {
-    ...props.config.recording,
-    customFps,
-    customFpsEnabled: true,
-  });
-}
-
-function startRecording() {
-  emit("start-recording");
-}
-
-function stopRecording() {
-  emit("stop-recording");
-}
-
-function addSyncMarker() {
-  emit("add-sync-marker");
-}
-
-function inspectRecordingFile() {
-  emit("inspect-recording-file");
-}
-
-function updateRecordingHotkeyMode(event: Event) {
-  emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
-}
-
-function beginHotkeyCapture(target: "start" | "stop" | "sync") {
-  emit("begin-hotkey-capture", target);
-}
-
-function formatHotkey(keys: string[]) {
-  return keys.length > 0 ? keys.join(" + ") : "Not set";
-}
-
-function formatInspectionEvent(event: RecordingInspectionEvent) {
-  if ("down" in event) {
-    return `frame ${event.frame} down ${event.down}`;
-  }
-
-  if ("up" in event) {
-    return `frame ${event.frame} up ${event.up}`;
-  }
-
-  return `frame ${event.frame} marker ${event.marker}`;
-}
 </script>
 
 <template>
@@ -559,214 +428,30 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
       </section>
 
       <section v-else-if="activePage === 'recording'" class="page-stack">
-        <article class="panel wide-panel">
-          <h2>Recording</h2>
-          <div class="field-row">
-            <span>Save folder</span>
-            <strong>
-              {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
-            </strong>
-          </div>
-          <div class="recording-actions">
-            <button type="button" @click="chooseRecordingDirectory">Choose folder</button>
-            <button
-              type="button"
-              :disabled="isRecording || recordingCountdown > 0"
-              @click="startRecording"
-            >
-              {{ recordingCountdown > 0 ? `Starting in ${recordingCountdown}` : "Start recording" }}
-            </button>
-            <button type="button" :disabled="!isRecording" @click="stopRecording">
-              Stop recording
-            </button>
-            <button type="button" :disabled="!isRecording" @click="addSyncMarker">
-              Add sync marker
-            </button>
-          </div>
-          <label class="toggle-row">
-            <input
-              :checked="silentRecording"
-              type="checkbox"
-              @change="updateSilentRecording"
-            />
-            Silent recording
-          </label>
-          <div class="fps-config-row">
-            <label class="toggle-row">
-              <input
-                :checked="config.recording.syncFeedbackEnabled"
-                type="checkbox"
-                @change="updateSyncFeedbackEnabled"
-              />
-              Sync border flash
-            </label>
-            <input
-              :disabled="!config.recording.syncFeedbackEnabled"
-              :min="100"
-              :value="syncFeedbackDurationDraft"
-              class="fps-input"
-              type="number"
-              @blur="commitSyncFeedbackDuration"
-              @change="commitSyncFeedbackDuration"
-              @input="updateSyncFeedbackDuration"
-            />
-            <span class="write-estimate">ms</span>
-          </div>
-          <div class="hotkey-panel">
-            <label class="settings-row">
-              <span>Hotkey mode</span>
-              <select
-                class="select-control"
-                :value="recordingHotkeys.mode"
-                @change="updateRecordingHotkeyMode"
-              >
-                <option value="disabled">Disabled</option>
-                <option value="toggle">Toggle start/stop</option>
-                <option value="separate">Separate start/stop</option>
-              </select>
-            </label>
-            <div v-if="recordingHotkeys.mode !== 'disabled'" class="hotkey-row">
-              <span>Start</span>
-              <strong>{{ formatHotkey(recordingHotkeys.start) }}</strong>
-              <button type="button" @click="beginHotkeyCapture('start')">
-                {{ hotkeyCaptureTarget === "start" ? "Press shortcut..." : "Set" }}
-              </button>
-            </div>
-            <div v-if="recordingHotkeys.mode === 'separate'" class="hotkey-row">
-              <span>Stop</span>
-              <strong>{{ formatHotkey(recordingHotkeys.stop) }}</strong>
-              <button type="button" @click="beginHotkeyCapture('stop')">
-                {{ hotkeyCaptureTarget === "stop" ? "Press shortcut..." : "Set" }}
-              </button>
-            </div>
-            <div class="hotkey-row">
-              <span>Sync</span>
-              <strong>{{ formatHotkey(recordingHotkeys.sync) }}</strong>
-              <button type="button" @click="beginHotkeyCapture('sync')">
-                {{ hotkeyCaptureTarget === "sync" ? "Press shortcut..." : "Set" }}
-              </button>
-            </div>
-          </div>
-          <div class="segmented" aria-label="Capture frame rate">
-            <button
-              v-for="fps in config.recording.fpsOptions"
-              :key="fps"
-              :class="{ selected: !config.recording.customFpsEnabled && fps === config.recording.defaultFps }"
-              type="button"
-              @click="selectRecordingFps(fps)"
-            >
-              {{ fps }}fps
-            </button>
-          </div>
-          <div class="fps-config-row">
-            <label class="toggle-row">
-              <input
-                :checked="config.recording.customFpsEnabled"
-                type="checkbox"
-                @change="updateCustomFpsEnabled"
-              />
-              Custom FPS
-            </label>
-            <input
-              :disabled="!config.recording.customFpsEnabled"
-              :max="config.recording.maxFps"
-              :min="1"
-              :value="customFpsDraft"
-              class="fps-input"
-              type="number"
-              @blur="commitCustomFps"
-              @change="commitCustomFps"
-              @input="updateCustomFps"
-            />
-            <span class="write-estimate">
-              {{ activeRecordingFps }}fps · {{ formatBytesPerSecond(estimatedRecordingBytesPerSecond) }} raw
-            </span>
-          </div>
-          <div class="field-row">
-            <span>Primary artifact</span>
-            <strong>{{ config.recording.formatExtension }}</strong>
-          </div>
-          <p class="quiet">
-            Input frames are stored as compact binary state, then replayed for
-            rendering or export.
-          </p>
-          <p v-if="lastRecordingPath" class="quiet">
-            Last recording: {{ lastRecordingPath }}
-          </p>
-          <p v-if="recordingStatusMessage" class="status-text">
-            {{ recordingStatusMessage }}
-          </p>
-          <div class="inspection-panel">
-            <div class="section-header">
-              <h3>Recording inspection</h3>
-              <button type="button" @click="inspectRecordingFile">
-                Inspect .kbdrec
-              </button>
-            </div>
-            <p v-if="inspectedRecordingPath" class="quiet">
-              File: {{ inspectedRecordingPath }}
-            </p>
-            <p v-if="recordingInspectionError" class="error-text">
-              {{ recordingInspectionError }}
-            </p>
-            <div v-if="recordingInspection" class="inspection-grid">
-              <div class="field-row">
-                <span>Version</span>
-                <strong>{{ recordingInspection.version }}</strong>
-              </div>
-              <div class="field-row">
-                <span>FPS</span>
-                <strong>{{ recordingInspection.fps }}</strong>
-              </div>
-              <div class="field-row">
-                <span>Keys</span>
-                <strong>{{ recordingInspection.keyIds.length }}</strong>
-              </div>
-              <div class="field-row">
-                <span>Events</span>
-                <strong>{{ recordingInspection.events.length }}</strong>
-              </div>
-              <div class="field-row">
-                <span>Frames</span>
-                <strong>{{ recordingInspection.frames.length }}</strong>
-              </div>
-              <div class="field-row">
-                <span>Markers</span>
-                <strong>
-                  {{ recordingInspection.events.filter((event) => "marker" in event).length }}
-                </strong>
-              </div>
-            </div>
-            <div v-if="recordingInspection" class="inspection-lists">
-              <div>
-                <h4>Key table</h4>
-                <p class="quiet">{{ recordingInspection.keyIds.join(", ") || "None" }}</p>
-              </div>
-              <div>
-                <h4>Events</h4>
-                <ol>
-                  <li
-                    v-for="(event, index) in recordingInspection.events.slice(0, 8)"
-                    :key="index"
-                  >
-                    {{ formatInspectionEvent(event) }}
-                  </li>
-                </ol>
-              </div>
-              <div>
-                <h4>Frames</h4>
-                <ol>
-                  <li
-                    v-for="frame in recordingInspection.frames.slice(0, 8)"
-                    :key="frame.frame"
-                  >
-                    frame {{ frame.frame }}: {{ frame.keys.join(", ") || "none" }}
-                  </li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        </article>
+        <RecordingPanel
+          :config="config"
+          :recording-directory="recordingDirectory"
+          :default-recording-directory="defaultRecordingDirectory"
+          :silent-recording="silentRecording"
+          :is-recording="isRecording"
+          :recording-countdown="recordingCountdown"
+          :last-recording-path="lastRecordingPath"
+          :recording-status-message="recordingStatusMessage"
+          :inspected-recording-path="inspectedRecordingPath"
+          :recording-inspection="recordingInspection"
+          :recording-inspection-error="recordingInspectionError"
+          :recording-hotkeys="recordingHotkeys"
+          :hotkey-capture-target="hotkeyCaptureTarget"
+          @choose-recording-directory="emit('choose-recording-directory')"
+          @update-silent-recording="emit('update-silent-recording', $event)"
+          @update-recording-config="emit('update-recording-config', $event)"
+          @start-recording="emit('start-recording')"
+          @stop-recording="emit('stop-recording')"
+          @add-sync-marker="emit('add-sync-marker')"
+          @inspect-recording-file="emit('inspect-recording-file')"
+          @update-recording-hotkey-mode="emit('update-recording-hotkey-mode', $event)"
+          @begin-hotkey-capture="emit('begin-hotkey-capture', $event)"
+        />
       </section>
 
       <section v-else-if="activePage === 'export'" class="page-stack">
@@ -1103,152 +788,6 @@ label {
   background: #29313d;
 }
 
-.recording-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 16px 0;
-}
-
-.recording-actions button,
-.inspection-panel button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.recording-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.recording-actions button:not(:disabled):hover {
-  background: #29313d;
-}
-
-.inspection-panel {
-  display: grid;
-  gap: 14px;
-  margin-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 18px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.section-header h3,
-.inspection-lists h4 {
-  margin: 0;
-  letter-spacing: 0;
-}
-
-.section-header h3 {
-  font-size: 16px;
-  line-height: 22px;
-}
-
-.inspection-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 18px;
-}
-
-.inspection-lists {
-  display: grid;
-  gap: 14px;
-}
-
-.inspection-lists h4 {
-  margin-bottom: 6px;
-  color: #c9d1da;
-  font-size: 13px;
-}
-
-.inspection-lists ol {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  padding-left: 18px;
-  color: #dfe5ec;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-.error-text {
-  margin: 0;
-  color: #ff8f8f;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.status-text {
-  margin: 10px 0 0;
-  color: #c9d1da;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.hotkey-panel {
-  display: grid;
-  gap: 10px;
-  margin: 16px 0;
-}
-
-.settings-row {
-  display: grid;
-  grid-template-columns: minmax(112px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-}
-
-.settings-row span {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.hotkey-row {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-}
-
-.hotkey-row span {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.hotkey-row strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hotkey-row button {
-  min-height: 32px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
 input[type="range"] {
   accent-color: #25d366;
 }
@@ -1292,8 +831,7 @@ select:focus {
   outline-offset: 0;
 }
 
-.color-grid,
-.segmented {
+.color-grid {
   display: flex;
   gap: 8px;
 }
@@ -1319,57 +857,6 @@ select:focus {
   background: transparent;
   cursor: pointer;
   padding: 0;
-}
-
-.segmented {
-  margin-bottom: 16px;
-}
-
-.segmented button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #c9d1da;
-  padding: 8px 10px;
-  font-weight: 700;
-}
-
-.segmented button.selected {
-  border-color: rgba(37, 211, 102, 0.52);
-  background: rgba(37, 211, 102, 0.14);
-  color: #eafff0;
-}
-
-.fps-config-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.fps-config-row .toggle-row {
-  margin: 0;
-}
-
-.fps-input {
-  width: 96px;
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  padding: 0 10px;
-}
-
-.fps-input:disabled {
-  opacity: 0.45;
-}
-
-.write-estimate {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
 }
 
 .quiet {
