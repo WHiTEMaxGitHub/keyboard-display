@@ -147,11 +147,16 @@
     config.
   - This gives the video timeline a visible cue for alignment.
 
-- [x] Support export offset.
-  - Use `offsetFrames` instead of `offsetMs` so alignment follows `.kbdrec`
-    frame semantics.
-  - Show offset-adjusted marker and frame positions in recording inspection.
-  - Use this to align `.kbdrec` playback with external game footage.
+- [ ] Add marker timeline/editor view.
+  - Show `.kbdrec` frame-state timeline with marker positions.
+  - Let users inspect markers visually instead of manually calculating offsets.
+  - Keep marker frame as the source of truth for future export alignment.
+
+- [ ] Render markers during future overlay video export.
+  - When exporting overlay video from `.kbdrec`, optionally render visible sync
+    marker feedback into the exported overlay.
+  - Use this for post-production alignment instead of exposing premature
+    offset controls before export exists.
 
 - [x] Document two recording workflows.
   - Realtime OBS capture: overlay is recorded directly, no later alignment

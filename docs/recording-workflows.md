@@ -39,12 +39,9 @@ should be rendered later.
    export with the gameplay footage.
 
 In this workflow, `.kbdrec` remains the source of truth. A later export tool
-should render the overlay from frame-state data, then apply an offset when
-aligning it with external video.
-
-The inspection UI supports `offsetFrames`, which shifts marker and frame
-positions in the debug view. Use this when checking how far the `.kbdrec`
-timeline should move relative to external footage.
+should render the overlay from frame-state data. Marker frames should be shown
+visually in an editor/timeline so users can align the generated overlay with
+external footage without doing manual offset math in the inspection view.
 
 ## Marker behavior
 

@@ -51,8 +51,6 @@ const estimatedRecordingBytesPerSecond = computed(() =>
 );
 const customFpsDraft = ref(String(props.config.recording.customFps));
 const syncFeedbackDurationDraft = ref(String(props.config.recording.syncFeedbackDurationMs));
-const offsetFramesDraft = ref("0");
-const offsetFrames = computed(() => Math.round(Number(offsetFramesDraft.value) || 0));
 
 watch(
   () => props.config.recording.customFps,
@@ -157,10 +155,6 @@ function addSyncMarker() {
 
 function inspectRecordingFile() {
   emit("inspect-recording-file");
-}
-
-function updateOffsetFrames(event: Event) {
-  offsetFramesDraft.value = (event.target as HTMLInputElement).value;
 }
 
 function updateRecordingHotkeyMode(event: Event) {
@@ -339,17 +333,6 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
       <p v-if="recordingInspectionError" class="error-text">
         {{ recordingInspectionError }}
       </p>
-      <div v-if="recordingInspection" class="offset-row">
-        <label class="settings-row">
-          <span>Offset frames</span>
-          <input
-            :value="offsetFramesDraft"
-            class="fps-input"
-            type="number"
-            @input="updateOffsetFrames"
-          />
-        </label>
-      </div>
       <div v-if="recordingInspection" class="inspection-grid">
         <div class="field-row">
           <span>Version</span>
@@ -390,7 +373,7 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
               v-for="(event, index) in recordingInspection.events.slice(0, 8)"
               :key="index"
             >
-              {{ formatInspectionEvent(event) }} -> frame {{ event.frame + offsetFrames }}
+              {{ formatInspectionEvent(event) }}
             </li>
           </ol>
         </div>
@@ -401,8 +384,7 @@ function formatInspectionEvent(event: RecordingInspectionEvent) {
               v-for="frame in recordingInspection.frames.slice(0, 8)"
               :key="frame.frame"
             >
-              frame {{ frame.frame }} -> {{ frame.frame + offsetFrames }}:
-              {{ frame.keys.join(", ") || "none" }}
+              frame {{ frame.frame }}: {{ frame.keys.join(", ") || "none" }}
             </li>
           </ol>
         </div>
@@ -672,11 +654,6 @@ select:focus {
 .inspection-lists {
   display: grid;
   gap: 14px;
-}
-
-.offset-row {
-  display: grid;
-  gap: 8px;
 }
 
 .inspection-lists h4 {
