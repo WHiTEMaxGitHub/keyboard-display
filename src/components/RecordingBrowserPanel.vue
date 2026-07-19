@@ -52,6 +52,7 @@ type RecordingFileSummary = {
 type RecordingTreeNode = {
   name: string;
   path: string;
+  exists: boolean;
   type: "directory" | "file";
   children: RecordingTreeNode[];
   summary: RecordingFileSummary | null;
@@ -334,6 +335,10 @@ function padFrame(frame: number, fps: number) {
     </form>
     <p v-if="recordingTreeError" class="error-text">
       {{ recordingTreeError }}
+    </p>
+    <p v-else-if="recordingTree && !recordingTree.exists" class="notice-text">
+      Recording folder does not exist yet. It may have been deleted; create a
+      folder or start recording to initialize it again.
     </p>
     <div v-if="recordingTree" class="recording-tree">
       <RecordingTreeNodeView
@@ -784,6 +789,17 @@ function padFrame(frame: number, fps: number) {
   color: #ff8f8f;
   font-size: 13px;
   font-weight: 700;
+}
+
+.notice-text {
+  margin: 0;
+  border: 1px solid rgba(255, 209, 102, 0.18);
+  border-radius: 7px;
+  background: rgba(255, 209, 102, 0.08);
+  color: #e8cf88;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 10px;
 }
 
 .status-text {

@@ -26,6 +26,7 @@ type RecordingFileSummary = {
 type RecordingTreeNode = {
   name: string;
   path: string;
+  exists: boolean;
   type: "directory" | "file";
   children: RecordingTreeNode[];
   summary: RecordingFileSummary | null;

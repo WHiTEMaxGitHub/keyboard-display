@@ -88,6 +88,7 @@ pub struct RecordingMarkerNote {
 pub struct RecordingTreeNode {
     pub name: String,
     pub path: String,
+    pub exists: bool,
     #[serde(rename = "type")]
     pub node_type: String,
     pub children: Vec<RecordingTreeNode>,
@@ -427,7 +428,7 @@ pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
 
 pub fn list_recording_files(root: PathBuf) -> Result<RecordingTreeNode, String> {
     if !root.exists() {
-        return Ok(directory_node(&root, Vec::new()));
+        return Ok(missing_directory_node(&root));
     }
 
     if !root.is_dir() {
@@ -539,8 +540,23 @@ fn directory_node(path: &PathBuf, children: Vec<RecordingTreeNode>) -> Recording
             .map(|name| name.to_string_lossy().to_string())
             .unwrap_or_else(|| path.to_string_lossy().to_string()),
         path: path.to_string_lossy().to_string(),
+        exists: true,
         node_type: "directory".to_string(),
         children,
+        summary: None,
+    }
+}
+
+fn missing_directory_node(path: &PathBuf) -> RecordingTreeNode {
+    RecordingTreeNode {
+        name: path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.to_string_lossy().to_string()),
+        path: path.to_string_lossy().to_string(),
+        exists: false,
+        node_type: "directory".to_string(),
+        children: Vec::new(),
         summary: None,
     }
 }
@@ -551,6 +567,7 @@ fn file_node(path: &PathBuf) -> Result<RecordingTreeNode, String> {
     Ok(RecordingTreeNode {
         name: summary.file_name.clone(),
         path: path.to_string_lossy().to_string(),
+        exists: true,
         node_type: "file".to_string(),
         children: Vec::new(),
         summary: Some(summary),
@@ -1028,6 +1045,21 @@ mod tests {
         assert_eq!(summary.marker_count, 1);
 
         let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn marks_missing_recording_root_as_not_existing() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-missing-root-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+
+        let tree = list_recording_files(root).unwrap();
+
+        assert_eq!(tree.node_type, "directory");
+        assert!(!tree.exists);
+        assert!(tree.children.is_empty());
     }
 
     #[test]
