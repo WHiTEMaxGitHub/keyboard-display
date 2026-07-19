@@ -138,6 +138,12 @@
     - `HH:MM:SS:FF @ <fps>fps`
   - Reuse the Rust `.kbdrec` inspection command as the parser.
 
+- [x] Add root-folder creation in the recording files browser.
+  - Create a new folder directly under the current recording root.
+  - Refresh the recursive recording tree after creation.
+  - Reject empty names and names containing path separators.
+  - Let directory nodes expand and collapse using the triangle affordance.
+
 - [x] Add sidecar metadata for recordings.
   - Store user-facing metadata outside `.kbdrec` first, likely as a JSON
     sidecar next to the recording file.

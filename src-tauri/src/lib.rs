@@ -116,6 +116,14 @@ fn list_recording_files(root: std::path::PathBuf) -> Result<recording::Recording
 }
 
 #[tauri::command]
+fn create_recording_folder(
+    root: std::path::PathBuf,
+    folder_name: String,
+) -> Result<recording::RecordingTreeNode, String> {
+    recording::create_recording_folder(root, folder_name)
+}
+
+#[tauri::command]
 fn read_recording_metadata(
     path: std::path::PathBuf,
 ) -> Result<recording::RecordingMetadata, String> {
@@ -149,6 +157,7 @@ pub fn run() {
             stop_recording,
             inspect_recording_file,
             list_recording_files,
+            create_recording_folder,
             read_recording_metadata,
             save_recording_metadata
         ])

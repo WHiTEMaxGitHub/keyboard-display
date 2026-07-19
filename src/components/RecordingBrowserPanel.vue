@@ -68,6 +68,9 @@ const props = defineProps<{
 const recordingTree = ref<RecordingTreeNode | null>(null);
 const recordingTreeError = ref("");
 const recordingTreeLoading = ref(false);
+const folderNameDraft = ref("");
+const folderCreating = ref(false);
+const folderEditorVisible = ref(false);
 const metadataDraft = ref<RecordingMetadata>(createEmptyMetadata());
 const metadataTagsDraft = ref("");
 const metadataStatus = ref("");
@@ -120,6 +123,47 @@ async function refreshRecordingTree() {
     recordingTreeError.value = String(error);
   } finally {
     recordingTreeLoading.value = false;
+  }
+}
+
+function showFolderEditor() {
+  folderEditorVisible.value = true;
+  recordingTreeError.value = "";
+}
+
+function cancelFolderEditor() {
+  folderEditorVisible.value = false;
+  folderNameDraft.value = "";
+}
+
+async function createRecordingFolder() {
+  const root = props.recordingDirectory || props.defaultRecordingDirectory;
+  const folderName = folderNameDraft.value.trim();
+
+  if (!root) {
+    recordingTreeError.value = "Recording folder is not ready.";
+    return;
+  }
+
+  if (!folderName) {
+    recordingTreeError.value = "Folder name is required.";
+    return;
+  }
+
+  folderCreating.value = true;
+  recordingTreeError.value = "";
+
+  try {
+    recordingTree.value = await invoke<RecordingTreeNode>("create_recording_folder", {
+      root,
+      folderName,
+    });
+    folderNameDraft.value = "";
+    folderEditorVisible.value = false;
+  } catch (error) {
+    recordingTreeError.value = String(error);
+  } finally {
+    folderCreating.value = false;
   }
 }
 
@@ -243,13 +287,37 @@ function padFrame(frame: number, fps: number) {
     <h2>Recordings</h2>
     <div class="section-header">
       <h3>Recording files</h3>
-      <button type="button" :disabled="recordingTreeLoading" @click="refreshRecordingTree">
-        {{ recordingTreeLoading ? "Loading..." : "Refresh" }}
-      </button>
+      <div class="header-actions">
+        <button type="button" @click="showFolderEditor">
+          New folder
+        </button>
+        <button type="button" :disabled="recordingTreeLoading" @click="refreshRecordingTree">
+          {{ recordingTreeLoading ? "Loading..." : "Refresh" }}
+        </button>
+      </div>
     </div>
     <p class="quiet">
       {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
     </p>
+    <form v-if="folderEditorVisible" class="new-folder-form" @submit.prevent="createRecordingFolder">
+      <label>
+        <span>Folder name</span>
+        <input
+          v-model="folderNameDraft"
+          type="text"
+          placeholder="Match 01"
+          :disabled="folderCreating"
+        />
+      </label>
+      <div class="header-actions">
+        <button type="submit" :disabled="folderCreating">
+          {{ folderCreating ? "Creating..." : "Create" }}
+        </button>
+        <button type="button" :disabled="folderCreating" @click="cancelFolderEditor">
+          Cancel
+        </button>
+      </div>
+    </form>
     <p v-if="recordingTreeError" class="error-text">
       {{ recordingTreeError }}
     </p>
@@ -442,6 +510,13 @@ function padFrame(frame: number, fps: number) {
   gap: 12px;
 }
 
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .section-header h3,
 .inspection-lists h4 {
   margin: 0;
@@ -467,6 +542,34 @@ function padFrame(frame: number, fps: number) {
 .section-header button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.new-folder-form {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #151a20;
+  padding: 12px;
+}
+
+.new-folder-form label {
+  display: grid;
+  gap: 6px;
+  color: #c9d1da;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.new-folder-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #10141a;
+  color: #dfe5ec;
+  font: inherit;
+  padding: 9px 10px;
 }
 
 .recording-tree {

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from "vue";
+
 type RecordingMetadata = {
   displayName: string;
   description: string;
@@ -37,8 +39,14 @@ const emit = defineEmits<{
   inspect: [path: string];
 }>();
 
+const expanded = ref(true);
+
 function inspect(path: string) {
   emit("inspect", path);
+}
+
+function toggleExpanded() {
+  expanded.value = !expanded.value;
 }
 
 function formatFileSize(bytes: number) {
@@ -64,10 +72,16 @@ function displayTitle(node: RecordingTreeNode) {
 
 <template>
   <div class="tree-node">
-    <div v-if="node.type === 'directory'" class="directory-node">
-      <span class="tree-prefix">▾</span>
+    <button
+      v-if="node.type === 'directory'"
+      class="directory-node"
+      type="button"
+      :aria-expanded="expanded"
+      @click="toggleExpanded"
+    >
+      <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
       <strong>{{ node.name }}</strong>
-    </div>
+    </button>
     <button
       v-else
       class="file-node"
@@ -88,7 +102,7 @@ function displayTitle(node: RecordingTreeNode) {
         <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
       </span>
     </button>
-    <div v-if="node.children.length > 0" class="tree-children">
+    <div v-if="expanded && node.children.length > 0" class="tree-children">
       <RecordingTreeNodeView
         v-for="child in node.children"
         :key="child.path"
@@ -114,8 +128,18 @@ function displayTitle(node: RecordingTreeNode) {
 }
 
 .directory-node {
+  width: 100%;
+  border: 0;
+  background: transparent;
   color: #c9d1da;
+  cursor: pointer;
   font-size: 13px;
+  padding: 0;
+  text-align: left;
+}
+
+.directory-node:hover {
+  color: #eafff0;
 }
 
 .file-node {

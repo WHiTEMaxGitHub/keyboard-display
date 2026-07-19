@@ -364,6 +364,17 @@ pub fn list_recording_files(root: PathBuf) -> Result<RecordingTreeNode, String> 
     scan_recording_directory(&root)
 }
 
+pub fn create_recording_folder(
+    root: PathBuf,
+    folder_name: String,
+) -> Result<RecordingTreeNode, String> {
+    let folder_name = normalize_folder_name(&folder_name)?;
+    let folder_path = root.join(folder_name);
+
+    std::fs::create_dir_all(&folder_path).map_err(|error| error.to_string())?;
+    list_recording_files(root)
+}
+
 pub fn read_recording_metadata(path: PathBuf) -> Result<RecordingMetadata, String> {
     let sidecar_path = recording_metadata_path(&path);
     if !sidecar_path.exists() {
@@ -425,6 +436,24 @@ fn scan_recording_directory(path: &PathBuf) -> Result<RecordingTreeNode, String>
     }
 
     Ok(directory_node(path, children))
+}
+
+fn normalize_folder_name(folder_name: &str) -> Result<String, String> {
+    let folder_name = folder_name.trim();
+
+    if folder_name.is_empty() {
+        return Err("folder name is required".to_string());
+    }
+
+    if folder_name.contains('/') || folder_name.contains('\\') {
+        return Err("folder name must not contain path separators".to_string());
+    }
+
+    if folder_name == "." || folder_name == ".." {
+        return Err("folder name must not be . or ..".to_string());
+    }
+
+    Ok(folder_name.to_string())
 }
 
 fn directory_node(path: &PathBuf, children: Vec<RecordingTreeNode>) -> RecordingTreeNode {
@@ -539,9 +568,10 @@ fn event_frame(event: &RecordingEvent) -> u64 {
 mod tests {
     use super::{
         binary::{decode_kbdrec, encode_kbdrec},
-        inspect_kbdrec, list_recording_files, parse_recording_file_times, read_recording_metadata,
-        sample_frames, save_recording_metadata, RecordingEvent, RecordingManager,
-        RecordingMarkerNote, RecordingMetadata, RecordingSession, RecordingSnapshot,
+        create_recording_folder, inspect_kbdrec, list_recording_files, parse_recording_file_times,
+        read_recording_metadata, sample_frames, save_recording_metadata, RecordingEvent,
+        RecordingManager, RecordingMarkerNote, RecordingMetadata, RecordingSession,
+        RecordingSnapshot,
     };
 
     #[test]
@@ -924,6 +954,41 @@ mod tests {
         assert_eq!(summary.metadata.description, "first run");
         assert_eq!(summary.metadata.tags, vec!["fps", "aim"]);
         assert_eq!(summary.metadata.marker_notes[0].frame, 12);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn creates_recording_folder_and_returns_updated_tree() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-folder-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+
+        let tree = create_recording_folder(root.clone(), "Match 01".to_string()).unwrap();
+
+        assert!(root.join("Match 01").is_dir());
+        assert!(tree
+            .children
+            .iter()
+            .any(|node| { node.name == "Match 01" && node.node_type == "directory" }));
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn rejects_recording_folder_names_with_path_separators() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-folder-invalid-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+
+        let error = create_recording_folder(root.clone(), "../escape".to_string()).unwrap_err();
+
+        assert!(error.contains("folder name must not contain path separators"));
+        assert!(!root.join("escape").exists());
 
         let _ = std::fs::remove_dir_all(root);
     }
