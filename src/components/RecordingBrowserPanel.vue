@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import {
   buildRecordingTimelineMarkers,
   type RecordingTimelineMarker,
@@ -78,6 +78,8 @@ const metadataError = ref("");
 const metadataSaving = ref(false);
 const selectedTimelineMarker = ref<RecordingTimelineMarker | null>(null);
 
+const recordingRoot = computed(() => props.recordingDirectory || props.defaultRecordingDirectory);
+
 const timelineMarkers = computed(() => {
   if (!props.recordingInspection) {
     return [];
@@ -108,7 +110,7 @@ function inspectRecordingFile() {
 }
 
 async function refreshRecordingTree() {
-  const root = props.recordingDirectory || props.defaultRecordingDirectory;
+  const root = recordingRoot.value;
   if (!root) {
     recordingTreeError.value = "Recording folder is not ready.";
     return;
@@ -126,6 +128,18 @@ async function refreshRecordingTree() {
   }
 }
 
+onMounted(() => {
+  if (recordingRoot.value) {
+    void refreshRecordingTree();
+  }
+});
+
+watch(recordingRoot, (root, previousRoot) => {
+  if (root && root !== previousRoot) {
+    void refreshRecordingTree();
+  }
+});
+
 function showFolderEditor() {
   folderEditorVisible.value = true;
   recordingTreeError.value = "";
@@ -137,7 +151,7 @@ function cancelFolderEditor() {
 }
 
 async function createRecordingFolder() {
-  const root = props.recordingDirectory || props.defaultRecordingDirectory;
+  const root = recordingRoot.value;
   const folderName = folderNameDraft.value.trim();
 
   if (!root) {
