@@ -196,7 +196,7 @@
     config.
   - This gives the video timeline a visible cue for alignment.
 
-- [ ] Add marker timeline/editor view.
+- [x] Add marker timeline/editor view.
   - Show `.kbdrec` frame-state timeline with marker positions.
   - Let users inspect markers visually instead of manually calculating offsets.
   - Keep marker frame as the source of truth for future export alignment.

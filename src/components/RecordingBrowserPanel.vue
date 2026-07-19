@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { invoke } from "@tauri-apps/api/core";
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
+import {
+  buildRecordingTimelineMarkers,
+  type RecordingTimelineMarker,
+} from "../domain/recordingTimeline";
 import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
 
 type RecordingInspectionEvent =
@@ -69,6 +73,27 @@ const metadataTagsDraft = ref("");
 const metadataStatus = ref("");
 const metadataError = ref("");
 const metadataSaving = ref(false);
+const selectedTimelineMarker = ref<RecordingTimelineMarker | null>(null);
+
+const timelineMarkers = computed(() => {
+  if (!props.recordingInspection) {
+    return [];
+  }
+
+  return buildRecordingTimelineMarkers({
+    events: props.recordingInspection.events,
+    fps: props.recordingInspection.fps,
+    frameCount: props.recordingInspection.frames.length,
+  });
+});
+
+watch(
+  timelineMarkers,
+  (markers) => {
+    selectedTimelineMarker.value = markers[0] ?? null;
+  },
+  { immediate: true },
+);
 
 const emit = defineEmits<{
   "inspect-recording-file": [];
@@ -190,6 +215,10 @@ function markerEvents(events: RecordingInspectionEvent[]) {
   );
 }
 
+function timelineMarkerPosition(percent: number) {
+  return `calc(10px + ${percent / 100} * (100% - 20px))`;
+}
+
 function formatFrameTimecode(frame: number, fps: number) {
   const totalSeconds = Math.floor(frame / fps);
   const frameInSecond = frame % fps;
@@ -292,6 +321,35 @@ function padFrame(frame: number, fps: number) {
           <strong>
             {{ recordingInspection.events.filter((event) => "marker" in event).length }}
           </strong>
+        </div>
+      </div>
+      <div v-if="recordingInspection" class="marker-timeline-panel">
+        <div class="section-header">
+          <h3>Marker timeline</h3>
+          <span class="quiet">
+            {{ recordingInspection.frames.length }} frames
+          </span>
+        </div>
+        <div v-if="timelineMarkers.length" class="marker-timeline" aria-label="Marker timeline">
+          <button
+            v-for="(marker, index) in timelineMarkers"
+            :key="`${marker.frame}-${marker.name}-${index}`"
+            type="button"
+            class="timeline-marker"
+            :class="{ selected: selectedTimelineMarker === marker }"
+            :style="{ left: timelineMarkerPosition(marker.percent) }"
+            :title="`${marker.name} · frame ${marker.frame} · ${marker.timecode}`"
+            @click="selectedTimelineMarker = marker"
+          >
+            <span class="timeline-marker-dot" />
+            <span class="timeline-marker-label">{{ marker.name }}</span>
+          </button>
+        </div>
+        <p v-else class="quiet">No markers in this recording.</p>
+        <div v-if="selectedTimelineMarker" class="timeline-marker-detail">
+          <strong>{{ selectedTimelineMarker.name }}</strong>
+          <span>frame {{ selectedTimelineMarker.frame }}</span>
+          <span>{{ selectedTimelineMarker.timecode }}</span>
         </div>
       </div>
       <div v-if="recordingInspection" class="inspection-lists">
@@ -463,6 +521,102 @@ function padFrame(frame: number, fps: number) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 18px;
+}
+
+.marker-timeline-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #151a20;
+  padding: 14px;
+}
+
+.marker-timeline {
+  position: relative;
+  height: 62px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+      0 0 / 25% 100%,
+    #10141a;
+}
+
+.marker-timeline::before {
+  position: absolute;
+  right: 10px;
+  bottom: 13px;
+  left: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  content: "";
+}
+
+.timeline-marker {
+  position: absolute;
+  bottom: 9px;
+  display: grid;
+  justify-items: center;
+  gap: 5px;
+  min-width: 36px;
+  max-width: 96px;
+  border: 0;
+  background: transparent;
+  color: #dfe5ec;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  transform: translateX(-50%);
+}
+
+.timeline-marker-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #10141a;
+  border-radius: 999px;
+  background: #9ff0b9;
+  box-shadow: 0 0 0 1px rgba(159, 240, 185, 0.65);
+}
+
+.timeline-marker-label {
+  max-width: 96px;
+  overflow: hidden;
+  color: #c9d1da;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-marker.selected .timeline-marker-dot,
+.timeline-marker:focus-visible .timeline-marker-dot {
+  background: #ffd166;
+  box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.32);
+}
+
+.timeline-marker.selected .timeline-marker-label,
+.timeline-marker:focus-visible .timeline-marker-label {
+  color: #fff2c2;
+}
+
+.timeline-marker-detail {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(90px, auto) minmax(170px, auto);
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: #10141a;
+  color: #dfe5ec;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+
+.timeline-marker-detail strong {
+  color: #fff2c2;
 }
 
 .inspection-lists {
