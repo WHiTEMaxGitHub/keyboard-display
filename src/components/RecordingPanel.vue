@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { invoke } from "@tauri-apps/api/core";
 import { computed, ref, watch } from "vue";
 import type { AppConfig, RecordingConfig } from "../domain/defaultConfig";
 import {
@@ -11,43 +10,6 @@ import {
   formatBytesPerSecond,
 } from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
-import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
-
-type RecordingInspectionEvent =
-  | { frame: number; down: string }
-  | { frame: number; up: string }
-  | { frame: number; marker: string };
-
-type RecordingInspectionFrame = {
-  frame: number;
-  keys: string[];
-};
-
-type RecordingInspection = {
-  version: number;
-  fps: number;
-  keyIds: string[];
-  events: RecordingInspectionEvent[];
-  frames: RecordingInspectionFrame[];
-};
-
-type RecordingFileSummary = {
-  fileName: string;
-  sizeBytes: number;
-  startUnixMs: number | null;
-  endUnixMs: number | null;
-  fps: number;
-  frameCount: number;
-  markerCount: number;
-};
-
-type RecordingTreeNode = {
-  name: string;
-  path: string;
-  type: "directory" | "file";
-  children: RecordingTreeNode[];
-  summary: RecordingFileSummary | null;
-};
 
 const props = defineProps<{
   config: AppConfig;
@@ -58,9 +20,6 @@ const props = defineProps<{
   recordingCountdown: number;
   lastRecordingPath: string;
   recordingStatusMessage: string;
-  inspectedRecordingPath: string;
-  recordingInspection: RecordingInspection | null;
-  recordingInspectionError: string;
   recordingHotkeys: RecordingHotkeyConfig;
   hotkeyCaptureTarget: "start" | "stop" | "sync" | null;
 }>();
@@ -71,9 +30,6 @@ const estimatedRecordingBytesPerSecond = computed(() =>
 );
 const customFpsDraft = ref(String(props.config.recording.customFps));
 const syncFeedbackDurationDraft = ref(String(props.config.recording.syncFeedbackDurationMs));
-const recordingTree = ref<RecordingTreeNode | null>(null);
-const recordingTreeError = ref("");
-const recordingTreeLoading = ref(false);
 
 watch(
   () => props.config.recording.customFps,
@@ -96,8 +52,6 @@ const emit = defineEmits<{
   "start-recording": [];
   "stop-recording": [];
   "add-sync-marker": [];
-  "inspect-recording-file": [];
-  "inspect-recording-path": [path: string];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
   "begin-hotkey-capture": [target: "start" | "stop" | "sync"];
 }>();
@@ -177,33 +131,6 @@ function addSyncMarker() {
   emit("add-sync-marker");
 }
 
-function inspectRecordingFile() {
-  emit("inspect-recording-file");
-}
-
-async function refreshRecordingTree() {
-  const root = props.recordingDirectory || props.defaultRecordingDirectory;
-  if (!root) {
-    recordingTreeError.value = "Recording folder is not ready.";
-    return;
-  }
-
-  recordingTreeLoading.value = true;
-  recordingTreeError.value = "";
-
-  try {
-    recordingTree.value = await invoke<RecordingTreeNode>("list_recording_files", { root });
-  } catch (error) {
-    recordingTreeError.value = String(error);
-  } finally {
-    recordingTreeLoading.value = false;
-  }
-}
-
-function inspectRecordingPath(path: string) {
-  emit("inspect-recording-path", path);
-}
-
 function updateRecordingHotkeyMode(event: Event) {
   emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
 }
@@ -216,41 +143,6 @@ function formatHotkey(keys: string[]) {
   return keys.length > 0 ? keys.join(" + ") : "Not set";
 }
 
-function formatInspectionEvent(event: RecordingInspectionEvent) {
-  if ("down" in event) {
-    return `frame ${event.frame} down ${event.down}`;
-  }
-
-  if ("up" in event) {
-    return `frame ${event.frame} up ${event.up}`;
-  }
-
-  return `frame ${event.frame} marker ${event.marker}`;
-}
-
-function markerEvents(events: RecordingInspectionEvent[]) {
-  return events.filter((event): event is Extract<RecordingInspectionEvent, { marker: string }> =>
-    "marker" in event
-  );
-}
-
-function formatFrameTimecode(frame: number, fps: number) {
-  const totalSeconds = Math.floor(frame / fps);
-  const frameInSecond = frame % fps;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}:${padFrame(frameInSecond, fps)} @ ${fps}fps`;
-}
-
-function pad2(value: number) {
-  return String(value).padStart(2, "0");
-}
-
-function padFrame(frame: number, fps: number) {
-  return String(frame).padStart(String(Math.max(fps - 1, 0)).length, "0");
-}
 </script>
 
 <template>
@@ -391,105 +283,6 @@ function padFrame(frame: number, fps: number) {
     <p v-if="recordingStatusMessage" class="status-text">
       {{ recordingStatusMessage }}
     </p>
-    <div class="inspection-panel">
-      <div class="section-header">
-        <h3>Recording inspection</h3>
-        <button type="button" @click="inspectRecordingFile">
-          Inspect .kbdrec
-        </button>
-      </div>
-      <div class="section-header">
-        <h3>Recording files</h3>
-        <button type="button" :disabled="recordingTreeLoading" @click="refreshRecordingTree">
-          {{ recordingTreeLoading ? "Loading..." : "Refresh" }}
-        </button>
-      </div>
-      <p v-if="recordingTreeError" class="error-text">
-        {{ recordingTreeError }}
-      </p>
-      <div v-if="recordingTree" class="recording-tree">
-        <RecordingTreeNodeView
-          :node="recordingTree"
-          @inspect="inspectRecordingPath"
-        />
-      </div>
-      <p v-if="inspectedRecordingPath" class="quiet">
-        File: {{ inspectedRecordingPath }}
-      </p>
-      <p v-if="recordingInspectionError" class="error-text">
-        {{ recordingInspectionError }}
-      </p>
-      <div v-if="recordingInspection" class="inspection-grid">
-        <div class="field-row">
-          <span>Version</span>
-          <strong>{{ recordingInspection.version }}</strong>
-        </div>
-        <div class="field-row">
-          <span>FPS</span>
-          <strong>{{ recordingInspection.fps }}</strong>
-        </div>
-        <div class="field-row">
-          <span>Keys</span>
-          <strong>{{ recordingInspection.keyIds.length }}</strong>
-        </div>
-        <div class="field-row">
-          <span>Events</span>
-          <strong>{{ recordingInspection.events.length }}</strong>
-        </div>
-        <div class="field-row">
-          <span>Frames</span>
-          <strong>{{ recordingInspection.frames.length }}</strong>
-        </div>
-        <div class="field-row">
-          <span>Markers</span>
-          <strong>
-            {{ recordingInspection.events.filter((event) => "marker" in event).length }}
-          </strong>
-        </div>
-      </div>
-      <div v-if="recordingInspection" class="inspection-lists">
-        <div>
-          <h4>Markers</h4>
-          <div class="marker-metadata-list">
-            <div
-              v-for="(event, index) in markerEvents(recordingInspection.events)"
-              :key="`${event.frame}-${event.marker}-${index}`"
-              class="marker-metadata"
-            >
-              <strong>marker {{ event.marker }}</strong>
-              <span>frame {{ event.frame }}</span>
-              <span>time {{ formatFrameTimecode(event.frame, recordingInspection.fps) }}</span>
-            </div>
-          </div>
-        </div>
-        <div>
-          <h4>Key table</h4>
-          <p class="quiet">{{ recordingInspection.keyIds.join(", ") || "None" }}</p>
-        </div>
-        <div>
-          <h4>Events</h4>
-          <ol>
-            <li
-              v-for="(event, index) in recordingInspection.events.slice(0, 8)"
-              :key="index"
-            >
-              {{ formatInspectionEvent(event) }}
-            </li>
-          </ol>
-        </div>
-        <div>
-          <h4>Frames</h4>
-          <ol>
-            <li
-              v-for="frame in recordingInspection.frames.slice(0, 8)"
-              :key="frame.frame"
-            >
-              frame {{ frame.frame }}: {{ frame.keys.join(", ") || "none" }}
-            </li>
-          </ol>
-        </div>
-      </div>
-    </div>
   </article>
 </template>
 
@@ -519,7 +312,8 @@ function padFrame(frame: number, fps: number) {
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
-.field-row span {
+.field-row span,
+.quiet {
   color: #9ca7b4;
 }
 
@@ -537,7 +331,6 @@ function padFrame(frame: number, fps: number) {
 }
 
 .recording-actions button,
-.inspection-panel button,
 .hotkey-row button {
   min-height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -550,14 +343,12 @@ function padFrame(frame: number, fps: number) {
 }
 
 .recording-actions button:disabled,
-.inspection-panel button:disabled,
 .hotkey-row button:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
 
 .recording-actions button:not(:disabled):hover,
-.inspection-panel button:not(:disabled):hover,
 .hotkey-row button:not(:disabled):hover {
   background: #29313d;
 }
@@ -702,7 +493,6 @@ select:focus {
 
 .quiet {
   margin: 14px 0 0;
-  color: #9ca7b4;
 }
 
 .status-text {
@@ -710,94 +500,5 @@ select:focus {
   color: #c9d1da;
   font-size: 13px;
   font-weight: 700;
-}
-
-.error-text {
-  margin: 0;
-  color: #ff8f8f;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.inspection-panel {
-  display: grid;
-  gap: 14px;
-  margin-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-  padding-top: 18px;
-}
-
-.recording-tree {
-  display: grid;
-  gap: 6px;
-  max-height: 360px;
-  overflow: auto;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.section-header h3,
-.inspection-lists h4 {
-  margin: 0;
-  letter-spacing: 0;
-}
-
-.section-header h3 {
-  font-size: 16px;
-  line-height: 22px;
-}
-
-.inspection-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 18px;
-}
-
-.inspection-lists {
-  display: grid;
-  gap: 14px;
-}
-
-.marker-metadata-list {
-  display: grid;
-  gap: 8px;
-}
-
-.marker-metadata {
-  display: grid;
-  grid-template-columns: minmax(120px, 1.1fr) minmax(100px, 0.7fr) minmax(180px, 1.2fr);
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: #151a20;
-  padding: 8px 10px;
-  color: #dfe5ec;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-.marker-metadata strong {
-  color: #eafff0;
-}
-
-.inspection-lists h4 {
-  margin-bottom: 6px;
-  color: #c9d1da;
-  font-size: 13px;
-}
-
-.inspection-lists ol {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  padding-left: 18px;
-  color: #dfe5ec;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
 }
 </style>

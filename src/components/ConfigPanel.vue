@@ -17,9 +17,11 @@ import {
 } from "../domain/defaultConfig";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
+import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
 import RecordingPanel from "./RecordingPanel.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
+type RecordingSubPage = "control" | "files";
 
 type RecordingInspectionFrame = {
   frame: number;
@@ -40,6 +42,7 @@ type RecordingInspection = {
 };
 
 const activePage = ref<ConfigPage>("overview");
+const recordingSubPage = ref<RecordingSubPage>("control");
 
 const navItems: Array<{
   id: ConfigPage;
@@ -52,6 +55,11 @@ const navItems: Array<{
   { id: "window", label: "Window", icon: MonitorCog },
   { id: "recording", label: "Recording", icon: Clapperboard },
   { id: "export", label: "Export", icon: Video },
+];
+
+const recordingNavItems: Array<{ id: RecordingSubPage; label: string }> = [
+  { id: "control", label: "Control" },
+  { id: "files", label: "Files" },
 ];
 
 const props = defineProps<{
@@ -177,16 +185,27 @@ function overwriteAndApplyConfig() {
       </div>
 
       <nav class="nav-list" aria-label="Configuration pages">
-        <button
-          v-for="item in navItems"
-          :key="item.id"
-          :class="{ active: activePage === item.id }"
-          type="button"
-          @click="activePage = item.id"
-        >
-          <component :is="item.icon" :size="18" aria-hidden="true" />
-          {{ item.label }}
-        </button>
+        <template v-for="item in navItems" :key="item.id">
+          <button
+            :class="{ active: activePage === item.id }"
+            type="button"
+            @click="activePage = item.id"
+          >
+            <component :is="item.icon" :size="18" aria-hidden="true" />
+            {{ item.label }}
+          </button>
+          <div v-if="item.id === 'recording' && activePage === 'recording'" class="subnav-list">
+            <button
+              v-for="child in recordingNavItems"
+              :key="child.id"
+              :class="{ active: recordingSubPage === child.id }"
+              type="button"
+              @click="recordingSubPage = child.id"
+            >
+              {{ child.label }}
+            </button>
+          </div>
+        </template>
       </nav>
     </aside>
 
@@ -428,7 +447,7 @@ function overwriteAndApplyConfig() {
         </article>
       </section>
 
-      <section v-else-if="activePage === 'recording'" class="page-stack">
+      <section v-else-if="activePage === 'recording' && recordingSubPage === 'control'" class="page-stack">
         <RecordingPanel
           :config="config"
           :recording-directory="recordingDirectory"
@@ -438,9 +457,6 @@ function overwriteAndApplyConfig() {
           :recording-countdown="recordingCountdown"
           :last-recording-path="lastRecordingPath"
           :recording-status-message="recordingStatusMessage"
-          :inspected-recording-path="inspectedRecordingPath"
-          :recording-inspection="recordingInspection"
-          :recording-inspection-error="recordingInspectionError"
           :recording-hotkeys="recordingHotkeys"
           :hotkey-capture-target="hotkeyCaptureTarget"
           @choose-recording-directory="emit('choose-recording-directory')"
@@ -453,6 +469,18 @@ function overwriteAndApplyConfig() {
           @inspect-recording-path="emit('inspect-recording-path', $event)"
           @update-recording-hotkey-mode="emit('update-recording-hotkey-mode', $event)"
           @begin-hotkey-capture="emit('begin-hotkey-capture', $event)"
+        />
+      </section>
+
+      <section v-else-if="activePage === 'recording' && recordingSubPage === 'files'" class="page-stack">
+        <RecordingBrowserPanel
+          :recording-directory="recordingDirectory"
+          :default-recording-directory="defaultRecordingDirectory"
+          :inspected-recording-path="inspectedRecordingPath"
+          :recording-inspection="recordingInspection"
+          :recording-inspection-error="recordingInspectionError"
+          @inspect-recording-file="emit('inspect-recording-file')"
+          @inspect-recording-path="emit('inspect-recording-path', $event)"
         />
       </section>
 
@@ -545,6 +573,23 @@ function overwriteAndApplyConfig() {
 }
 
 .nav-list button.active {
+  color: #eafff0;
+}
+
+.subnav-list {
+  display: grid;
+  gap: 4px;
+  margin: -2px 0 4px 28px;
+}
+
+.subnav-list button {
+  min-height: 30px;
+  padding: 7px 10px;
+  color: #9ca7b4;
+  font-size: 13px;
+}
+
+.subnav-list button.active {
   color: #eafff0;
 }
 
