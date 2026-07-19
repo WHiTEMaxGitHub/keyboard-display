@@ -238,19 +238,29 @@ function padFrame(frame: number, fps: number) {
               <strong>Tags</strong>
               <span>{{ node.summary.metadata.tags.join(", ") }}</span>
             </div>
-            <div class="file-detail-block">
-              <strong>Markers</strong>
-              <span>{{ node.summary.markerCount }} markers</span>
-            </div>
-            <div
-              v-for="marker in node.summary.markers"
-              :key="`${marker.frame}-${marker.name}`"
-              class="marker-note-row"
-            >
-              <strong>{{ marker.name || "marker" }}</strong>
-              <span>frame {{ marker.frame }}</span>
-              <span>{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
-              <span>{{ markerNoteFor(node.summary, marker)?.note || "" }}</span>
+            <div class="marker-detail-section">
+              <div class="marker-detail-header">
+                <strong>Markers</strong>
+                <span>{{ node.summary.markerCount }} total</span>
+              </div>
+              <div v-if="node.summary.markers.length" class="marker-table">
+                <div class="marker-table-head" aria-hidden="true">
+                  <span>Name</span>
+                  <span>Frame</span>
+                  <span>Timecode</span>
+                  <span>Note</span>
+                </div>
+                <div
+                  v-for="marker in node.summary.markers"
+                  :key="`${marker.frame}-${marker.name}`"
+                  class="marker-note-row"
+                >
+                  <strong>{{ marker.name || "marker" }}</strong>
+                  <span>frame {{ marker.frame }}</span>
+                  <span>{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
+                  <span>{{ markerNoteFor(node.summary, marker)?.note || "-" }}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -379,34 +389,93 @@ function padFrame(frame: number, fps: number) {
 }
 
 .file-detail-block,
-.marker-note-row {
+.marker-detail-section {
   display: grid;
   gap: 3px;
   min-width: 0;
 }
 
-.file-detail-block strong,
-.marker-note-row strong {
+.file-detail-block strong {
   color: #c9d1da;
   font-size: 12px;
 }
 
-.file-detail-block span,
-.marker-note-row span {
+.file-detail-block span {
   overflow-wrap: anywhere;
   color: #9ca7b4;
   font-size: 12px;
 }
 
+.marker-detail-section {
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.marker-detail-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.marker-detail-header strong {
+  color: #dfe5ec;
+  font-size: 13px;
+}
+
+.marker-detail-header span {
+  color: #9ca7b4;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.marker-table {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 7px;
+}
+
+.marker-table-head,
 .marker-note-row {
+  display: grid;
   grid-template-columns:
-    minmax(80px, 0.8fr)
-    minmax(74px, auto)
-    minmax(160px, auto)
+    minmax(110px, 0.9fr)
+    minmax(90px, auto)
+    minmax(190px, auto)
     minmax(120px, 1fr);
-  align-items: start;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+}
+
+.marker-table-head {
+  background: rgba(255, 255, 255, 0.035);
+  color: #7f8b99;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.marker-note-row {
+  color: #9ca7b4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}
+
+.marker-note-row + .marker-note-row {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 8px;
+}
+
+.marker-note-row strong {
+  color: #dfe5ec;
+  font: inherit;
+  font-weight: 800;
+}
+
+.marker-note-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .tree-collapse-enter-active,
