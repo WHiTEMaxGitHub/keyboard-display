@@ -274,9 +274,9 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
 
   await resizeOverlayWindow(overlayWindow);
 
-  const horizontalMargin = 64;
-  const topMargin = 64;
-  const bottomMargin = 72;
+  const horizontalMargin = 16;
+  const topMargin = 16;
+  const bottomMargin = 24;
   const overlaySafePadding = 14;
   const overlaySize = measuredOverlaySize.value ?? estimateOverlaySize(config.layout, config.rows, config.style);
   const workArea = {
