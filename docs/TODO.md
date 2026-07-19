@@ -236,7 +236,7 @@
   - Recording hotkeys.
   - Silent recording.
 
-- [ ] Add recent profile list.
+- [x] Add recent profile list.
   - Keep only real user-selected profile paths.
   - Use it for quick switching in the config UI.
 

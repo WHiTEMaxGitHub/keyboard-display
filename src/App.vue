@@ -13,7 +13,11 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, onUnmounted, reactive, ref, watch, type WatchStopHandle } from "vue";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
-import { buildAppConfigFile, parseAppConfigFile } from "./domain/appConfig";
+import {
+  buildAppConfigFile,
+  parseAppConfigFile,
+  type RecentProfile,
+} from "./domain/appConfig";
 import { buildConfigFileJson, parseConfigFile } from "./domain/configFile";
 import {
   createDefaultConfig,
@@ -49,6 +53,7 @@ const isOverlayVisible = ref(true);
 const profileName = ref("CS POV");
 const profileSourcePath = ref<string | null>(null);
 const profileChanged = ref(false);
+const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const recordingDirectory = ref("");
 const defaultRecordingDirectory = ref("");
@@ -303,6 +308,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   if (visible) {
     await moveOverlay(overlayPosition.value, false);
   }
+  scheduleAppConfigSave();
 }
 
 async function loadConfig() {
@@ -320,6 +326,11 @@ async function loadConfig() {
   await applyLoadedConfig(text, selectedPath.split(/[\\/]/).pop() ?? selectedPath, selectedPath);
 }
 
+async function loadRecentProfile(path: string) {
+  const text = await invoke<string>("read_config_file", { path });
+  await applyLoadedConfig(text, path.split(/[\\/]/).pop() ?? path, path);
+}
+
 async function restoreAppConfig() {
   defaultRecordingDirectory.value = await invoke<string>("default_recording_dir");
   const savedConfig = await invoke<string | null>("load_app_config");
@@ -331,6 +342,7 @@ async function restoreAppConfig() {
   profileName.value = appConfig.currentProfile.name;
   profileSourcePath.value = appConfig.currentProfile.sourcePath;
   profileChanged.value = appConfig.currentProfile.changed;
+  recentProfiles.value = appConfig.profiles.recentProfiles;
   overlayPosition.value = appConfig.currentProfile.overlay.position as OverlayPosition;
   recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
   silentRecording.value = appConfig.recording.silent ?? false;
@@ -371,6 +383,7 @@ function scheduleAppConfigSave() {
 async function saveAppConfig() {
   const appConfig = buildAppConfigFile({
     defaultProfilePath: "docs/default-config.json",
+    recentProfiles: recentProfiles.value,
     currentProfile: {
       name: profileName.value,
       sourcePath: profileSourcePath.value,
@@ -391,6 +404,7 @@ async function saveAppConfig() {
       hotkeys: recordingHotkeys.value,
     },
   });
+  recentProfiles.value = appConfig.profiles.recentProfiles;
 
   await invoke("save_app_config", {
     contents: `${JSON.stringify(appConfig, null, 2)}\n`,
@@ -876,6 +890,7 @@ onUnmounted(() => {
       :overlay-visible="isOverlayVisible"
       :profile-name="profileName"
       :profile-changed="profileChanged"
+      :recent-profiles="recentProfiles"
       :recording-directory="recordingDirectory"
       :default-recording-directory="defaultRecordingDirectory"
       :silent-recording="silentRecording"
@@ -892,6 +907,7 @@ onUnmounted(() => {
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-visible="setOverlayVisible"
       @load-config="loadConfig"
+      @load-recent-profile="loadRecentProfile"
       @export-and-apply-config="exportAndApplyConfig"
       @overwrite-and-apply-config="overwriteAndApplyConfig"
       @choose-recording-directory="chooseRecordingDirectory"

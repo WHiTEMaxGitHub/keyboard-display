@@ -7,6 +7,8 @@ export type RecentProfile = {
   path: string;
 };
 
+export const MAX_RECENT_PROFILES = 8;
+
 export type CurrentProfile = {
   name: string;
   sourcePath: string | null;
@@ -50,23 +52,23 @@ export type PersistedAppConfigFile = Omit<AppConfigFile, "currentProfile"> & {
 
 export function buildAppConfigFile({
   defaultProfilePath,
+  recentProfiles,
   currentProfile,
   recording,
 }: {
   defaultProfilePath: string;
+  recentProfiles: RecentProfile[];
   currentProfile: CurrentProfile;
   recording: AppConfigFile["recording"];
 }): PersistedAppConfigFile {
-  const recentProfiles = currentProfile.sourcePath
-    ? [{ name: currentProfile.name, path: currentProfile.sourcePath }]
-    : [];
+  const nextRecentProfiles = mergeRecentProfiles(recentProfiles, currentProfile);
 
   return {
     version: 1,
     profiles: {
       defaultProfilePath,
       lastProfilePath: currentProfile.sourcePath,
-      recentProfiles,
+      recentProfiles: nextRecentProfiles,
     },
     currentProfile: {
       ...currentProfile,
@@ -84,6 +86,32 @@ export function buildAppConfigFile({
       language: "system",
     },
   };
+}
+
+export function mergeRecentProfiles(
+  recentProfiles: RecentProfile[],
+  currentProfile: Pick<CurrentProfile, "name" | "sourcePath">,
+): RecentProfile[] {
+  const nextProfiles = currentProfile.sourcePath
+    ? [{ name: currentProfile.name, path: currentProfile.sourcePath }, ...recentProfiles]
+    : [...recentProfiles];
+  const seenPaths = new Set<string>();
+  const dedupedProfiles: RecentProfile[] = [];
+
+  for (const profile of nextProfiles) {
+    const path = profile.path.trim();
+    if (!path || seenPaths.has(path)) {
+      continue;
+    }
+
+    seenPaths.add(path);
+    dedupedProfiles.push({
+      name: profile.name.trim() || profileNameFromPath(path),
+      path,
+    });
+  }
+
+  return dedupedProfiles.slice(0, MAX_RECENT_PROFILES);
 }
 
 export function parseAppConfigFile(text: string): AppConfigFile {
@@ -133,4 +161,9 @@ function rowsFromKeys(keys: AppConfig["keys"]): OverlayRow[] {
   return [...rowMap.entries()]
     .sort(([left], [right]) => left - right)
     .map(([, row]) => row);
+}
+
+function profileNameFromPath(path: string): string {
+  const fileName = path.split(/[\\/]/).pop() ?? path;
+  return fileName.replace(/\.json$/i, "") || path;
 }

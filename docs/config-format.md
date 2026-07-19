@@ -232,7 +232,7 @@ recording format; `.kbdrec` is the source of truth.
 | --- | --- | --- |
 | `profiles.defaultProfilePath` | string | Default profile path used by the app. |
 | `profiles.lastProfilePath` | string or null | Last loaded profile file path. |
-| `profiles.recentProfiles` | array | Recent profile list for future quick switching. |
+| `profiles.recentProfiles` | array | Recently loaded real profile paths for quick switching. |
 | `currentProfile` | object | Current active profile state. Its `overlay` and `recording` use the same schema as profile configs. |
 | `currentProfile.changed` | boolean | Whether current profile state differs from `currentProfile.sourcePath`. |
 | `recording.outputDirectory` | string or null | Folder for new `.kbdrec` recordings. |

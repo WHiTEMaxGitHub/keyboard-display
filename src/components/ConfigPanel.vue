@@ -15,6 +15,7 @@ import {
   type AppConfig,
   type OverlayStyle,
 } from "../domain/defaultConfig";
+import type { RecentProfile } from "../domain/appConfig";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
@@ -68,6 +69,7 @@ const props = defineProps<{
   overlayVisible: boolean;
   profileName: string;
   profileChanged: boolean;
+  recentProfiles: RecentProfile[];
   recordingDirectory: string;
   defaultRecordingDirectory: string;
   silentRecording: boolean;
@@ -91,6 +93,7 @@ const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-visible": [visible: boolean];
   "load-config": [];
+  "load-recent-profile": [path: string];
   "export-and-apply-config": [];
   "overwrite-and-apply-config": [];
   "choose-recording-directory": [];
@@ -161,6 +164,15 @@ function moveOverlay(
 
 function loadConfigFile() {
   emit("load-config");
+}
+
+function loadRecentProfile(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const path = select.value;
+  if (path) {
+    emit("load-recent-profile", path);
+    select.value = "";
+  }
 }
 
 function exportAndApplyConfig() {
@@ -261,6 +273,26 @@ function overwriteAndApplyConfig() {
               <span>Visible keys</span>
               <strong>{{ config.keys.length }}</strong>
             </div>
+            <label class="recent-profile-control">
+              <span>Recent profiles</span>
+              <select
+                class="select-control"
+                :disabled="recentProfiles.length === 0"
+                value=""
+                @change="loadRecentProfile"
+              >
+                <option value="">
+                  {{ recentProfiles.length ? "Choose a profile" : "No recent profiles" }}
+                </option>
+                <option
+                  v-for="profile in recentProfiles"
+                  :key="profile.path"
+                  :value="profile.path"
+                >
+                  {{ profile.name }}
+                </option>
+              </select>
+            </label>
           </article>
 
           <article class="panel">
@@ -744,6 +776,20 @@ h2 {
   min-width: 0;
   overflow-wrap: anywhere;
   text-align: right;
+}
+
+.recent-profile-control {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  color: #c9d1da;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.recent-profile-control select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .layout-line-list {

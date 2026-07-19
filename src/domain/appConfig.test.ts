@@ -7,6 +7,7 @@ describe("app config", () => {
     const config = createDefaultConfig();
     const appConfig = buildAppConfigFile({
       defaultProfilePath: "docs/default-config.json",
+      recentProfiles: [],
       currentProfile: {
         name: "CS POV",
         sourcePath: "/tmp/cs-pov.json",
@@ -45,6 +46,93 @@ describe("app config", () => {
     expect("keys" in appConfig.currentProfile.overlay).toBe(false);
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
     expect(appConfig.recording.silent).toBe(true);
+  });
+
+  it("keeps real recent profile paths deduped and newest first", () => {
+    const config = createDefaultConfig();
+    const appConfig = buildAppConfigFile({
+      defaultProfilePath: "docs/default-config.json",
+      recentProfiles: [
+        { name: "Old copy", path: "/tmp/cs-pov.json" },
+        { name: "Aim", path: "/tmp/aim.json" },
+        { name: "No path", path: "" },
+      ],
+      currentProfile: {
+        name: "CS POV",
+        sourcePath: "/tmp/cs-pov.json",
+        changed: false,
+        recording: config.recording,
+        overlay: {
+          visible: true,
+          position: "bottom-right",
+          layout: config.layout,
+          style: config.style,
+          rows: config.rows,
+          keys: config.keys,
+        },
+      },
+      recording: {
+        outputDirectory: null,
+        silent: false,
+        hotkeys: {
+          mode: "toggle",
+          start: ["ctrl-left", "shift-left", "r"],
+          stop: ["ctrl-left", "shift-left", "r"],
+          sync: ["f8"],
+        },
+      },
+    });
+
+    expect(appConfig.profiles.recentProfiles).toEqual([
+      { name: "CS POV", path: "/tmp/cs-pov.json" },
+      { name: "Aim", path: "/tmp/aim.json" },
+    ]);
+  });
+
+  it("limits recent profiles to eight entries", () => {
+    const config = createDefaultConfig();
+    const recentProfiles = Array.from({ length: 10 }, (_, index) => ({
+      name: `Profile ${index}`,
+      path: `/tmp/profile-${index}.json`,
+    }));
+    const appConfig = buildAppConfigFile({
+      defaultProfilePath: "docs/default-config.json",
+      recentProfiles,
+      currentProfile: {
+        name: "Current",
+        sourcePath: "/tmp/current.json",
+        changed: false,
+        recording: config.recording,
+        overlay: {
+          visible: true,
+          position: "bottom-right",
+          layout: config.layout,
+          style: config.style,
+          rows: config.rows,
+          keys: config.keys,
+        },
+      },
+      recording: {
+        outputDirectory: null,
+        silent: false,
+        hotkeys: {
+          mode: "toggle",
+          start: ["ctrl-left", "shift-left", "r"],
+          stop: ["ctrl-left", "shift-left", "r"],
+          sync: ["f8"],
+        },
+      },
+    });
+
+    expect(appConfig.profiles.recentProfiles).toHaveLength(8);
+    expect(appConfig.profiles.recentProfiles[0]).toEqual({
+      name: "Current",
+      path: "/tmp/current.json",
+    });
+    expect(appConfig.profiles.recentProfiles[appConfig.profiles.recentProfiles.length - 1]).toEqual({
+      name: "Profile 6",
+      path: "/tmp/profile-6.json",
+    });
   });
 
   it("parses app config json", () => {
