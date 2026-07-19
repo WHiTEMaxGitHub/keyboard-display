@@ -295,18 +295,15 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
   const horizontalMargin = 16;
   const topMargin = 16;
   const bottomMargin = 24;
-  const overlaySafePadding = 14;
   const overlaySize = measuredOverlaySize.value ?? estimateOverlaySize(config.layout, config.rows, config.style);
   const workArea = {
     position: monitor.workArea.position.toLogical(monitor.scaleFactor),
     size: monitor.workArea.size.toLogical(monitor.scaleFactor),
   };
-  const xMin = workArea.position.x + horizontalMargin - overlaySafePadding;
-  const yMin = workArea.position.y + topMargin - overlaySafePadding;
-  const xMax =
-    workArea.position.x + workArea.size.width - overlaySize.width - horizontalMargin + overlaySafePadding;
-  const yMax =
-    workArea.position.y + workArea.size.height - overlaySize.height - bottomMargin + overlaySafePadding;
+  const xMin = workArea.position.x + horizontalMargin;
+  const yMin = workArea.position.y + topMargin;
+  const xMax = workArea.position.x + workArea.size.width - overlaySize.width - horizontalMargin;
+  const yMax = workArea.position.y + workArea.size.height - overlaySize.height - bottomMargin;
 
   const positions: Record<Exclude<OverlayPosition, "custom">, LogicalPosition> = {
     "top-left": new LogicalPosition(xMin, yMin),

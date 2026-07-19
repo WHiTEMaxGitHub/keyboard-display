@@ -29,8 +29,9 @@ onMounted(async () => {
   await currentWindow.setIgnoreCursorEvents(true);
   unlistenAdjustMode = await listen<{ enabled: boolean }>(
     OVERLAY_ADJUST_MODE_EVENT,
-    (event) => {
+    async (event) => {
       adjusting.value = event.payload.enabled;
+      await currentWindow.setIgnoreCursorEvents(!event.payload.enabled);
     },
   );
   await reportMeasuredSize();
@@ -82,7 +83,7 @@ async function startDrag() {
   <main
     ref="overlayRoot"
     :class="['overlay-root', { adjusting }]"
-    @pointerdown="startDrag"
+    @mousedown="startDrag"
   >
     <PovOverlay
       :layout="layout"
@@ -101,7 +102,7 @@ async function startDrag() {
   gap: 8px;
   width: max-content;
   justify-items: center;
-  padding: 14px;
+  padding: 0;
   background: transparent;
 }
 
