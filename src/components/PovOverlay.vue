@@ -24,6 +24,12 @@ const platformKey = computed(() => detectPlatformKey());
 function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: OverlayStyle) {
   return overlayStyle.idleKeyVisibility !== "hidden" || activeKeys.has(keyId);
 }
+
+function backplateOpacity(overlayStyle: OverlayStyle) {
+  return /^#[0-9a-fA-F]{8}$/.test(overlayStyle.backgroundColor)
+    ? 1
+    : overlayStyle.backgroundOpacity;
+}
 </script>
 
 <template>
@@ -36,7 +42,7 @@ function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: Over
       '--gap-unit': normalizeUnit(layout.gapUnit),
       '--overlay-opacity': overlayStyle.opacity,
       '--overlay-bg': overlayStyle.backgroundColor,
-      '--overlay-bg-opacity': overlayStyle.backgroundOpacity,
+      '--overlay-bg-opacity': backplateOpacity(overlayStyle),
       '--overlay-bg-radius': `${overlayStyle.backgroundRadius}px`,
       '--key-idle': overlayStyle.idleColor,
       '--key-active': overlayStyle.activeColor,

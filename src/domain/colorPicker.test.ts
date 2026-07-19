@@ -9,6 +9,8 @@ describe("color picker utilities", () => {
   it("normalizes short and long hex colors", () => {
     expect(normalizeHexColor("#abc")).toBe("#aabbcc");
     expect(normalizeHexColor("25D366")).toBe("#25d366");
+    expect(normalizeHexColor("#abcd")).toBe("#aabbccdd");
+    expect(normalizeHexColor("25D36680")).toBe("#25d36680");
   });
 
   it("falls back when the input is not a hex color", () => {
@@ -17,8 +19,9 @@ describe("color picker utilities", () => {
   });
 
   it("converts between rgb channels and hex colors", () => {
-    expect(hexToRgb("#25d366")).toEqual({ r: 37, g: 211, b: 102 });
+    expect(hexToRgb("#25d36680")).toEqual({ r: 37, g: 211, b: 102, a: 128 });
     expect(rgbToHex({ r: 37, g: 211, b: 102 })).toBe("#25d366");
+    expect(rgbToHex({ r: 37, g: 211, b: 102, a: 128 })).toBe("#25d36680");
   });
 
   it("clamps rgb channels before formatting", () => {

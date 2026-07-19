@@ -126,11 +126,6 @@ function updateOpacity(event: Event) {
   emit("update-overlay-style", { ...props.config.style, opacity });
 }
 
-function updateBackgroundOpacity(event: Event) {
-  const backgroundOpacity = Number((event.target as HTMLInputElement).value);
-  emit("update-overlay-style", { ...props.config.style, backgroundOpacity });
-}
-
 function updateBackgroundRadius(event: Event) {
   const backgroundRadius = Number((event.target as HTMLInputElement).value);
   emit("update-overlay-style", { ...props.config.style, backgroundRadius });
@@ -418,18 +413,6 @@ function updateRenderMarkers(event: Event) {
           </label>
           <div class="appearance-control-grid">
             <label>
-              Backplate opacity
-              <input
-                :value="config.style.backgroundOpacity"
-                min="0"
-                max="1"
-                step="0.01"
-                type="range"
-                @input="updateBackgroundOpacity"
-              />
-              <span class="hint">Controls only the backplate behind the keys.</span>
-            </label>
-            <label>
               Backplate radius
               <input
                 :value="config.style.backgroundRadius"
@@ -486,6 +469,7 @@ function updateRenderMarkers(event: Event) {
               label="Backplate"
               :value="config.style.backgroundColor"
               :recent-colors="recentColors"
+              alpha-enabled
               @update:value="updateStyleColor('backgroundColor', $event)"
               @remember-color="rememberColor"
             />

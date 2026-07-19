@@ -22,6 +22,7 @@ const props = defineProps<{
   label: string;
   value: string;
   recentColors: string[];
+  alphaEnabled?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -68,15 +69,18 @@ function updateHex(event: Event) {
 }
 
 function commitHex() {
-  commitColor(normalizeHexColor(hexDraft.value, normalizeHexColor(props.value)));
+  commitColor(hexDraft.value);
 }
 
 function updateChannel(channel: keyof RgbColor, event: Event) {
+  const nextRgb = {
+    ...rgb.value,
+    ...(props.alphaEnabled && rgb.value.a === undefined ? { a: 255 } : {}),
+    [channel]: Number((event.target as HTMLInputElement).value),
+  };
+
   commitColor(
-    rgbToHex({
-      ...rgb.value,
-      [channel]: Number((event.target as HTMLInputElement).value),
-    }),
+    rgbToHex(props.alphaEnabled ? nextRgb : { r: nextRgb.r, g: nextRgb.g, b: nextRgb.b }),
   );
 }
 
@@ -85,10 +89,17 @@ function chooseColor(color: string) {
 }
 
 function commitColor(color: string) {
-  const normalizedColor = normalizeHexColor(color, normalizeHexColor(props.value));
+  const normalizedColor = normalizePickerColor(color);
   hexDraft.value = normalizedColor;
   emit("update:value", normalizedColor);
   emit("remember-color", normalizedColor);
+}
+
+function normalizePickerColor(color: string) {
+  const normalizedColor = normalizeHexColor(color, normalizeHexColor(props.value));
+  return !props.alphaEnabled && normalizedColor.length === 9
+    ? normalizedColor.slice(0, 7)
+    : normalizedColor;
 }
 </script>
 
@@ -129,11 +140,15 @@ function commitColor(color: string) {
             <span>G</span>
             <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
           </label>
-          <label>
-            <span>B</span>
-            <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
-          </label>
-        </div>
+        <label>
+          <span>B</span>
+          <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
+        </label>
+        <label v-if="alphaEnabled">
+          <span>A</span>
+          <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
+        </label>
+      </div>
         <div class="swatch-section">
           <span>Presets</span>
           <div class="swatch-grid">

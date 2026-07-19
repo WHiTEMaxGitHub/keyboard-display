@@ -163,8 +163,8 @@ profile files should prefer `gap` for clarity.
 | `scale` | number | Multiplies the whole overlay size. |
 | `opacity` | number | Opacity for the whole overlay. Range is usually `0` to `1`. |
 | `backgroundMode` | string | `transparent` or `panel`. |
-| `backgroundColor` | string | Backplate color as a hex color. |
-| `backgroundOpacity` | number | Backplate opacity when `backgroundMode` is `panel`. |
+| `backgroundColor` | string | Backplate color as `#rrggbb` or `#rrggbbaa`. Alpha in this color is used directly. |
+| `backgroundOpacity` | number | Legacy backplate opacity used when `backgroundColor` has no alpha channel. |
 | `backgroundRadius` | number | Backplate corner radius in pixels. |
 | `idleKeyVisibility` | string | `visible`, `faint`, or `hidden`. |
 | `alwaysOnTop` | boolean | Whether the POV window should stay above normal windows. |

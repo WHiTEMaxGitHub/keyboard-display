@@ -2,6 +2,7 @@ export type RgbColor = {
   r: number;
   g: number;
   b: number;
+  a?: number;
 };
 
 export function normalizeHexColor(value: string, fallback = "#000000") {
@@ -15,7 +16,19 @@ export function normalizeHexColor(value: string, fallback = "#000000") {
       .toLowerCase()}`;
   }
 
+  if (/^[0-9a-fA-F]{4}$/.test(trimmed)) {
+    return `#${trimmed
+      .split("")
+      .map((character) => character + character)
+      .join("")
+      .toLowerCase()}`;
+  }
+
   if (/^[0-9a-fA-F]{6}$/.test(trimmed)) {
+    return `#${trimmed.toLowerCase()}`;
+  }
+
+  if (/^[0-9a-fA-F]{8}$/.test(trimmed)) {
     return `#${trimmed.toLowerCase()}`;
   }
 
@@ -29,11 +42,13 @@ export function hexToRgb(value: string): RgbColor {
     r: Number.parseInt(hex.slice(0, 2), 16),
     g: Number.parseInt(hex.slice(2, 4), 16),
     b: Number.parseInt(hex.slice(4, 6), 16),
+    ...(hex.length === 8 ? { a: Number.parseInt(hex.slice(6, 8), 16) } : {}),
   };
 }
 
 export function rgbToHex(rgb: RgbColor) {
-  return `#${toHexChannel(rgb.r)}${toHexChannel(rgb.g)}${toHexChannel(rgb.b)}`;
+  const alpha = rgb.a === undefined ? "" : toHexChannel(rgb.a);
+  return `#${toHexChannel(rgb.r)}${toHexChannel(rgb.g)}${toHexChannel(rgb.b)}${alpha}`;
 }
 
 function toHexChannel(value: number) {

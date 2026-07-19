@@ -26,8 +26,8 @@
 
 - [x] Keep opacity separate from color when it affects rendering semantics.
   - Overlay opacity controls the whole POV overlay.
-  - Backplate opacity controls only the backplate.
-  - Key color alpha can be added later if the custom picker supports it.
+  - Backplate alpha can be expressed directly in the backplate color.
+  - Key color alpha can be added later if needed.
 
 ## Profile editor
 
