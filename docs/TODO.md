@@ -24,7 +24,7 @@
     - preset colors
     - recent colors
 
-- [ ] Keep opacity separate from color when it affects rendering semantics.
+- [x] Keep opacity separate from color when it affects rendering semantics.
   - Overlay opacity controls the whole POV overlay.
   - Backplate opacity controls only the backplate.
   - Key color alpha can be added later if the custom picker supports it.

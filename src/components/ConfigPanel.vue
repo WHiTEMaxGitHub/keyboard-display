@@ -126,6 +126,16 @@ function updateOpacity(event: Event) {
   emit("update-overlay-style", { ...props.config.style, opacity });
 }
 
+function updateBackgroundOpacity(event: Event) {
+  const backgroundOpacity = Number((event.target as HTMLInputElement).value);
+  emit("update-overlay-style", { ...props.config.style, backgroundOpacity });
+}
+
+function updateBackgroundRadius(event: Event) {
+  const backgroundRadius = Number((event.target as HTMLInputElement).value);
+  emit("update-overlay-style", { ...props.config.style, backgroundRadius });
+}
+
 function updateBackgroundMode(event: Event) {
   const backgroundMode = (event.target as HTMLSelectElement).value as OverlayStyle["backgroundMode"];
   emit("update-overlay-style", { ...props.config.style, backgroundMode });
@@ -406,6 +416,31 @@ function updateRenderMarkers(event: Event) {
               <option value="panel">Rounded panel</option>
             </select>
           </label>
+          <div class="appearance-control-grid">
+            <label>
+              Backplate opacity
+              <input
+                :value="config.style.backgroundOpacity"
+                min="0"
+                max="1"
+                step="0.01"
+                type="range"
+                @input="updateBackgroundOpacity"
+              />
+              <span class="hint">Controls only the backplate behind the keys.</span>
+            </label>
+            <label>
+              Backplate radius
+              <input
+                :value="config.style.backgroundRadius"
+                min="0"
+                max="24"
+                step="1"
+                type="range"
+                @input="updateBackgroundRadius"
+              />
+            </label>
+          </div>
           <label class="settings-row">
             <span>Idle keys</span>
             <select
@@ -867,6 +902,17 @@ label {
   font-weight: 700;
 }
 
+.settings-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(180px, 240px);
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-row span {
+  min-width: 0;
+}
+
 .toggle-row {
   display: flex;
   align-items: center;
@@ -915,6 +961,12 @@ label {
 
 input[type="range"] {
   accent-color: #25d366;
+}
+
+.appearance-control-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
 }
 
 select {
