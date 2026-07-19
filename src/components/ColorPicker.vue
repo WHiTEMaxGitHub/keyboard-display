@@ -86,60 +86,62 @@ function commitColor(color: string) {
       <span>{{ label }}</span>
       <strong>{{ normalizeHexColor(value) }}</strong>
     </button>
-    <div v-if="pickerOpen" class="picker-panel">
-      <label class="hex-row">
-        <span>HEX</span>
-        <input
-          :value="hexDraft"
-          spellcheck="false"
-          @blur="commitHex"
-          @change="commitHex"
-          @input="updateHex"
-        />
-      </label>
-      <div class="slider-list">
-        <label>
-          <span>R</span>
-          <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
-        </label>
-        <label>
-          <span>G</span>
-          <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
-        </label>
-        <label>
-          <span>B</span>
-          <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
-        </label>
-      </div>
-      <div class="swatch-section">
-        <span>Presets</span>
-        <div class="swatch-grid">
-          <button
-            v-for="color in PRESET_COLORS"
-            :key="color"
-            :aria-label="color"
-            class="swatch-button"
-            type="button"
-            :style="{ backgroundColor: color }"
-            @click="chooseColor(color)"
+    <Transition name="picker-popover">
+      <div v-if="pickerOpen" class="picker-panel">
+        <label class="hex-row">
+          <span>HEX</span>
+          <input
+            :value="hexDraft"
+            spellcheck="false"
+            @blur="commitHex"
+            @change="commitHex"
+            @input="updateHex"
           />
+        </label>
+        <div class="slider-list">
+          <label>
+            <span>R</span>
+            <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
+          </label>
+          <label>
+            <span>G</span>
+            <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
+          </label>
+          <label>
+            <span>B</span>
+            <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
+          </label>
+        </div>
+        <div class="swatch-section">
+          <span>Presets</span>
+          <div class="swatch-grid">
+            <button
+              v-for="color in PRESET_COLORS"
+              :key="color"
+              :aria-label="color"
+              class="swatch-button"
+              type="button"
+              :style="{ backgroundColor: color }"
+              @click="chooseColor(color)"
+            />
+          </div>
+        </div>
+        <div v-if="recentColors.length" class="swatch-section">
+          <span>Recent</span>
+          <div class="swatch-grid">
+            <button
+              v-for="color in recentColors"
+              :key="color"
+              :aria-label="color"
+              class="swatch-button"
+              type="button"
+              :style="{ backgroundColor: color }"
+              @click="chooseColor(color)"
+            />
+          </div>
         </div>
       </div>
-      <div v-if="recentColors.length" class="swatch-section">
-        <span>Recent</span>
-        <div class="swatch-grid">
-          <button
-            v-for="color in recentColors"
-            :key="color"
-            :aria-label="color"
-            class="swatch-button"
-            type="button"
-            :style="{ backgroundColor: color }"
-            @click="chooseColor(color)"
-          />
-        </div>
-      </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -147,6 +149,11 @@ function commitColor(color: string) {
 .color-picker {
   position: relative;
   min-width: 0;
+  z-index: 1;
+}
+
+.color-picker:has(.picker-panel) {
+  z-index: 20;
 }
 
 .color-trigger {
@@ -195,13 +202,37 @@ function commitColor(color: string) {
 }
 
 .picker-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
   display: grid;
   gap: 12px;
-  margin-top: 8px;
+  width: max(100%, 260px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
   padding: 12px;
+}
+
+.picker-popover-enter-active,
+.picker-popover-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 170ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.picker-popover-enter-from,
+.picker-popover-leave-to {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.98);
+}
+
+.picker-popover-enter-to,
+.picker-popover-leave-from {
+  opacity: 1;
+  transform: translateY(0) scale(1);
 }
 
 .hex-row,
