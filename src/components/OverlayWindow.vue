@@ -59,10 +59,16 @@ async function setClickThrough(enabled: boolean) {
 </script>
 
 <template>
-  <main
-    class="overlay-root"
-    @mousedown.prevent.stop="startDrag"
-  >
+  <main class="overlay-root">
+    <button
+      v-if="adjusting"
+      class="drag-handle"
+      type="button"
+      title="Drag POV"
+      @mousedown.prevent.stop="startDrag"
+    >
+      Drag
+    </button>
     <PovOverlay
       :layout="layout"
       :rows="rows"
@@ -77,12 +83,29 @@ async function setClickThrough(enabled: boolean) {
 
 <style scoped>
 .overlay-root {
+  position: relative;
   display: grid;
   gap: 8px;
   width: max-content;
   justify-items: center;
   padding: 0 12px 12px 0;
   background: transparent;
+}
+
+.drag-handle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 5;
+  min-height: 24px;
+  border: 1px solid rgba(37, 211, 102, 0.56);
+  border-radius: 6px;
+  background: rgba(17, 19, 22, 0.9);
+  color: #eafff0;
+  cursor: move;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 8px;
 }
 
 </style>

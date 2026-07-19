@@ -109,8 +109,16 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
 
 .key-cluster.adjusting {
   cursor: move;
-  outline: 2px solid rgba(37, 211, 102, 0.78);
-  outline-offset: 4px;
+}
+
+.key-cluster.adjusting::before {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border: 2px solid rgba(37, 211, 102, 0.78);
+  border-radius: inherit;
+  content: "";
+  pointer-events: none;
 }
 
 .key-cluster.backplate-visible {
