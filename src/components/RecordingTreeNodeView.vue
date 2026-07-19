@@ -192,11 +192,7 @@ function displayTitle(node: RecordingTreeNode) {
 }
 
 .tree-children-shell {
-  max-height: 720px;
   overflow: hidden;
-  opacity: 1;
-  transform: translateY(0);
-  will-change: max-height, opacity, transform;
 }
 
 .tree-children {
@@ -206,20 +202,31 @@ function displayTitle(node: RecordingTreeNode) {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  transform-origin: top;
+  will-change: opacity, transform, clip-path;
 }
 
-.tree-collapse-enter-active,
-.tree-collapse-leave-active {
+.tree-collapse-enter-active .tree-children,
+.tree-collapse-leave-active .tree-children {
   transition:
-    max-height 180ms cubic-bezier(0.2, 0, 0.2, 1),
-    opacity 120ms ease,
-    transform 180ms cubic-bezier(0.2, 0, 0.2, 1);
+    opacity 90ms linear,
+    transform 120ms cubic-bezier(0.2, 0, 0.2, 1),
+    clip-path 120ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
-.tree-collapse-enter-from,
-.tree-collapse-leave-to {
-  max-height: 0;
+.tree-collapse-enter-from .tree-children,
+.tree-collapse-leave-to .tree-children {
+  clip-path: inset(0 0 100% 0);
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(-3px) scaleY(0.96);
+}
+
+.tree-collapse-enter-to .tree-children,
+.tree-collapse-leave-from .tree-children {
+  clip-path: inset(0 0 0 0);
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
 }
 </style>
