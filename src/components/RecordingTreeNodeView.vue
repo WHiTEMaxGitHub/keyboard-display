@@ -40,9 +40,15 @@ const emit = defineEmits<{
 }>();
 
 const expanded = ref(true);
+const fileDetailsVisible = ref(false);
 
 function inspect(path: string) {
   emit("inspect", path);
+}
+
+function inspectAndToggleFile(path: string) {
+  fileDetailsVisible.value = !fileDetailsVisible.value;
+  inspect(path);
 }
 
 function toggleExpanded() {
@@ -109,6 +115,20 @@ function formatFileTimes(summary: RecordingFileSummary) {
 function displayTitle(node: RecordingTreeNode) {
   return node.summary?.metadata.displayName || node.name;
 }
+
+function hasFileDetails(summary: RecordingFileSummary | null) {
+  if (!summary) {
+    return false;
+  }
+
+  return (
+    Boolean(summary.metadata.displayName) ||
+    Boolean(summary.metadata.description) ||
+    summary.metadata.tags.length > 0 ||
+    summary.metadata.markerNotes.length > 0 ||
+    summary.markerCount > 0
+  );
+}
 </script>
 
 <template>
@@ -144,26 +164,66 @@ function displayTitle(node: RecordingTreeNode) {
         </div>
       </Transition>
     </div>
-    <button
-      v-else
-      class="file-node"
-      type="button"
-      @click="inspect(node.path)"
-    >
-      <span class="tree-prefix">•</span>
-      <span class="file-main">
-        <strong>{{ displayTitle(node) }}</strong>
-        <small v-if="node.summary?.metadata.displayName">{{ node.name }}</small>
-        <small v-if="node.summary">
-          {{ formatFileSize(node.summary.sizeBytes) }} · {{ node.summary.fps }}fps ·
-          {{ node.summary.frameCount }} frames · {{ node.summary.markerCount }} markers
-        </small>
-        <small v-if="node.summary?.metadata.tags.length">
-          tags: {{ node.summary.metadata.tags.join(", ") }}
-        </small>
-        <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
-      </span>
-    </button>
+    <div v-else class="file-branch">
+      <button
+        class="file-node"
+        type="button"
+        :aria-expanded="fileDetailsVisible"
+        @click="inspectAndToggleFile(node.path)"
+      >
+        <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
+        <span class="file-main">
+          <strong>{{ displayTitle(node) }}</strong>
+          <small v-if="node.summary?.metadata.displayName">{{ node.name }}</small>
+          <small v-if="node.summary">
+            {{ formatFileSize(node.summary.sizeBytes) }} · {{ node.summary.fps }}fps ·
+            {{ node.summary.frameCount }} frames · {{ node.summary.markerCount }} markers
+          </small>
+          <small v-if="node.summary?.metadata.tags.length">
+            tags: {{ node.summary.metadata.tags.join(", ") }}
+          </small>
+          <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
+        </span>
+      </button>
+      <Transition
+        name="tree-collapse"
+        @before-enter="beforeEnter"
+        @enter="enter"
+        @after-enter="afterEnter"
+        @before-leave="beforeLeave"
+        @leave="leave"
+        @after-leave="afterLeave"
+      >
+        <div
+          v-show="fileDetailsVisible && hasFileDetails(node.summary)"
+          class="tree-children-shell"
+        >
+          <div v-if="node.summary" class="file-details">
+            <div v-if="node.summary.metadata.description" class="file-detail-block">
+              <strong>Description</strong>
+              <span>{{ node.summary.metadata.description }}</span>
+            </div>
+            <div v-if="node.summary.metadata.tags.length" class="file-detail-block">
+              <strong>Tags</strong>
+              <span>{{ node.summary.metadata.tags.join(", ") }}</span>
+            </div>
+            <div class="file-detail-block">
+              <strong>Markers</strong>
+              <span>{{ node.summary.markerCount }} markers</span>
+            </div>
+            <div
+              v-for="markerNote in node.summary.metadata.markerNotes"
+              :key="`${markerNote.frame}-${markerNote.name}-${markerNote.note}`"
+              class="marker-note-row"
+            >
+              <strong>{{ markerNote.name || "marker" }}</strong>
+              <span>frame {{ markerNote.frame }}</span>
+              <span>{{ markerNote.note }}</span>
+            </div>
+          </div>
+        </div>
+      </Transition>
+    </div>
   </div>
 </template>
 
@@ -174,6 +234,12 @@ function displayTitle(node: RecordingTreeNode) {
 }
 
 .directory-branch {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.file-branch {
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -257,6 +323,44 @@ function displayTitle(node: RecordingTreeNode) {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+}
+
+.file-details {
+  display: grid;
+  gap: 8px;
+  margin-left: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 7px;
+  background: #11161d;
+  color: #dfe5ec;
+  padding: 10px;
+}
+
+.file-detail-block,
+.marker-note-row {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.file-detail-block strong,
+.marker-note-row strong {
+  color: #c9d1da;
+  font-size: 12px;
+}
+
+.file-detail-block span,
+.marker-note-row span {
+  overflow-wrap: anywhere;
+  color: #9ca7b4;
+  font-size: 12px;
+}
+
+.marker-note-row {
+  grid-template-columns: minmax(80px, 0.7fr) minmax(74px, auto) minmax(120px, 1fr);
+  align-items: start;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 8px;
 }
 
 .tree-collapse-enter-active,
