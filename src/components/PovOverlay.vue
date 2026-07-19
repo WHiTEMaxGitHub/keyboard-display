@@ -30,6 +30,11 @@ function backplateOpacity(overlayStyle: OverlayStyle) {
     ? 1
     : overlayStyle.backgroundOpacity;
 }
+
+function isBackplateVisible(overlayStyle: OverlayStyle) {
+  return !/^#[0-9a-fA-F]{8}$/.test(overlayStyle.backgroundColor) ||
+    !overlayStyle.backgroundColor.endsWith("00");
+}
 </script>
 
 <template>
@@ -54,7 +59,7 @@ function backplateOpacity(overlayStyle: OverlayStyle) {
     <div
       :class="[
         'key-cluster',
-        `background-${overlayStyle.backgroundMode}`,
+        { 'backplate-visible': isBackplateVisible(overlayStyle) },
         { 'sync-feedback-active': syncFeedbackActive },
       ]"
     >
@@ -100,8 +105,8 @@ function backplateOpacity(overlayStyle: OverlayStyle) {
   border-radius: var(--overlay-bg-radius);
 }
 
-.key-cluster.background-panel {
-  padding: 18px;
+.key-cluster.backplate-visible {
+  padding: 10px;
   border: 0;
   border-radius: var(--overlay-bg-radius);
   background: transparent;
@@ -111,7 +116,7 @@ function backplateOpacity(overlayStyle: OverlayStyle) {
   display: none;
 }
 
-.key-cluster.background-panel .backplate {
+.key-cluster.backplate-visible .backplate {
   position: absolute;
   inset: 0;
   display: block;
@@ -121,13 +126,13 @@ function backplateOpacity(overlayStyle: OverlayStyle) {
   opacity: var(--overlay-bg-opacity);
 }
 
-.key-cluster.background-panel .row-layout {
+.key-cluster.backplate-visible .row-layout {
   position: relative;
   z-index: 1;
   opacity: 1;
 }
 
-.key-cluster.background-transparent {
+.key-cluster:not(.backplate-visible) {
   padding: 0;
   border: 0;
   background: transparent;

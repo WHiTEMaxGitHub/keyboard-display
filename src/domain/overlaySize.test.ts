@@ -15,11 +15,11 @@ describe("estimateOverlaySize", () => {
     expect(large.height).toBeGreaterThan(normal.height);
   });
 
-  it("includes the transparent window padding", () => {
+  it("does not add hidden window padding around transparent overlays", () => {
     const config = createDefaultConfig();
     const size = estimateOverlaySize(config.layout, config.rows, config.style);
 
-    expect(size.height).toBeGreaterThan(5 * config.layout.unitPx);
+    expect(size.height).toBeGreaterThan(0);
   });
 
   it("uses default gap only between adjacent keys", () => {
@@ -38,7 +38,7 @@ describe("estimateOverlaySize", () => {
       config.style,
     );
 
-    expect(size.width).toBe(248);
+    expect(size.width).toBe(220);
   });
 
   it("uses custom gap item instead of adding default gap around it", () => {
@@ -58,7 +58,7 @@ describe("estimateOverlaySize", () => {
       config.style,
     );
 
-    expect(size.width).toBe(278);
+    expect(size.width).toBe(250);
   });
 
   it("keeps a stable minimum size for empty row layouts", () => {
@@ -69,20 +69,18 @@ describe("estimateOverlaySize", () => {
     expect(size.height).toBeGreaterThan(0);
   });
 
-  it("does not include panel padding when the backplate is transparent", () => {
+  it("does not include backplate padding when the backplate is transparent", () => {
     const config = createDefaultConfig();
     const panelSize = estimateOverlaySize(config.layout, config.rows, {
       ...config.style,
-      backgroundMode: "panel",
-      backgroundColor: "#0a0c0e00",
+      backgroundColor: "#0a0c0eff",
     });
     const transparentSize = estimateOverlaySize(config.layout, config.rows, {
       ...config.style,
-      backgroundMode: "transparent",
       backgroundColor: "#0a0c0e00",
     });
 
-    expect(panelSize.width - transparentSize.width).toBe(36);
-    expect(panelSize.height - transparentSize.height).toBe(36);
+    expect(panelSize.width - transparentSize.width).toBe(20);
+    expect(panelSize.height - transparentSize.height).toBe(20);
   });
 });

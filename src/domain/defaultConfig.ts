@@ -32,14 +32,11 @@ export type OverlayLayout = {
   gapUnit: number;
 };
 
-export type OverlayBackgroundMode = "panel" | "transparent";
-
 export type IdleKeyVisibility = "visible" | "faint" | "hidden";
 
 export type OverlayStyle = {
   scale: number;
   opacity: number;
-  backgroundMode: OverlayBackgroundMode;
   backgroundColor: string;
   backgroundOpacity: number;
   backgroundRadius: number;
@@ -221,8 +218,7 @@ export function createDefaultConfig(): AppConfig {
     style: {
       scale: 1,
       opacity: 0.92,
-      backgroundMode: "transparent",
-      backgroundColor: "#0a0c0e",
+      backgroundColor: "#0a0c0e00",
       backgroundOpacity: 0.72,
       backgroundRadius: 8,
       idleKeyVisibility: "visible",

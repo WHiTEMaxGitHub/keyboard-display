@@ -65,11 +65,10 @@ describe("createDefaultConfig", () => {
     expect(config.recording.primaryArtifact).toBe("input-binary");
   });
 
-  it("defaults to a transparent overlay with visible idle keys", () => {
+  it("defaults to a transparent backplate with visible idle keys", () => {
     const config = createDefaultConfig();
 
-    expect(config.style.backgroundMode).toBe("transparent");
-    expect(config.style.backgroundColor).toBe("#0a0c0e");
+    expect(config.style.backgroundColor).toBe("#0a0c0e00");
     expect(config.style.backgroundOpacity).toBe(0.72);
     expect(config.style.backgroundRadius).toBe(8);
     expect(config.style.idleKeyVisibility).toBe("visible");

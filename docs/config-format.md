@@ -145,8 +145,7 @@ profile files should prefer `gap` for clarity.
 {
   "scale": 1,
   "opacity": 0.92,
-  "backgroundMode": "transparent",
-  "backgroundColor": "#0a0c0e",
+  "backgroundColor": "#0a0c0e00",
   "backgroundOpacity": 0.72,
   "backgroundRadius": 8,
   "idleKeyVisibility": "visible",
@@ -162,7 +161,6 @@ profile files should prefer `gap` for clarity.
 | --- | --- | --- |
 | `scale` | number | Multiplies the whole overlay size. |
 | `opacity` | number | Opacity for the whole overlay. Range is usually `0` to `1`. |
-| `backgroundMode` | string | `transparent` or `panel`. |
 | `backgroundColor` | string | Backplate color as `#rrggbb` or `#rrggbbaa`. Alpha in this color is used directly. |
 | `backgroundOpacity` | number | Legacy backplate opacity used when `backgroundColor` has no alpha channel. |
 | `backgroundRadius` | number | Backplate corner radius in pixels. |
@@ -266,8 +264,7 @@ config may contain local absolute paths.
     "style": {
       "scale": 1,
       "opacity": 0.92,
-      "backgroundMode": "transparent",
-      "backgroundColor": "#0a0c0e",
+      "backgroundColor": "#0a0c0e00",
       "backgroundOpacity": 0.72,
       "backgroundRadius": 8,
       "idleKeyVisibility": "visible",

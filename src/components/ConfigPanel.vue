@@ -131,7 +131,6 @@ function updateBackgroundRadius(event: Event) {
   const backgroundRadius = Number((event.target as HTMLInputElement).value);
   emit("update-overlay-style", {
     ...props.config.style,
-    backgroundMode: "panel",
     backgroundRadius,
   });
 }
@@ -146,7 +145,6 @@ function updateBackplateTransparent(event: Event) {
   const transparent = (event.target as HTMLInputElement).checked;
   emit("update-overlay-style", {
     ...props.config.style,
-    backgroundMode: transparent ? "transparent" : "panel",
     backgroundColor: setHexAlpha(props.config.style.backgroundColor, transparent ? 0 : 255),
   });
 }
@@ -161,15 +159,8 @@ function updateStyleColor(
   color: string,
 ) {
   const nextColor = normalizeHexColor(color, props.config.style[field]);
-  const backgroundMode =
-    field === "backgroundColor"
-      ? nextColor.length === 9 && nextColor.endsWith("00")
-        ? "transparent"
-        : "panel"
-      : props.config.style.backgroundMode;
   emit("update-overlay-style", {
     ...props.config.style,
-    backgroundMode,
     [field]: nextColor,
   });
 }
@@ -184,10 +175,7 @@ function rememberColor(color: string) {
 
 function isBackplateTransparent() {
   const normalizedColor = normalizeHexColor(props.config.style.backgroundColor);
-  return (
-    props.config.style.backgroundMode === "transparent" ||
-    (normalizedColor.length === 9 && normalizedColor.endsWith("00"))
-  );
+  return normalizedColor.length === 9 && normalizedColor.endsWith("00");
 }
 
 function setHexAlpha(color: string, alpha: number) {
@@ -472,6 +460,7 @@ function updateRenderMarkers(event: Event) {
               label="Idle key"
               :value="config.style.idleColor"
               :recent-colors="recentColors"
+              alpha-enabled
               @update:value="updateStyleColor('idleColor', $event)"
               @remember-color="rememberColor"
             />
@@ -479,6 +468,7 @@ function updateRenderMarkers(event: Event) {
               label="Pressed key"
               :value="config.style.activeColor"
               :recent-colors="recentColors"
+              alpha-enabled
               @update:value="updateStyleColor('activeColor', $event)"
               @remember-color="rememberColor"
             />
@@ -486,6 +476,7 @@ function updateRenderMarkers(event: Event) {
               label="Idle text"
               :value="config.style.idleTextColor"
               :recent-colors="recentColors"
+              alpha-enabled
               @update:value="updateStyleColor('idleTextColor', $event)"
               @remember-color="rememberColor"
             />
@@ -493,6 +484,7 @@ function updateRenderMarkers(event: Event) {
               label="Pressed text"
               :value="config.style.activeTextColor"
               :recent-colors="recentColors"
+              alpha-enabled
               @update:value="updateStyleColor('activeTextColor', $event)"
               @remember-color="rememberColor"
             />

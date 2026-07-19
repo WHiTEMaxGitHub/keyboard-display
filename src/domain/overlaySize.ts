@@ -6,7 +6,7 @@ export type OverlaySize = {
   height: number;
 };
 
-const OVERLAY_WINDOW_PADDING = 14 * 2;
+const BACKPLATE_PADDING = 10 * 2;
 const FLOAT_EPSILON = 0.000001;
 
 export function estimateOverlaySize(
@@ -16,14 +16,18 @@ export function estimateOverlaySize(
 ): OverlaySize {
   const unit = layout.unitPx * style.scale;
   const gap = unit * normalizeUnit(layout.gapUnit);
-  const padding = style.backgroundMode === "panel" ? 18 * 2 : 0;
+  const padding = isBackplateVisible(style.backgroundColor) ? BACKPLATE_PADDING : 0;
   const widthUnits = Math.max(...rows.map((row) => rowWidthUnits(row, layout.gapUnit)), 1);
   const rowCount = Math.max(rows.length, 1);
 
   return {
-    width: ceilStable(widthUnits * unit + padding + OVERLAY_WINDOW_PADDING),
-    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding + OVERLAY_WINDOW_PADDING),
+    width: ceilStable(widthUnits * unit + padding),
+    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding),
   };
+}
+
+function isBackplateVisible(backgroundColor: string): boolean {
+  return !/^#[0-9a-fA-F]{8}$/.test(backgroundColor) || !backgroundColor.endsWith("00");
 }
 
 function ceilStable(value: number): number {
