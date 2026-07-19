@@ -66,7 +66,7 @@ async function startDrag() {
   gap: 8px;
   width: max-content;
   justify-items: center;
-  padding: 0;
+  padding: 0 12px 12px 0;
   background: transparent;
 }
 
