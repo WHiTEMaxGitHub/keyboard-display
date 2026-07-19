@@ -68,4 +68,21 @@ describe("estimateOverlaySize", () => {
     expect(size.width).toBeGreaterThan(0);
     expect(size.height).toBeGreaterThan(0);
   });
+
+  it("does not include panel padding when the backplate is transparent", () => {
+    const config = createDefaultConfig();
+    const panelSize = estimateOverlaySize(config.layout, config.rows, {
+      ...config.style,
+      backgroundMode: "panel",
+      backgroundColor: "#0a0c0e00",
+    });
+    const transparentSize = estimateOverlaySize(config.layout, config.rows, {
+      ...config.style,
+      backgroundMode: "transparent",
+      backgroundColor: "#0a0c0e00",
+    });
+
+    expect(panelSize.width - transparentSize.width).toBe(36);
+    expect(panelSize.height - transparentSize.height).toBe(36);
+  });
 });

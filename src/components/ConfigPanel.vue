@@ -146,7 +146,7 @@ function updateBackplateTransparent(event: Event) {
   const transparent = (event.target as HTMLInputElement).checked;
   emit("update-overlay-style", {
     ...props.config.style,
-    backgroundMode: "panel",
+    backgroundMode: transparent ? "transparent" : "panel",
     backgroundColor: setHexAlpha(props.config.style.backgroundColor, transparent ? 0 : 255),
   });
 }
@@ -160,11 +160,17 @@ function updateStyleColor(
     | "backgroundColor",
   color: string,
 ) {
-  const backgroundMode = field === "backgroundColor" ? "panel" : props.config.style.backgroundMode;
+  const nextColor = normalizeHexColor(color, props.config.style[field]);
+  const backgroundMode =
+    field === "backgroundColor"
+      ? nextColor.length === 9 && nextColor.endsWith("00")
+        ? "transparent"
+        : "panel"
+      : props.config.style.backgroundMode;
   emit("update-overlay-style", {
     ...props.config.style,
     backgroundMode,
-    [field]: normalizeHexColor(color, props.config.style[field]),
+    [field]: nextColor,
   });
 }
 
@@ -178,7 +184,10 @@ function rememberColor(color: string) {
 
 function isBackplateTransparent() {
   const normalizedColor = normalizeHexColor(props.config.style.backgroundColor);
-  return normalizedColor.length === 9 && normalizedColor.endsWith("00");
+  return (
+    props.config.style.backgroundMode === "transparent" ||
+    (normalizedColor.length === 9 && normalizedColor.endsWith("00"))
+  );
 }
 
 function setHexAlpha(color: string, alpha: number) {
