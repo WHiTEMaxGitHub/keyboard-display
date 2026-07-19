@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   hexToRgb,
   normalizeHexColor,
@@ -31,6 +31,7 @@ const emit = defineEmits<{
 }>();
 
 const pickerOpen = ref(false);
+const pickerRoot = ref<HTMLElement | null>(null);
 const colorTrigger = ref<HTMLButtonElement | null>(null);
 const popoverDirection = ref<"down" | "up">("down");
 const hexDraft = ref(normalizeHexColor(props.value));
@@ -51,6 +52,29 @@ function togglePicker() {
   pickerOpen.value = !pickerOpen.value;
 }
 
+function closePicker() {
+  pickerOpen.value = false;
+}
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (!pickerOpen.value) {
+    return;
+  }
+
+  const root = pickerRoot.value;
+  if (root && !root.contains(event.target as Node)) {
+    closePicker();
+  }
+}
+
+onMounted(() => {
+  document.addEventListener("pointerdown", handleDocumentPointerDown, true);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+});
+
 function updatePopoverDirection() {
   const trigger = colorTrigger.value;
   if (!trigger) {
@@ -66,6 +90,10 @@ function updatePopoverDirection() {
 
 function updateHex(event: Event) {
   hexDraft.value = (event.target as HTMLInputElement).value;
+  const normalizedColor = normalizePickerColor(hexDraft.value, "");
+  if (normalizedColor) {
+    applyColor(normalizedColor, false);
+  }
 }
 
 function commitHex() {
@@ -89,14 +117,20 @@ function chooseColor(color: string) {
 }
 
 function commitColor(color: string) {
-  const normalizedColor = normalizePickerColor(color);
-  hexDraft.value = normalizedColor;
-  emit("update:value", normalizedColor);
-  emit("remember-color", normalizedColor);
+  const normalizedColor = normalizePickerColor(color, normalizeHexColor(props.value));
+  applyColor(normalizedColor, true);
 }
 
-function normalizePickerColor(color: string) {
-  const normalizedColor = normalizeHexColor(color, normalizeHexColor(props.value));
+function applyColor(normalizedColor: string, remember: boolean) {
+  hexDraft.value = normalizedColor;
+  emit("update:value", normalizedColor);
+  if (remember) {
+    emit("remember-color", normalizedColor);
+  }
+}
+
+function normalizePickerColor(color: string, fallback = normalizeHexColor(props.value)) {
+  const normalizedColor = normalizeHexColor(color, fallback);
   return !props.alphaEnabled && normalizedColor.length === 9
     ? normalizedColor.slice(0, 7)
     : normalizedColor;
@@ -104,7 +138,7 @@ function normalizePickerColor(color: string) {
 </script>
 
 <template>
-  <div class="color-picker">
+  <div ref="pickerRoot" class="color-picker">
     <button
       ref="colorTrigger"
       class="color-trigger"

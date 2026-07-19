@@ -924,6 +924,7 @@ onUnmounted(() => {
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-visible="setOverlayVisible"
       @load-config="loadConfig"
+      @refresh-pov="applyConfigToOverlay"
       @load-recent-profile="loadRecentProfile"
       @export-and-apply-config="exportAndApplyConfig"
       @overwrite-and-apply-config="overwriteAndApplyConfig"

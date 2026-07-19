@@ -97,6 +97,7 @@ const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-visible": [visible: boolean];
   "load-config": [];
+  "refresh-pov": [];
   "load-recent-profile": [path: string];
   "export-and-apply-config": [];
   "overwrite-and-apply-config": [];
@@ -182,6 +183,10 @@ function moveOverlay(
 
 function loadConfigFile() {
   emit("load-config");
+}
+
+function refreshPov() {
+  emit("refresh-pov");
 }
 
 function loadRecentProfile(event: Event) {
@@ -376,7 +381,12 @@ function updateRenderMarkers(event: Event) {
 
       <section v-else-if="activePage === 'appearance'" class="page-stack">
         <article class="panel wide-panel">
-          <h2>Appearance</h2>
+          <div class="section-header">
+            <h2>Appearance</h2>
+            <button class="panel-action-button" type="button" @click="refreshPov">
+              Refresh POV
+            </button>
+          </div>
           <label>
             Scale
             <input
@@ -813,6 +823,33 @@ h2 {
 
 .panel h2 {
   margin-bottom: 16px;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.section-header h2 {
+  margin-bottom: 0;
+}
+
+.panel-action-button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.panel-action-button:hover {
+  background: #29313d;
 }
 
 .field-row {
