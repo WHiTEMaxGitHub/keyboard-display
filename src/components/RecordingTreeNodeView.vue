@@ -212,9 +212,9 @@ function displayTitle(node: RecordingTreeNode) {
 .tree-collapse-enter-active,
 .tree-collapse-leave-active {
   transition:
-    opacity 90ms linear,
-    transform 120ms cubic-bezier(0.2, 0, 0.2, 1),
-    clip-path 120ms cubic-bezier(0.2, 0, 0.2, 1);
+    opacity 180ms ease,
+    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    clip-path 240ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tree-collapse-enter-from,
