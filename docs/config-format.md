@@ -209,12 +209,20 @@ profile files should prefer `gap` for clarity.
 {
   "defaultFormat": "webm",
   "transparentFormat": "webm",
-  "compatibleFormat": "mp4"
+  "compatibleFormat": "mp4",
+  "renderMarkers": true
 }
 ```
 
 These fields describe future export preferences. Video export is not the source
 recording format; `.kbdrec` is the source of truth.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `defaultFormat` | string | Default export format. Current planned value is `webm`. |
+| `transparentFormat` | string | Format for transparent overlay export. Current planned value is `webm`. |
+| `compatibleFormat` | string | Format for broad compatibility export. Current planned value is `mp4`. |
+| `renderMarkers` | boolean | Whether future overlay video export should render visible sync markers. |
 
 ## App config
 
@@ -296,7 +304,8 @@ config may contain local absolute paths.
   "export": {
     "defaultFormat": "webm",
     "transparentFormat": "webm",
-    "compatibleFormat": "mp4"
+    "compatibleFormat": "mp4",
+    "renderMarkers": true
   }
 }
 ```

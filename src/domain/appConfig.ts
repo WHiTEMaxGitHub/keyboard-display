@@ -14,6 +14,7 @@ export type CurrentProfile = {
   sourcePath: string | null;
   changed: boolean;
   recording: AppConfig["recording"];
+  export: AppConfig["export"];
   overlay: {
     visible: boolean;
     position: string;
@@ -130,6 +131,9 @@ export function parseAppConfigFile(text: string): AppConfigFile {
   const profileRecording = normalizeRecordingConfig(
     config.currentProfile.recording ?? createDefaultConfig().recording,
   );
+  const profileExport = normalizeExportConfig(
+    config.currentProfile.export ?? createDefaultConfig().export,
+  );
 
   return {
     ...config,
@@ -137,6 +141,7 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       ...config.currentProfile,
       changed: config.currentProfile.changed ?? config.currentProfile.dirty ?? false,
       recording: profileRecording,
+      export: profileExport,
       overlay: {
         ...config.currentProfile.overlay,
         rows,
@@ -147,6 +152,17 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       ...config.recording,
       hotkeys: normalizeRecordingHotkeyConfig(config.recording.hotkeys),
     },
+  };
+}
+
+function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppConfig["export"] {
+  const defaultExport = createDefaultConfig().export;
+
+  return {
+    defaultFormat: exportConfig.defaultFormat ?? defaultExport.defaultFormat,
+    transparentFormat: exportConfig.transparentFormat ?? defaultExport.transparentFormat,
+    compatibleFormat: exportConfig.compatibleFormat ?? defaultExport.compatibleFormat,
+    renderMarkers: exportConfig.renderMarkers ?? true,
   };
 }
 

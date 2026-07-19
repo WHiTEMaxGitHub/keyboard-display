@@ -24,6 +24,7 @@ export type OverlayConfigFile = {
     keys: KeyBinding[];
   };
   recording: AppConfig["recording"];
+  export: AppConfig["export"];
 };
 
 export function parseConfigFile(text: string): OverlayConfigFile {
@@ -31,6 +32,7 @@ export function parseConfigFile(text: string): OverlayConfigFile {
   const defaultConfig = createDefaultConfig();
   const rows = normalizeRows(config.overlay.rows ?? rowsFromLegacyKeys(config.overlay.keys ?? []));
   const recording = normalizeRecordingConfig(config.recording ?? defaultConfig.recording);
+  const exportConfig = normalizeExportConfig(config.export ?? defaultConfig.export);
 
   return {
     ...config,
@@ -44,6 +46,7 @@ export function parseConfigFile(text: string): OverlayConfigFile {
       keys: flattenRowKeys(rows),
     },
     recording,
+    export: exportConfig,
   };
 }
 
@@ -70,15 +73,22 @@ export function buildConfigFileJson({
         rows: config.rows,
       },
       recording: config.recording,
-      export: {
-        defaultFormat: "webm",
-        transparentFormat: "webm",
-        compatibleFormat: "mp4",
-      },
+      export: config.export,
     },
     null,
     2,
   )}\n`;
+}
+
+function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppConfig["export"] {
+  const defaultExport = createDefaultConfig().export;
+
+  return {
+    defaultFormat: exportConfig.defaultFormat ?? defaultExport.defaultFormat,
+    transparentFormat: exportConfig.transparentFormat ?? defaultExport.transparentFormat,
+    compatibleFormat: exportConfig.compatibleFormat ?? defaultExport.compatibleFormat,
+    renderMarkers: exportConfig.renderMarkers ?? true,
+  };
 }
 
 function normalizeRows(rows: OverlayRow[]): OverlayRow[] {

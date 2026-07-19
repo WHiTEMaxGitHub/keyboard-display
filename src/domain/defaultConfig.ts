@@ -64,6 +64,13 @@ export type RecordingConfig = {
   primaryArtifact: "input-binary";
 };
 
+export type ExportConfig = {
+  defaultFormat: "webm";
+  transparentFormat: "webm";
+  compatibleFormat: "mp4";
+  renderMarkers: boolean;
+};
+
 export type AppConfig = {
   surfaces: AppSurface[];
   layout: OverlayLayout;
@@ -71,6 +78,7 @@ export type AppConfig = {
   keys: KeyBinding[];
   style: OverlayStyle;
   recording: RecordingConfig;
+  export: ExportConfig;
 };
 
 export function isKeyBinding(item: OverlayRowItem): item is KeyBinding {
@@ -235,6 +243,12 @@ export function createDefaultConfig(): AppConfig {
       filenameTemplate: "${start}-${end}",
       formatExtension: ".kbdrec",
       primaryArtifact: "input-binary",
+    },
+    export: {
+      defaultFormat: "webm",
+      transparentFormat: "webm",
+      compatibleFormat: "mp4",
+      renderMarkers: true,
     },
   };
 }

@@ -207,9 +207,14 @@
   - Let users inspect markers visually instead of manually calculating offsets.
   - Keep marker frame as the source of truth for future export alignment.
 
+- [x] Add a marker rendering option for future overlay video export.
+  - Store the option in profile export config.
+  - Show it as a standalone export setting so marker rendering is not forced.
+
 - [ ] Render markers during future overlay video export.
   - When exporting overlay video from `.kbdrec`, optionally render visible sync
     marker feedback into the exported overlay.
+  - Respect the export marker rendering option.
   - Use this for post-production alignment instead of exposing premature
     offset controls before export exists.
 

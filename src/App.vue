@@ -22,6 +22,7 @@ import { buildConfigFileJson, parseConfigFile } from "./domain/configFile";
 import {
   createDefaultConfig,
   flattenRowKeys,
+  type ExportConfig,
   type OverlayStyle,
 } from "./domain/defaultConfig";
 import { estimateOverlaySize } from "./domain/overlaySize";
@@ -148,6 +149,10 @@ function applyOverlayRows(rows: typeof config.rows) {
 
 function applyRecordingConfig(recording: RecordingConfig) {
   config.recording = { ...recording };
+}
+
+function applyExportConfig(exportConfig: ExportConfig) {
+  config.export = { ...exportConfig };
 }
 
 async function updateOverlayStyle(style: OverlayStyle) {
@@ -295,6 +300,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   applyOverlayRows(loadedConfig.overlay.rows);
   applyOverlayStyle(loadedConfig.overlay.style);
   applyRecordingConfig(loadedConfig.recording);
+  applyExportConfig(loadedConfig.export);
   await resizeOverlayWindow();
 
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
@@ -352,6 +358,7 @@ async function restoreAppConfig() {
   applyOverlayRows(appConfig.currentProfile.overlay.rows);
   applyOverlayStyle(appConfig.currentProfile.overlay.style);
   applyRecordingConfig(appConfig.currentProfile.recording);
+  applyExportConfig(appConfig.currentProfile.export);
 
   await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
     layout: appConfig.currentProfile.overlay.layout,
@@ -389,6 +396,7 @@ async function saveAppConfig() {
       sourcePath: profileSourcePath.value,
       changed: profileChanged.value,
       recording: config.recording,
+      export: config.export,
       overlay: {
         visible: isOverlayVisible.value,
         position: overlayPosition.value,
@@ -607,6 +615,12 @@ function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
 
 function updateRecordingConfig(recording: RecordingConfig) {
   applyRecordingConfig(recording);
+  markProfileChanged();
+  scheduleAppConfigSave();
+}
+
+function updateExportConfig(exportConfig: ExportConfig) {
+  applyExportConfig(exportConfig);
   markProfileChanged();
   scheduleAppConfigSave();
 }
@@ -916,6 +930,7 @@ onUnmounted(() => {
       @choose-recording-directory="chooseRecordingDirectory"
       @update-silent-recording="updateSilentRecording"
       @update-recording-config="updateRecordingConfig"
+      @update-export-config="updateExportConfig"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
       @add-sync-marker="addSyncMarker"

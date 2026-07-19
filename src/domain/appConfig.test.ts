@@ -13,6 +13,7 @@ describe("app config", () => {
         sourcePath: "/tmp/cs-pov.json",
         changed: true,
         recording: config.recording,
+        export: config.export,
         overlay: {
           visible: true,
           position: "bottom-right",
@@ -44,6 +45,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.recording).toEqual(config.recording);
     expect(appConfig.currentProfile.overlay.rows).toEqual(config.rows);
     expect("keys" in appConfig.currentProfile.overlay).toBe(false);
+    expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
     expect(appConfig.recording.silent).toBe(true);
   });
@@ -62,6 +64,7 @@ describe("app config", () => {
         sourcePath: "/tmp/cs-pov.json",
         changed: false,
         recording: config.recording,
+        export: config.export,
         overlay: {
           visible: true,
           position: "bottom-right",
@@ -103,6 +106,7 @@ describe("app config", () => {
         sourcePath: "/tmp/current.json",
         changed: false,
         recording: config.recording,
+        export: config.export,
         overlay: {
           visible: true,
           position: "bottom-right",
@@ -178,6 +182,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.recording).toEqual(createDefaultConfig().recording);
     expect(appConfig.currentProfile.overlay.position).toBe("center");
     expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
+    expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
   });
 
   it("fills profile recording config when loading older app config", () => {

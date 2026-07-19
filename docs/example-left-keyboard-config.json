@@ -276,6 +276,7 @@
   "export": {
     "defaultFormat": "webm",
     "transparentFormat": "webm",
-    "compatibleFormat": "mp4"
+    "compatibleFormat": "mp4",
+    "renderMarkers": true
   }
 }

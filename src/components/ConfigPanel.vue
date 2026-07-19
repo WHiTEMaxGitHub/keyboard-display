@@ -13,6 +13,7 @@ import { computed, ref } from "vue";
 import {
   isKeyBinding,
   type AppConfig,
+  type ExportConfig,
   type OverlayStyle,
 } from "../domain/defaultConfig";
 import type { RecentProfile } from "../domain/appConfig";
@@ -99,6 +100,7 @@ const emit = defineEmits<{
   "choose-recording-directory": [];
   "update-silent-recording": [value: boolean];
   "update-recording-config": [recording: AppConfig["recording"]];
+  "update-export-config": [exportConfig: ExportConfig];
   "start-recording": [];
   "stop-recording": [];
   "add-sync-marker": [];
@@ -181,6 +183,13 @@ function exportAndApplyConfig() {
 
 function overwriteAndApplyConfig() {
   emit("overwrite-and-apply-config");
+}
+
+function updateRenderMarkers(event: Event) {
+  emit("update-export-config", {
+    ...props.config.export,
+    renderMarkers: (event.target as HTMLInputElement).checked,
+  });
 }
 
 </script>
@@ -527,6 +536,14 @@ function overwriteAndApplyConfig() {
             <span>Compatible video</span>
             <strong>MP4</strong>
           </div>
+          <label class="toggle-row">
+            <input
+              :checked="config.export.renderMarkers"
+              type="checkbox"
+              @change="updateRenderMarkers"
+            />
+            Render sync markers
+          </label>
           <p class="quiet">
             Video is generated from the input timeline, so size and format can
             be tuned after recording.

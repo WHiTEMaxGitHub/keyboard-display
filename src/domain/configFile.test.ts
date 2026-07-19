@@ -64,6 +64,28 @@ describe("parseConfigFile", () => {
     expect(config.recording.customFpsEnabled).toBe(true);
     expect(config.recording.customFps).toBe(1000);
     expect(config.recording.maxFps).toBe(1000);
+    expect(config.export.renderMarkers).toBe(true);
+  });
+
+  it("loads export marker rendering preference", () => {
+    const config = parseConfigFile(
+      JSON.stringify({
+        version: 1,
+        overlay: {
+          layout: createDefaultConfig().layout,
+          style: createDefaultConfig().style,
+          rows: createDefaultConfig().rows,
+        },
+        export: {
+          defaultFormat: "webm",
+          transparentFormat: "webm",
+          compatibleFormat: "mp4",
+          renderMarkers: false,
+        },
+      }),
+    );
+
+    expect(config.export.renderMarkers).toBe(false);
   });
 
   it("loads row layout with custom gaps", () => {
@@ -146,5 +168,6 @@ describe("buildConfigFileJson", () => {
     expect(parsed.overlay.style).toEqual(config.style);
     expect(parsed.overlay.rows).toEqual(config.rows);
     expect(parsed.overlay.keys).toBeUndefined();
+    expect(parsed.export.renderMarkers).toBe(true);
   });
 });
