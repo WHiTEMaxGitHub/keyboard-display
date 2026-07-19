@@ -58,6 +58,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
     aria-label="POV key overlay"
   >
     <div
+      :data-tauri-drag-region="adjusting ? true : undefined"
       :class="[
         'key-cluster',
         { 'backplate-visible': isBackplateVisible(overlayStyle) },

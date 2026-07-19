@@ -16,12 +16,14 @@ defineProps<{
 }>();
 
 const adjusting = ref(false);
+const startsAdjusting = new URLSearchParams(window.location.search).get("adjust") === "1";
 let unlistenAdjustMode: UnlistenFn | undefined;
 
 onMounted(async () => {
   const currentWindow = getCurrentWindow();
   await currentWindow.setVisibleOnAllWorkspaces(true);
-  await currentWindow.setIgnoreCursorEvents(true);
+  adjusting.value = startsAdjusting;
+  await currentWindow.setIgnoreCursorEvents(!startsAdjusting);
   unlistenAdjustMode = await listen<{ enabled: boolean }>(
     OVERLAY_ADJUST_MODE_EVENT,
     async (event) => {
@@ -35,16 +37,6 @@ onMounted(async () => {
 onUnmounted(() => {
   unlistenAdjustMode?.();
 });
-
-async function startDrag() {
-  if (!adjusting.value) {
-    return;
-  }
-
-  clearSelection();
-  await setClickThrough(false);
-  await getCurrentWindow().startDragging();
-}
 
 function clearSelection() {
   window.getSelection()?.removeAllRanges();
@@ -65,17 +57,7 @@ async function setClickThrough(enabled: boolean) {
 </script>
 
 <template>
-  <main class="overlay-root">
-    <button
-      v-if="adjusting"
-      class="drag-handle"
-      type="button"
-      draggable="false"
-      title="Drag POV"
-      @mousedown.prevent.stop="startDrag"
-    >
-      Drag
-    </button>
+  <main :class="['overlay-root', { adjusting }]">
     <PovOverlay
       :layout="layout"
       :rows="rows"
@@ -103,22 +85,6 @@ async function setClickThrough(enabled: boolean) {
 .overlay-root.adjusting * {
   user-select: none;
   -webkit-user-select: none;
-}
-
-.drag-handle {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 5;
-  min-height: 24px;
-  border: 1px solid rgba(37, 211, 102, 0.56);
-  border-radius: 6px;
-  background: rgba(17, 19, 22, 0.9);
-  color: #eafff0;
-  cursor: move;
-  font-size: 11px;
-  font-weight: 800;
-  padding: 0 8px;
 }
 
 </style>

@@ -192,7 +192,7 @@ async function resizeOverlayWindow(overlayWindow?: Window | null) {
   await targetWindow.setSize(new LogicalSize(size.width, size.height));
 }
 
-async function ensureOverlayWindow(): Promise<Window | null> {
+async function ensureOverlayWindow(adjust = false): Promise<Window | null> {
   const existingWindow = await WebviewWindow.getByLabel("pov");
   if (existingWindow) {
     return existingWindow;
@@ -200,7 +200,7 @@ async function ensureOverlayWindow(): Promise<Window | null> {
 
   const size = estimateOverlaySize(config.layout, config.rows, config.style);
   const createdWindow = new WebviewWindow("pov", {
-    url: "/?surface=pov",
+    url: adjust ? "/?surface=pov&adjust=1" : "/?surface=pov",
     title: "POV Overlay",
     width: size.width,
     height: size.height,
@@ -323,14 +323,18 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
 }
 
 async function startOverlayAdjust() {
-  const overlayWindow = await ensureOverlayWindow();
+  const existingWindow = await Window.getByLabel("pov");
+  await existingWindow?.destroy();
+  const overlayWindow = await ensureOverlayWindow(true);
   if (!overlayWindow) {
     return;
   }
 
   overlayAdjusting.value = true;
-  await setOverlayVisible(true, false);
-  await overlayWindow.setIgnoreCursorEvents(false);
+  await syncOverlayWindow(overlayWindow);
+  await overlayWindow.show();
+  isOverlayVisible.value = true;
+  await setOverlayClickThrough(false);
   await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: true });
 }
 
@@ -351,16 +355,31 @@ async function saveOverlayAdjust() {
   overlayAdjusting.value = false;
   markProfileChanged();
   scheduleAppConfigSave();
-  await overlayWindow.setIgnoreCursorEvents(true);
+  await setOverlayClickThrough(true);
   await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
 }
 
 async function cancelOverlayAdjust() {
-  const overlayWindow = await Window.getByLabel("pov");
   overlayAdjusting.value = false;
-  await overlayWindow?.setIgnoreCursorEvents(true);
+  await setOverlayClickThrough(true);
   await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
   await moveOverlay(overlayPosition.value, false);
+}
+
+async function setOverlayClickThrough(enabled: boolean) {
+  const overlayWindow = await Window.getByLabel("pov");
+  await overlayWindow?.setIgnoreCursorEvents(enabled);
+  if (!enabled) {
+    window.setTimeout(() => {
+      void Window.getByLabel("pov").then((window) => window?.setIgnoreCursorEvents(false));
+    }, 100);
+    window.setTimeout(() => {
+      void Window.getByLabel("pov").then((window) => window?.setIgnoreCursorEvents(false));
+    }, 250);
+    window.setTimeout(() => {
+      void Window.getByLabel("pov").then((window) => window?.setIgnoreCursorEvents(false));
+    }, 500);
+  }
 }
 
 async function applyLoadedConfig(text: string, fileName: string, sourcePath: string | null) {
