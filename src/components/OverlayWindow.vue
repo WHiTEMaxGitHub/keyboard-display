@@ -15,7 +15,7 @@ const props = defineProps<{
   syncFeedbackActive?: boolean;
 }>();
 
-const povOverlay = ref<InstanceType<typeof PovOverlay> | null>(null);
+const overlayRoot = ref<HTMLElement | null>(null);
 
 onMounted(async () => {
   const currentWindow = getCurrentWindow();
@@ -34,19 +34,29 @@ watch(
 
 async function reportMeasuredSize() {
   await nextTick();
-  const measured = povOverlay.value?.measure();
-  if (!measured) {
+  await nextAnimationFrame();
+  await nextAnimationFrame();
+  const rect = overlayRoot.value?.getBoundingClientRect();
+  if (!rect) {
     return;
   }
 
-  await emitTo<OverlayMeasuredPayload>("config", OVERLAY_MEASURED_EVENT, measured);
+  await emitTo<OverlayMeasuredPayload>("config", OVERLAY_MEASURED_EVENT, {
+    width: Math.ceil(rect.width),
+    height: Math.ceil(rect.height),
+  });
+}
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
 }
 </script>
 
 <template>
-  <main class="overlay-root">
+  <main ref="overlayRoot" class="overlay-root">
     <PovOverlay
-      ref="povOverlay"
       :layout="layout"
       :rows="rows"
       :keys="keys"
@@ -63,7 +73,7 @@ async function reportMeasuredSize() {
   gap: 8px;
   width: max-content;
   justify-items: center;
-  padding: 0;
+  padding: 14px;
   background: transparent;
 }
 </style>

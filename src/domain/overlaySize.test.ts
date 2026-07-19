@@ -38,7 +38,7 @@ describe("estimateOverlaySize", () => {
       config.style,
     );
 
-    expect(size.width).toBe(236);
+    expect(size.width).toBe(264);
   });
 
   it("uses custom gap item instead of adding default gap around it", () => {
@@ -58,7 +58,7 @@ describe("estimateOverlaySize", () => {
       config.style,
     );
 
-    expect(size.width).toBe(266);
+    expect(size.width).toBe(294);
   });
 
   it("keeps a stable minimum size for empty row layouts", () => {
