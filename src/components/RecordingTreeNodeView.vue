@@ -192,7 +192,12 @@ function displayTitle(node: RecordingTreeNode) {
 }
 
 .tree-children-shell {
+  clip-path: inset(0 0 0 0);
   overflow: hidden;
+  opacity: 1;
+  transform: translateY(0) scaleY(1);
+  transform-origin: top;
+  will-change: opacity, transform, clip-path;
 }
 
 .tree-children {
@@ -202,29 +207,25 @@ function displayTitle(node: RecordingTreeNode) {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
-  opacity: 1;
-  transform: translateY(0) scaleY(1);
-  transform-origin: top;
-  will-change: opacity, transform, clip-path;
 }
 
-.tree-collapse-enter-active .tree-children,
-.tree-collapse-leave-active .tree-children {
+.tree-collapse-enter-active,
+.tree-collapse-leave-active {
   transition:
     opacity 90ms linear,
     transform 120ms cubic-bezier(0.2, 0, 0.2, 1),
     clip-path 120ms cubic-bezier(0.2, 0, 0.2, 1);
 }
 
-.tree-collapse-enter-from .tree-children,
-.tree-collapse-leave-to .tree-children {
+.tree-collapse-enter-from,
+.tree-collapse-leave-to {
   clip-path: inset(0 0 100% 0);
   opacity: 0;
   transform: translateY(-3px) scaleY(0.96);
 }
 
-.tree-collapse-enter-to .tree-children,
-.tree-collapse-leave-from .tree-children {
+.tree-collapse-enter-to,
+.tree-collapse-leave-from {
   clip-path: inset(0 0 0 0);
   opacity: 1;
   transform: translateY(0) scaleY(1);
