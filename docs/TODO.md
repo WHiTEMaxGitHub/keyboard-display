@@ -120,7 +120,7 @@
   - Format marker time as `HH:MM:SS:FF @ <fps>fps`.
   - Prefer this practical metadata view before building a richer timeline.
 
-- [ ] Add a recording files browser.
+- [x] Add a recording files browser.
   - Read the current recording save folder directly.
   - List `.kbdrec` files in a browser-style panel.
   - Show basic file information:
