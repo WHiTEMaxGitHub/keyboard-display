@@ -115,6 +115,21 @@ fn list_recording_files(root: std::path::PathBuf) -> Result<recording::Recording
     recording::list_recording_files(root)
 }
 
+#[tauri::command]
+fn read_recording_metadata(
+    path: std::path::PathBuf,
+) -> Result<recording::RecordingMetadata, String> {
+    recording::read_recording_metadata(path)
+}
+
+#[tauri::command]
+fn save_recording_metadata(
+    path: std::path::PathBuf,
+    metadata: recording::RecordingMetadata,
+) -> Result<recording::RecordingMetadata, String> {
+    recording::save_recording_metadata(path, metadata)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(RecordingManager::new())
@@ -133,7 +148,9 @@ pub fn run() {
             suppress_recording_keys,
             stop_recording,
             inspect_recording_file,
-            list_recording_files
+            list_recording_files,
+            read_recording_metadata,
+            save_recording_metadata
         ])
         .setup(|app| {
             input::start_native_input_backend(app.handle().clone());

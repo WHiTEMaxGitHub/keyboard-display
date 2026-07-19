@@ -98,7 +98,7 @@
     - RLE entries store `run_len varint + key_bits`.
   - Marker stream:
     - `marker_count varint`
-    - each marker: `t_ms varint + name_len varint + utf8 name`
+    - each marker: `frame varint + name_len varint + utf8 name`
   - Future optional sections:
     - richer metadata for profile/layout snapshots
     - event debug stream if needed for diagnostics
@@ -138,9 +138,10 @@
     - `HH:MM:SS:FF @ <fps>fps`
   - Reuse the Rust `.kbdrec` inspection command as the parser.
 
-- [ ] Add sidecar metadata for recordings.
+- [x] Add sidecar metadata for recordings.
   - Store user-facing metadata outside `.kbdrec` first, likely as a JSON
     sidecar next to the recording file.
+    Current implementation stores it as `<recording>.kbdrec.json`.
   - Candidate fields:
     - display name
     - description
@@ -149,7 +150,7 @@
   - The actual `.kbdrec` filename should keep the fixed machine-friendly
     `recording-start-recording-end.kbdrec` format.
 
-- [ ] Add configurable recording display names.
+- [x] Add configurable recording display names.
   - Display name is for the browser UI only.
   - It should not rename the underlying `.kbdrec` file.
   - Use the sidecar metadata file as the storage location.

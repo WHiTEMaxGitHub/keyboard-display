@@ -21,6 +21,19 @@ type RecordingInspection = {
   frames: RecordingInspectionFrame[];
 };
 
+type RecordingMarkerNote = {
+  frame: number;
+  name: string;
+  note: string;
+};
+
+type RecordingMetadata = {
+  displayName: string;
+  description: string;
+  tags: string[];
+  markerNotes: RecordingMarkerNote[];
+};
+
 type RecordingFileSummary = {
   fileName: string;
   sizeBytes: number;
@@ -29,6 +42,7 @@ type RecordingFileSummary = {
   fps: number;
   frameCount: number;
   markerCount: number;
+  metadata: RecordingMetadata;
 };
 
 type RecordingTreeNode = {
@@ -50,6 +64,11 @@ const props = defineProps<{
 const recordingTree = ref<RecordingTreeNode | null>(null);
 const recordingTreeError = ref("");
 const recordingTreeLoading = ref(false);
+const metadataDraft = ref<RecordingMetadata>(createEmptyMetadata());
+const metadataTagsDraft = ref("");
+const metadataStatus = ref("");
+const metadataError = ref("");
+const metadataSaving = ref(false);
 
 const emit = defineEmits<{
   "inspect-recording-file": [];
@@ -81,6 +100,76 @@ async function refreshRecordingTree() {
 
 function inspectRecordingPath(path: string) {
   emit("inspect-recording-path", path);
+  void loadRecordingMetadata(path);
+}
+
+async function loadRecordingMetadata(path: string) {
+  metadataStatus.value = "";
+  metadataError.value = "";
+
+  try {
+    const metadata = await invoke<RecordingMetadata>("read_recording_metadata", { path });
+    setMetadataDraft(metadata);
+  } catch (error) {
+    metadataError.value = String(error);
+    setMetadataDraft(createEmptyMetadata());
+  }
+}
+
+async function saveRecordingMetadata() {
+  if (!props.inspectedRecordingPath) {
+    metadataError.value = "Choose a recording file first.";
+    return;
+  }
+
+  metadataSaving.value = true;
+  metadataError.value = "";
+  metadataStatus.value = "";
+
+  try {
+    const metadata = await invoke<RecordingMetadata>("save_recording_metadata", {
+      path: props.inspectedRecordingPath,
+      metadata: metadataFromDraft(),
+    });
+    setMetadataDraft(metadata);
+    metadataStatus.value = "Metadata saved.";
+    await refreshRecordingTree();
+  } catch (error) {
+    metadataError.value = String(error);
+  } finally {
+    metadataSaving.value = false;
+  }
+}
+
+function setMetadataDraft(metadata: RecordingMetadata) {
+  metadataDraft.value = {
+    displayName: metadata.displayName,
+    description: metadata.description,
+    tags: [...metadata.tags],
+    markerNotes: metadata.markerNotes.map((markerNote) => ({ ...markerNote })),
+  };
+  metadataTagsDraft.value = metadata.tags.join(", ");
+}
+
+function metadataFromDraft(): RecordingMetadata {
+  return {
+    displayName: metadataDraft.value.displayName,
+    description: metadataDraft.value.description,
+    tags: metadataTagsDraft.value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+    markerNotes: metadataDraft.value.markerNotes.map((markerNote) => ({ ...markerNote })),
+  };
+}
+
+function createEmptyMetadata(): RecordingMetadata {
+  return {
+    displayName: "",
+    description: "",
+    tags: [],
+    markerNotes: [],
+  };
 }
 
 function formatInspectionEvent(event: RecordingInspectionEvent) {
@@ -152,6 +241,28 @@ function padFrame(frame: number, fps: number) {
       <p v-if="inspectedRecordingPath" class="quiet">
         File: {{ inspectedRecordingPath }}
       </p>
+      <div v-if="inspectedRecordingPath" class="metadata-editor">
+        <div class="section-header">
+          <h3>Sidecar metadata</h3>
+          <button type="button" :disabled="metadataSaving" @click="saveRecordingMetadata">
+            {{ metadataSaving ? "Saving..." : "Save metadata" }}
+          </button>
+        </div>
+        <label>
+          <span>Display name</span>
+          <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" />
+        </label>
+        <label>
+          <span>Description</span>
+          <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" />
+        </label>
+        <label>
+          <span>Tags</span>
+          <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" />
+        </label>
+        <p v-if="metadataStatus" class="status-text">{{ metadataStatus }}</p>
+        <p v-if="metadataError" class="error-text">{{ metadataError }}</p>
+      </div>
       <p v-if="recordingInspectionError" class="error-text">
         {{ recordingInspectionError }}
       </p>
@@ -315,6 +426,39 @@ function padFrame(frame: number, fps: number) {
   padding-top: 18px;
 }
 
+.metadata-editor {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #151a20;
+  padding: 14px;
+}
+
+.metadata-editor label {
+  display: grid;
+  gap: 6px;
+  color: #c9d1da;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metadata-editor input,
+.metadata-editor textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #10141a;
+  color: #dfe5ec;
+  font: inherit;
+  padding: 9px 10px;
+}
+
+.metadata-editor textarea {
+  resize: vertical;
+}
+
 .inspection-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -367,6 +511,13 @@ function padFrame(frame: number, fps: number) {
 .error-text {
   margin: 0;
   color: #ff8f8f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.status-text {
+  margin: 0;
+  color: #9ff0b9;
   font-size: 13px;
   font-weight: 700;
 }

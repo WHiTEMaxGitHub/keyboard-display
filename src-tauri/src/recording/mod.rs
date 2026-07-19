@@ -2,7 +2,7 @@
 
 mod binary;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashSet,
     path::PathBuf,
@@ -63,6 +63,24 @@ pub struct RecordingFileSummary {
     pub fps: u16,
     pub frame_count: u64,
     pub marker_count: usize,
+    pub metadata: RecordingMetadata,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingMetadata {
+    pub display_name: String,
+    pub description: String,
+    pub tags: Vec<String>,
+    pub marker_notes: Vec<RecordingMarkerNote>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingMarkerNote {
+    pub frame: u64,
+    pub name: String,
+    pub note: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
@@ -346,6 +364,39 @@ pub fn list_recording_files(root: PathBuf) -> Result<RecordingTreeNode, String> 
     scan_recording_directory(&root)
 }
 
+pub fn read_recording_metadata(path: PathBuf) -> Result<RecordingMetadata, String> {
+    let sidecar_path = recording_metadata_path(&path);
+    if !sidecar_path.exists() {
+        return Ok(RecordingMetadata::default());
+    }
+
+    let contents = std::fs::read_to_string(sidecar_path).map_err(|error| error.to_string())?;
+    parse_recording_metadata(&contents)
+}
+
+pub fn save_recording_metadata(
+    path: PathBuf,
+    metadata: RecordingMetadata,
+) -> Result<RecordingMetadata, String> {
+    if !is_kbdrec_file(&path) {
+        return Err(format!(
+            "recording metadata target is not .kbdrec: {}",
+            path.display()
+        ));
+    }
+
+    let metadata = normalize_recording_metadata(metadata);
+    let sidecar_path = recording_metadata_path(&path);
+    if let Some(parent) = sidecar_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
+    let contents = serde_json::to_string_pretty(&metadata).map_err(|error| error.to_string())?;
+    std::fs::write(sidecar_path, format!("{contents}\n")).map_err(|error| error.to_string())?;
+
+    Ok(metadata)
+}
+
 fn scan_recording_directory(path: &PathBuf) -> Result<RecordingTreeNode, String> {
     let mut entries = std::fs::read_dir(path)
         .map_err(|error| error.to_string())?
@@ -420,7 +471,42 @@ fn summarize_recording_file(path: &PathBuf) -> Result<RecordingFileSummary, Stri
         fps: decoded.fps,
         frame_count: decoded.frame_count,
         marker_count: decoded.markers.len(),
+        metadata: read_recording_metadata(path.clone())?,
     })
+}
+
+fn parse_recording_metadata(contents: &str) -> Result<RecordingMetadata, String> {
+    let metadata = serde_json::from_str(contents).map_err(|error| error.to_string())?;
+    Ok(normalize_recording_metadata(metadata))
+}
+
+fn normalize_recording_metadata(mut metadata: RecordingMetadata) -> RecordingMetadata {
+    metadata.display_name = metadata.display_name.trim().to_string();
+    metadata.description = metadata.description.trim().to_string();
+    metadata.tags = metadata
+        .tags
+        .into_iter()
+        .map(|tag| tag.trim().to_string())
+        .filter(|tag| !tag.is_empty())
+        .collect();
+    metadata.marker_notes = metadata
+        .marker_notes
+        .into_iter()
+        .map(|mut marker_note| {
+            marker_note.name = marker_note.name.trim().to_string();
+            marker_note.note = marker_note.note.trim().to_string();
+            marker_note
+        })
+        .filter(|marker_note| !marker_note.name.is_empty() || !marker_note.note.is_empty())
+        .collect();
+
+    metadata
+}
+
+fn recording_metadata_path(path: &std::path::Path) -> PathBuf {
+    let mut sidecar_path = path.as_os_str().to_os_string();
+    sidecar_path.push(".json");
+    PathBuf::from(sidecar_path)
 }
 
 fn is_kbdrec_file(path: &std::path::Path) -> bool {
@@ -453,8 +539,9 @@ fn event_frame(event: &RecordingEvent) -> u64 {
 mod tests {
     use super::{
         binary::{decode_kbdrec, encode_kbdrec},
-        inspect_kbdrec, list_recording_files, parse_recording_file_times, sample_frames,
-        RecordingEvent, RecordingManager, RecordingSession, RecordingSnapshot,
+        inspect_kbdrec, list_recording_files, parse_recording_file_times, read_recording_metadata,
+        sample_frames, save_recording_metadata, RecordingEvent, RecordingManager,
+        RecordingMarkerNote, RecordingMetadata, RecordingSession, RecordingSnapshot,
     };
 
     #[test]
@@ -795,6 +882,84 @@ mod tests {
         assert_eq!(summary.end_unix_ms, Some(2000));
         assert_eq!(summary.fps, 120);
         assert_eq!(summary.marker_count, 1);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn lists_recording_sidecar_metadata_with_summary() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-metadata-list-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        let snapshot = {
+            let mut session = RecordingSession::new(120, 1000);
+            session.record_input(1008, "w", true);
+            session.snapshot()
+        };
+        let recording_path = root.join("1000-2000.kbdrec");
+        std::fs::write(&recording_path, encode_kbdrec(&snapshot).unwrap()).unwrap();
+        save_recording_metadata(
+            recording_path.clone(),
+            RecordingMetadata {
+                display_name: "Aim warmup".to_string(),
+                description: "first run".to_string(),
+                tags: vec!["fps".to_string(), " aim ".to_string()],
+                marker_notes: vec![RecordingMarkerNote {
+                    frame: 12,
+                    name: "sync".to_string(),
+                    note: "first visible shot".to_string(),
+                }],
+            },
+        )
+        .unwrap();
+
+        let tree = list_recording_files(root.clone()).unwrap();
+        let summary = tree.children.first().unwrap().summary.as_ref().unwrap();
+
+        assert_eq!(summary.metadata.display_name, "Aim warmup");
+        assert_eq!(summary.metadata.description, "first run");
+        assert_eq!(summary.metadata.tags, vec!["fps", "aim"]);
+        assert_eq!(summary.metadata.marker_notes[0].frame, 12);
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn saves_and_reads_recording_sidecar_metadata() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-metadata-save-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let recording_path = root.join("1000-2000.kbdrec");
+
+        save_recording_metadata(
+            recording_path.clone(),
+            RecordingMetadata {
+                display_name: "  Session 1  ".to_string(),
+                description: "  marker check  ".to_string(),
+                tags: vec![" sync ".to_string(), "".to_string(), "ranked".to_string()],
+                marker_notes: vec![RecordingMarkerNote {
+                    frame: 24,
+                    name: " sync ".to_string(),
+                    note: " line up with reload ".to_string(),
+                }],
+            },
+        )
+        .unwrap();
+
+        let metadata = read_recording_metadata(recording_path).unwrap();
+
+        assert_eq!(metadata.display_name, "Session 1");
+        assert_eq!(metadata.description, "marker check");
+        assert_eq!(metadata.tags, vec!["sync", "ranked"]);
+        assert_eq!(metadata.marker_notes[0].name, "sync");
+        assert_eq!(metadata.marker_notes[0].note, "line up with reload");
 
         let _ = std::fs::remove_dir_all(root);
     }

@@ -1,4 +1,15 @@
 <script setup lang="ts">
+type RecordingMetadata = {
+  displayName: string;
+  description: string;
+  tags: string[];
+  markerNotes: Array<{
+    frame: number;
+    name: string;
+    note: string;
+  }>;
+};
+
 type RecordingFileSummary = {
   fileName: string;
   sizeBytes: number;
@@ -7,6 +18,7 @@ type RecordingFileSummary = {
   fps: number;
   frameCount: number;
   markerCount: number;
+  metadata: RecordingMetadata;
 };
 
 type RecordingTreeNode = {
@@ -44,6 +56,10 @@ function formatFileTimes(summary: RecordingFileSummary) {
 
   return `${new Date(summary.startUnixMs).toLocaleString()} - ${new Date(summary.endUnixMs).toLocaleTimeString()}`;
 }
+
+function displayTitle(node: RecordingTreeNode) {
+  return node.summary?.metadata.displayName || node.name;
+}
 </script>
 
 <template>
@@ -60,10 +76,14 @@ function formatFileTimes(summary: RecordingFileSummary) {
     >
       <span class="tree-prefix">•</span>
       <span class="file-main">
-        <strong>{{ node.name }}</strong>
+        <strong>{{ displayTitle(node) }}</strong>
+        <small v-if="node.summary?.metadata.displayName">{{ node.name }}</small>
         <small v-if="node.summary">
           {{ formatFileSize(node.summary.sizeBytes) }} · {{ node.summary.fps }}fps ·
           {{ node.summary.frameCount }} frames · {{ node.summary.markerCount }} markers
+        </small>
+        <small v-if="node.summary?.metadata.tags.length">
+          tags: {{ node.summary.metadata.tags.join(", ") }}
         </small>
         <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
       </span>
