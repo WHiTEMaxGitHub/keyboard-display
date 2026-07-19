@@ -10,6 +10,7 @@ import {
   Video,
 } from "@lucide/vue";
 import { computed, ref } from "vue";
+import { normalizeHexColor } from "../domain/colorPicker";
 import {
   isKeyBinding,
   type AppConfig,
@@ -20,6 +21,7 @@ import type { RecentProfile } from "../domain/appConfig";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
+import ColorPicker from "./ColorPicker.vue";
 import RecordingPanel from "./RecordingPanel.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
@@ -45,6 +47,7 @@ type RecordingInspection = {
 
 const activePage = ref<ConfigPage>("overview");
 const recordingSubPage = ref<RecordingSubPage>("control");
+const recentColors = ref<string[]>([]);
 
 const navItems: Array<{
   id: ConfigPage;
@@ -141,12 +144,20 @@ function updateStyleColor(
     | "idleTextColor"
     | "activeTextColor"
     | "backgroundColor",
-  event: Event,
+  color: string,
 ) {
   emit("update-overlay-style", {
     ...props.config.style,
-    [field]: (event.target as HTMLInputElement).value,
+    [field]: normalizeHexColor(color, props.config.style[field]),
   });
+}
+
+function rememberColor(color: string) {
+  const normalizedColor = normalizeHexColor(color);
+  recentColors.value = [
+    normalizedColor,
+    ...recentColors.value.filter((recentColor) => recentColor !== normalizedColor),
+  ].slice(0, 8);
 }
 
 function updateAlwaysOnTop(event: Event) {
@@ -408,46 +419,41 @@ function updateRenderMarkers(event: Event) {
             </select>
           </label>
           <div class="color-grid" aria-label="Overlay colors">
-            <label class="color-picker">
-              <span>Idle key</span>
-              <input
-                :value="config.style.idleColor"
-                type="color"
-                @input="updateStyleColor('idleColor', $event)"
-              />
-            </label>
-            <label class="color-picker">
-              <span>Pressed key</span>
-              <input
-                :value="config.style.activeColor"
-                type="color"
-                @input="updateStyleColor('activeColor', $event)"
-              />
-            </label>
-            <label class="color-picker">
-              <span>Idle text</span>
-              <input
-                :value="config.style.idleTextColor"
-                type="color"
-                @input="updateStyleColor('idleTextColor', $event)"
-              />
-            </label>
-            <label class="color-picker">
-              <span>Pressed text</span>
-              <input
-                :value="config.style.activeTextColor"
-                type="color"
-                @input="updateStyleColor('activeTextColor', $event)"
-              />
-            </label>
-            <label class="color-picker">
-              <span>Backplate</span>
-              <input
-                :value="config.style.backgroundColor"
-                type="color"
-                @input="updateStyleColor('backgroundColor', $event)"
-              />
-            </label>
+            <ColorPicker
+              label="Idle key"
+              :value="config.style.idleColor"
+              :recent-colors="recentColors"
+              @update:value="updateStyleColor('idleColor', $event)"
+              @remember-color="rememberColor"
+            />
+            <ColorPicker
+              label="Pressed key"
+              :value="config.style.activeColor"
+              :recent-colors="recentColors"
+              @update:value="updateStyleColor('activeColor', $event)"
+              @remember-color="rememberColor"
+            />
+            <ColorPicker
+              label="Idle text"
+              :value="config.style.idleTextColor"
+              :recent-colors="recentColors"
+              @update:value="updateStyleColor('idleTextColor', $event)"
+              @remember-color="rememberColor"
+            />
+            <ColorPicker
+              label="Pressed text"
+              :value="config.style.activeTextColor"
+              :recent-colors="recentColors"
+              @update:value="updateStyleColor('activeTextColor', $event)"
+              @remember-color="rememberColor"
+            />
+            <ColorPicker
+              label="Backplate"
+              :value="config.style.backgroundColor"
+              :recent-colors="recentColors"
+              @update:value="updateStyleColor('backgroundColor', $event)"
+              @remember-color="rememberColor"
+            />
           </div>
         </article>
       </section>
@@ -951,31 +957,9 @@ select:focus {
 }
 
 .color-grid {
-  display: flex;
-  gap: 8px;
-}
-
-.color-grid {
-  flex-wrap: wrap;
-}
-
-.color-picker {
   display: grid;
-  gap: 6px;
-  margin: 0;
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.color-picker input {
-  width: 44px;
-  height: 38px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 7px;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .quiet {

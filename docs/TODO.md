@@ -11,7 +11,7 @@
   - Reason: idle keys and pressed keys may use very different backgrounds, so a
     single text color cannot always keep good contrast.
 
-- [ ] Replace native `<input type="color">` with an in-app color picker.
+- [x] Replace native `<input type="color">` with an in-app color picker.
   - Native color input is useful for the first version, but its UI and behavior
     may differ between Windows WebView2 and macOS WKWebView.
   - A custom picker should provide consistent behavior across platforms.
