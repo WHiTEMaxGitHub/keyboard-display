@@ -47,7 +47,7 @@ import {
 } from "./domain/recordingHotkeys";
 import type { RecordingConfig } from "./domain/defaultConfig";
 
-type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center" | "custom";
+type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom";
 
 const config = reactive(createDefaultConfig());
 const activeKeyIds = ref(new Set<string>());
@@ -81,6 +81,16 @@ const activeRecordingHotkeySignature = ref("");
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
 });
+
+function normalizeOverlayPosition(position: string | null | undefined): OverlayPosition {
+  return position === "top-left" ||
+    position === "top-right" ||
+    position === "bottom-left" ||
+    position === "bottom-right" ||
+    position === "custom"
+    ? position
+    : "bottom-right";
+}
 
 let unlistenInputState: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
@@ -283,11 +293,11 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
     await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
     return;
   }
-  const presetPosition = position === "custom" ? "center" : position;
+  const presetPosition = position === "custom" ? "bottom-right" : position;
 
   const horizontalMargin = 6;
-  const topMargin = 6;
-  const bottomMargin = 10;
+  const topMargin = 3;
+  const bottomMargin = 5;
   const overlayBleed = 12;
   const overlaySize = estimateOverlaySize(config.layout, config.rows, config.style);
   const workArea = {
@@ -304,7 +314,6 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
     "top-right": new LogicalPosition(xMax, yMin),
     "bottom-left": new LogicalPosition(xMin, yMax),
     "bottom-right": new LogicalPosition(xMax, yMax),
-    center: new LogicalPosition((xMin + xMax) / 2, (yMin + yMax) / 2),
   };
 
   await overlayWindow.show();
@@ -359,7 +368,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   profileName.value = loadedConfig.name || profileNameFromFileName(fileName);
   profileSourcePath.value = sourcePath;
   profileChanged.value = false;
-  overlayPosition.value = (loadedConfig.overlay.position as OverlayPosition) ?? "bottom-right";
+  overlayPosition.value = normalizeOverlayPosition(loadedConfig.overlay.position);
   customOverlayPosition.value = loadedConfig.overlay.customPosition ?? null;
 
   applyOverlayLayout(loadedConfig.overlay.layout);
@@ -415,7 +424,7 @@ async function restoreAppConfig() {
   profileSourcePath.value = appConfig.currentProfile.sourcePath;
   profileChanged.value = appConfig.currentProfile.changed;
   recentProfiles.value = appConfig.profiles.recentProfiles;
-  overlayPosition.value = appConfig.currentProfile.overlay.position as OverlayPosition;
+  overlayPosition.value = normalizeOverlayPosition(appConfig.currentProfile.overlay.position);
   customOverlayPosition.value = appConfig.currentProfile.overlay.customPosition ?? null;
   recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
   silentRecording.value = appConfig.recording.silent ?? false;

@@ -117,7 +117,7 @@ const emit = defineEmits<{
   "save-overlay-adjust": [];
   "cancel-overlay-adjust": [];
   "move-overlay": [
-    position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center" | "custom",
+    position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
   ];
 }>();
 
@@ -200,7 +200,7 @@ function updateOverlayVisible(event: Event) {
 }
 
 function moveOverlay(
-  position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center" | "custom",
+  position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
 ) {
   emit("move-overlay", position);
 }
@@ -568,7 +568,6 @@ function updateRenderMarkers(event: Event) {
             <div class="position-grid">
               <button type="button" @click="moveOverlay('top-left')">Top left</button>
               <button type="button" @click="moveOverlay('top-right')">Top right</button>
-              <button type="button" @click="moveOverlay('center')">Center</button>
               <button type="button" @click="moveOverlay('bottom-left')">Bottom left</button>
               <button type="button" @click="moveOverlay('bottom-right')">Bottom right</button>
             </div>

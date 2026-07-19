@@ -17,6 +17,7 @@ const props = defineProps<{
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
   syncFeedbackActive?: boolean;
+  adjusting?: boolean;
 }>();
 
 const platformKey = computed(() => detectPlatformKey());
@@ -61,6 +62,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
         'key-cluster',
         { 'backplate-visible': isBackplateVisible(overlayStyle) },
         { 'sync-feedback-active': syncFeedbackActive },
+        { adjusting },
       ]"
     >
       <div class="backplate" aria-hidden="true"></div>
@@ -103,6 +105,12 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
   position: relative;
   width: max-content;
   border-radius: var(--overlay-bg-radius);
+}
+
+.key-cluster.adjusting {
+  cursor: move;
+  outline: 2px solid rgba(37, 211, 102, 0.78);
+  outline-offset: 4px;
 }
 
 .key-cluster.backplate-visible {

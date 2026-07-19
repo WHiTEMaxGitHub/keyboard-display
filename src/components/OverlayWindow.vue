@@ -26,7 +26,7 @@ onMounted(async () => {
     OVERLAY_ADJUST_MODE_EVENT,
     async (event) => {
       adjusting.value = event.payload.enabled;
-      await currentWindow.setIgnoreCursorEvents(!event.payload.enabled);
+      await setClickThrough(!event.payload.enabled);
     },
   );
 });
@@ -40,14 +40,28 @@ async function startDrag() {
     return;
   }
 
+  await setClickThrough(false);
   await getCurrentWindow().startDragging();
+}
+
+async function setClickThrough(enabled: boolean) {
+  const currentWindow = getCurrentWindow();
+  await currentWindow.setIgnoreCursorEvents(enabled);
+  if (!enabled) {
+    window.setTimeout(() => {
+      void currentWindow.setIgnoreCursorEvents(false);
+    }, 80);
+    window.setTimeout(() => {
+      void currentWindow.setIgnoreCursorEvents(false);
+    }, 180);
+  }
 }
 </script>
 
 <template>
   <main
-    :class="['overlay-root', { adjusting }]"
-    @mousedown="startDrag"
+    class="overlay-root"
+    @mousedown.prevent.stop="startDrag"
   >
     <PovOverlay
       :layout="layout"
@@ -56,6 +70,7 @@ async function startDrag() {
       :active-keys="activeKeys"
       :overlay-style="overlayStyle"
       :sync-feedback-active="syncFeedbackActive"
+      :adjusting="adjusting"
     />
   </main>
 </template>
@@ -70,9 +85,4 @@ async function startDrag() {
   background: transparent;
 }
 
-.overlay-root.adjusting {
-  cursor: move;
-  outline: 2px solid rgba(37, 211, 102, 0.75);
-  outline-offset: -2px;
-}
 </style>
