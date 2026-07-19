@@ -3,10 +3,16 @@ export const OVERLAY_STYLE_EVENT = "overlay-style";
 export const OVERLAY_VISIBLE_EVENT = "overlay-visible";
 export const OVERLAY_CONFIG_EVENT = "overlay-config";
 export const OVERLAY_SYNC_FEEDBACK_EVENT = "overlay-sync-feedback";
+export const OVERLAY_MEASURED_EVENT = "overlay-measured";
 
 export type InputStatePayload = {
   keyId: string;
   pressed: boolean;
+};
+
+export type OverlayMeasuredPayload = {
+  width: number;
+  height: number;
 };
 
 const keyCodeToId = new Map<string, string>([

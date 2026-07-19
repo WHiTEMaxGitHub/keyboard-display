@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import {
   isKeyBinding,
   type KeyBinding,
@@ -20,6 +20,21 @@ const props = defineProps<{
 }>();
 
 const platformKey = computed(() => detectPlatformKey());
+const shellElement = ref<HTMLElement | null>(null);
+
+defineExpose({
+  measure,
+});
+
+function measure() {
+  const rect = shellElement.value?.getBoundingClientRect();
+  return rect
+    ? {
+        width: Math.ceil(rect.width),
+        height: Math.ceil(rect.height),
+      }
+    : null;
+}
 
 function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: OverlayStyle) {
   return overlayStyle.idleKeyVisibility !== "hidden" || activeKeys.has(keyId);
@@ -39,6 +54,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
 
 <template>
   <section
+    ref="shellElement"
     class="pov-shell"
     :class="[`idle-${overlayStyle.idleKeyVisibility}`]"
     :style="{
