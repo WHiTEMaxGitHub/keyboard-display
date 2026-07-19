@@ -26,6 +26,7 @@ onMounted(async () => {
     OVERLAY_ADJUST_MODE_EVENT,
     async (event) => {
       adjusting.value = event.payload.enabled;
+      clearSelection();
       await setClickThrough(!event.payload.enabled);
     },
   );
@@ -40,8 +41,13 @@ async function startDrag() {
     return;
   }
 
+  clearSelection();
   await setClickThrough(false);
   await getCurrentWindow().startDragging();
+}
+
+function clearSelection() {
+  window.getSelection()?.removeAllRanges();
 }
 
 async function setClickThrough(enabled: boolean) {
@@ -64,6 +70,7 @@ async function setClickThrough(enabled: boolean) {
       v-if="adjusting"
       class="drag-handle"
       type="button"
+      draggable="false"
       title="Drag POV"
       @mousedown.prevent.stop="startDrag"
     >
@@ -90,6 +97,12 @@ async function setClickThrough(enabled: boolean) {
   justify-items: center;
   padding: 0 12px 12px 0;
   background: transparent;
+}
+
+.overlay-root.adjusting,
+.overlay-root.adjusting * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .drag-handle {
