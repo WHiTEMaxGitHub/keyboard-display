@@ -168,6 +168,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
 .key {
   display: grid;
   place-items: center;
+  box-sizing: border-box;
   min-width: 0;
   width: calc(var(--unit) * var(--key-width-unit, 1));
   height: var(--unit);
