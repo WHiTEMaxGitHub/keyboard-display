@@ -597,6 +597,10 @@ function overwriteAndApplyConfig() {
   padding: 10px 11px;
   text-align: left;
   font-weight: 700;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
 }
 
 .nav-list button:hover,
@@ -604,8 +608,13 @@ function overwriteAndApplyConfig() {
   background: rgba(255, 255, 255, 0.06);
 }
 
+.nav-list button:hover {
+  transform: translateX(2px);
+}
+
 .nav-list button.active {
   color: #eafff0;
+  transform: translateX(2px);
 }
 
 .subnav-list {

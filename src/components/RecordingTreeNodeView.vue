@@ -56,7 +56,7 @@ function toggleExpanded() {
 }
 
 function collapseDuration(element: HTMLElement) {
-  return `${Math.min(420, Math.max(180, element.scrollHeight * 1.25))}ms`;
+  return `${Math.min(560, Math.max(260, element.scrollHeight * 1.6))}ms`;
 }
 
 function setCollapseDuration(element: HTMLElement) {
@@ -262,10 +262,14 @@ function hasFileDetails(summary: RecordingFileSummary | null) {
   font-size: 13px;
   padding: 0;
   text-align: left;
+  transition:
+    color 140ms ease,
+    transform 140ms ease;
 }
 
 .directory-node:hover {
   color: #eafff0;
+  transform: translateX(2px);
 }
 
 .file-node {
@@ -277,10 +281,16 @@ function hasFileDetails(summary: RecordingFileSummary | null) {
   cursor: pointer;
   padding: 8px 10px;
   text-align: left;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
 }
 
 .file-node:hover {
+  border-color: rgba(255, 255, 255, 0.14);
   background: #1e252e;
+  transform: translateX(2px);
 }
 
 .tree-prefix {
