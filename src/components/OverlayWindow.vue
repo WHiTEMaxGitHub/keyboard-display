@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import {
-  OVERLAY_ADJUST_MODE_EVENT,
-  OVERLAY_MEASURED_EVENT,
-  type OverlayMeasuredPayload,
-} from "../domain/inputEvents";
+import { onMounted, onUnmounted, ref } from "vue";
+import { OVERLAY_ADJUST_MODE_EVENT } from "../domain/inputEvents";
 import type { KeyBinding, OverlayLayout, OverlayRow, OverlayStyle } from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
 
-const props = defineProps<{
+defineProps<{
   layout: OverlayLayout;
   rows: OverlayRow[];
   keys: KeyBinding[];
@@ -19,7 +15,6 @@ const props = defineProps<{
   syncFeedbackActive?: boolean;
 }>();
 
-const overlayRoot = ref<HTMLElement | null>(null);
 const adjusting = ref(false);
 let unlistenAdjustMode: UnlistenFn | undefined;
 
@@ -34,41 +29,11 @@ onMounted(async () => {
       await currentWindow.setIgnoreCursorEvents(!event.payload.enabled);
     },
   );
-  await reportMeasuredSize();
 });
 
 onUnmounted(() => {
   unlistenAdjustMode?.();
 });
-
-watch(
-  () => [props.layout, props.rows, props.overlayStyle],
-  () => {
-    void reportMeasuredSize();
-  },
-  { deep: true },
-);
-
-async function reportMeasuredSize() {
-  await nextTick();
-  await nextAnimationFrame();
-  await nextAnimationFrame();
-  const rect = overlayRoot.value?.getBoundingClientRect();
-  if (!rect) {
-    return;
-  }
-
-  await emitTo<OverlayMeasuredPayload>("config", OVERLAY_MEASURED_EVENT, {
-    width: Math.ceil(rect.width),
-    height: Math.ceil(rect.height),
-  });
-}
-
-function nextAnimationFrame() {
-  return new Promise<void>((resolve) => {
-    requestAnimationFrame(() => resolve());
-  });
-}
 
 async function startDrag() {
   if (!adjusting.value) {
@@ -81,7 +46,6 @@ async function startDrag() {
 
 <template>
   <main
-    ref="overlayRoot"
     :class="['overlay-root', { adjusting }]"
     @mousedown="startDrag"
   >

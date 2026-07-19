@@ -31,14 +31,12 @@ import {
   INPUT_STATE_EVENT,
   OVERLAY_ADJUST_MODE_EVENT,
   OVERLAY_CONFIG_EVENT,
-  OVERLAY_MEASURED_EVENT,
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
   OVERLAY_VISIBLE_EVENT,
   keyIdFromKeyboardCode,
   keyIdFromMouseButton,
   type InputStatePayload,
-  type OverlayMeasuredPayload,
 } from "./domain/inputEvents";
 import {
   isHotkeyMatch,
@@ -79,7 +77,6 @@ const activeRecordingHotkeys = ref<RecordingHotkeyConfig | null>(null);
 const hotkeyCaptureTarget = ref<"start" | "stop" | "sync" | null>(null);
 const capturedHotkeyKeys = ref(new Set<string>());
 const activeRecordingHotkeySignature = ref("");
-const measuredOverlaySize = ref<OverlayMeasuredPayload | null>(null);
 
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
@@ -87,7 +84,6 @@ const isOverlayWindow = computed(() => {
 
 let unlistenInputState: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
-let unlistenOverlayMeasured: UnlistenFn | undefined;
 let syncFeedbackTimer: number | undefined;
 let appConfigSaveTimer: number | undefined;
 let stopAppConfigWatch: WatchStopHandle | undefined;
@@ -146,17 +142,14 @@ function effectiveRecordingHotkeys(): RecordingHotkeyConfig {
 }
 
 function applyOverlayStyle(style: OverlayStyle) {
-  measuredOverlaySize.value = null;
   config.style = { ...style };
 }
 
 function applyOverlayLayout(layout: typeof config.layout) {
-  measuredOverlaySize.value = null;
   config.layout = { ...layout };
 }
 
 function applyOverlayRows(rows: typeof config.rows) {
-  measuredOverlaySize.value = null;
   config.rows = rows.map((row) => row.map((item) => ({ ...item })));
   config.keys = flattenRowKeys(config.rows);
 }
@@ -185,7 +178,7 @@ async function resizeOverlayWindow(overlayWindow?: Window | null) {
     return;
   }
 
-  const size = measuredOverlaySize.value ?? estimateOverlaySize(config.layout, config.rows, config.style);
+  const size = estimateOverlaySize(config.layout, config.rows, config.style);
   await targetWindow.setSize(new LogicalSize(size.width, size.height));
 }
 
@@ -295,7 +288,7 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
   const horizontalMargin = 16;
   const topMargin = 16;
   const bottomMargin = 24;
-  const overlaySize = measuredOverlaySize.value ?? estimateOverlaySize(config.layout, config.rows, config.style);
+  const overlaySize = estimateOverlaySize(config.layout, config.rows, config.style);
   const workArea = {
     position: monitor.workArea.position.toLogical(monitor.scaleFactor),
     size: monitor.workArea.size.toLogical(monitor.scaleFactor),
@@ -357,17 +350,6 @@ async function cancelOverlayAdjust() {
   overlayAdjusting.value = false;
   await overlayWindow?.setIgnoreCursorEvents(true);
   await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
-  await moveOverlay(overlayPosition.value, false);
-}
-
-async function handleOverlayMeasured(measured: OverlayMeasuredPayload) {
-  measuredOverlaySize.value = measured;
-  const overlayWindow = await Window.getByLabel("pov");
-  if (!overlayWindow) {
-    return;
-  }
-
-  await overlayWindow.setSize(new LogicalSize(measured.width, measured.height));
   await moveOverlay(overlayPosition.value, false);
 }
 
@@ -940,12 +922,6 @@ onMounted(async () => {
         isOverlayVisible.value = event.payload;
       },
     );
-    unlistenOverlayMeasured = await listen<OverlayMeasuredPayload>(
-      OVERLAY_MEASURED_EVENT,
-      (event) => {
-        void handleOverlayMeasured(event.payload);
-      },
-    );
   }
 
   window.addEventListener("keydown", handleKeydown);
@@ -974,7 +950,6 @@ onUnmounted(() => {
   stopAppConfigWatch?.();
   unlistenInputState?.();
   unlistenOverlayStyle?.();
-  unlistenOverlayMeasured?.();
   window.removeEventListener("keydown", handleKeydown);
   window.removeEventListener("keyup", handleKeyup);
   window.removeEventListener("mousedown", handleMousedown);
