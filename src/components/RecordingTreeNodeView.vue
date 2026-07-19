@@ -72,16 +72,29 @@ function displayTitle(node: RecordingTreeNode) {
 
 <template>
   <div class="tree-node">
-    <button
-      v-if="node.type === 'directory'"
-      class="directory-node"
-      type="button"
-      :aria-expanded="expanded"
-      @click="toggleExpanded"
-    >
-      <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
-      <strong>{{ node.name }}</strong>
-    </button>
+    <div v-if="node.type === 'directory'" class="directory-branch">
+      <button
+        class="directory-node"
+        type="button"
+        :aria-expanded="expanded"
+        @click="toggleExpanded"
+      >
+        <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
+        <strong>{{ node.name }}</strong>
+      </button>
+      <Transition name="tree-collapse">
+        <div v-show="expanded && node.children.length > 0" class="tree-children-shell">
+          <div class="tree-children">
+            <RecordingTreeNodeView
+              v-for="child in node.children"
+              :key="child.path"
+              :node="child"
+              @inspect="inspect"
+            />
+          </div>
+        </div>
+      </Transition>
+    </div>
     <button
       v-else
       class="file-node"
@@ -102,14 +115,6 @@ function displayTitle(node: RecordingTreeNode) {
         <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
       </span>
     </button>
-    <div v-if="expanded && node.children.length > 0" class="tree-children">
-      <RecordingTreeNodeView
-        v-for="child in node.children"
-        :key="child.path"
-        :node="child"
-        @inspect="inspect"
-      />
-    </div>
   </div>
 </template>
 
@@ -117,6 +122,12 @@ function displayTitle(node: RecordingTreeNode) {
 .tree-node {
   display: grid;
   gap: 6px;
+}
+
+.directory-branch {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
 }
 
 .directory-node,
@@ -180,9 +191,32 @@ function displayTitle(node: RecordingTreeNode) {
   font-size: 12px;
 }
 
+.tree-children-shell {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  opacity: 1;
+}
+
 .tree-children {
   display: grid;
   gap: 6px;
   margin-left: 18px;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tree-collapse-enter-active,
+.tree-collapse-leave-active {
+  transition:
+    grid-template-rows 150ms ease,
+    opacity 150ms ease;
+}
+
+.tree-collapse-enter-from,
+.tree-collapse-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
 }
 </style>
