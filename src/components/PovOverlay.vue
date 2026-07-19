@@ -96,6 +96,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
 
   width: max-content;
   opacity: var(--overlay-opacity);
+  padding: 8px;
   user-select: none;
 }
 

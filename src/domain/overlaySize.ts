@@ -7,6 +7,7 @@ export type OverlaySize = {
 };
 
 const BACKPLATE_PADDING = 10 * 2;
+const OVERLAY_VISUAL_PADDING = 8 * 2;
 const FLOAT_EPSILON = 0.000001;
 
 export function estimateOverlaySize(
@@ -21,8 +22,8 @@ export function estimateOverlaySize(
   const rowCount = Math.max(rows.length, 1);
 
   return {
-    width: ceilStable(widthUnits * unit + padding),
-    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding),
+    width: ceilStable(widthUnits * unit + padding + OVERLAY_VISUAL_PADDING),
+    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding + OVERLAY_VISUAL_PADDING),
   };
 }
 

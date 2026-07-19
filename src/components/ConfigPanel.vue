@@ -889,11 +889,18 @@ h2 {
 
 .recent-profile-control {
   display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(180px, 240px);
+  align-items: center;
   gap: 7px;
   margin-top: 14px;
   color: #c9d1da;
   font-size: 13px;
   font-weight: 700;
+}
+
+.recent-profile-control select {
+  justify-self: end;
+  width: min(240px, 100%);
 }
 
 .recent-profile-control select:disabled {
