@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { invoke } from "@tauri-apps/api/core";
 import { computed, ref, watch } from "vue";
 import type { AppConfig, RecordingConfig } from "../domain/defaultConfig";
 import {
@@ -10,6 +11,7 @@ import {
   formatBytesPerSecond,
 } from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
+import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
 
 type RecordingInspectionEvent =
   | { frame: number; down: string }
@@ -27,6 +29,24 @@ type RecordingInspection = {
   keyIds: string[];
   events: RecordingInspectionEvent[];
   frames: RecordingInspectionFrame[];
+};
+
+type RecordingFileSummary = {
+  fileName: string;
+  sizeBytes: number;
+  startUnixMs: number | null;
+  endUnixMs: number | null;
+  fps: number;
+  frameCount: number;
+  markerCount: number;
+};
+
+type RecordingTreeNode = {
+  name: string;
+  path: string;
+  type: "directory" | "file";
+  children: RecordingTreeNode[];
+  summary: RecordingFileSummary | null;
 };
 
 const props = defineProps<{
@@ -51,6 +71,9 @@ const estimatedRecordingBytesPerSecond = computed(() =>
 );
 const customFpsDraft = ref(String(props.config.recording.customFps));
 const syncFeedbackDurationDraft = ref(String(props.config.recording.syncFeedbackDurationMs));
+const recordingTree = ref<RecordingTreeNode | null>(null);
+const recordingTreeError = ref("");
+const recordingTreeLoading = ref(false);
 
 watch(
   () => props.config.recording.customFps,
@@ -74,6 +97,7 @@ const emit = defineEmits<{
   "stop-recording": [];
   "add-sync-marker": [];
   "inspect-recording-file": [];
+  "inspect-recording-path": [path: string];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
   "begin-hotkey-capture": [target: "start" | "stop" | "sync"];
 }>();
@@ -155,6 +179,29 @@ function addSyncMarker() {
 
 function inspectRecordingFile() {
   emit("inspect-recording-file");
+}
+
+async function refreshRecordingTree() {
+  const root = props.recordingDirectory || props.defaultRecordingDirectory;
+  if (!root) {
+    recordingTreeError.value = "Recording folder is not ready.";
+    return;
+  }
+
+  recordingTreeLoading.value = true;
+  recordingTreeError.value = "";
+
+  try {
+    recordingTree.value = await invoke<RecordingTreeNode>("list_recording_files", { root });
+  } catch (error) {
+    recordingTreeError.value = String(error);
+  } finally {
+    recordingTreeLoading.value = false;
+  }
+}
+
+function inspectRecordingPath(path: string) {
+  emit("inspect-recording-path", path);
 }
 
 function updateRecordingHotkeyMode(event: Event) {
@@ -350,6 +397,21 @@ function padFrame(frame: number, fps: number) {
         <button type="button" @click="inspectRecordingFile">
           Inspect .kbdrec
         </button>
+      </div>
+      <div class="section-header">
+        <h3>Recording files</h3>
+        <button type="button" :disabled="recordingTreeLoading" @click="refreshRecordingTree">
+          {{ recordingTreeLoading ? "Loading..." : "Refresh" }}
+        </button>
+      </div>
+      <p v-if="recordingTreeError" class="error-text">
+        {{ recordingTreeError }}
+      </p>
+      <div v-if="recordingTree" class="recording-tree">
+        <RecordingTreeNodeView
+          :node="recordingTree"
+          @inspect="inspectRecordingPath"
+        />
       </div>
       <p v-if="inspectedRecordingPath" class="quiet">
         File: {{ inspectedRecordingPath }}
@@ -663,6 +725,13 @@ select:focus {
   margin-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 18px;
+}
+
+.recording-tree {
+  display: grid;
+  gap: 6px;
+  max-height: 360px;
+  overflow: auto;
 }
 
 .section-header {

@@ -556,6 +556,10 @@ async function inspectRecordingFile() {
     return;
   }
 
+  await inspectRecordingPath(selectedPath);
+}
+
+async function inspectRecordingPath(selectedPath: string) {
   inspectedRecordingPath.value = selectedPath;
   recordingInspection.value = null;
   recordingInspectionError.value = "";
@@ -897,6 +901,7 @@ onUnmounted(() => {
       @stop-recording="stopRecording"
       @add-sync-marker="addSyncMarker"
       @inspect-recording-file="inspectRecordingFile"
+      @inspect-recording-path="inspectRecordingPath"
       @update-recording-hotkey-mode="updateRecordingHotkeyMode"
       @begin-hotkey-capture="beginHotkeyCapture"
       @move-overlay="moveOverlay"

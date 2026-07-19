@@ -92,6 +92,7 @@ const emit = defineEmits<{
   "stop-recording": [];
   "add-sync-marker": [];
   "inspect-recording-file": [];
+  "inspect-recording-path": [path: string];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
   "begin-hotkey-capture": [target: "start" | "stop" | "sync"];
   "move-overlay": [
@@ -449,6 +450,7 @@ function overwriteAndApplyConfig() {
           @stop-recording="emit('stop-recording')"
           @add-sync-marker="emit('add-sync-marker')"
           @inspect-recording-file="emit('inspect-recording-file')"
+          @inspect-recording-path="emit('inspect-recording-path', $event)"
           @update-recording-hotkey-mode="emit('update-recording-hotkey-mode', $event)"
           @begin-hotkey-capture="emit('begin-hotkey-capture', $event)"
         />

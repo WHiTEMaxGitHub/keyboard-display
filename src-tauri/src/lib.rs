@@ -110,6 +110,11 @@ fn inspect_recording_file(
     recording::inspect_kbdrec(&bytes)
 }
 
+#[tauri::command]
+fn list_recording_files(root: std::path::PathBuf) -> Result<recording::RecordingTreeNode, String> {
+    recording::list_recording_files(root)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .manage(RecordingManager::new())
@@ -127,7 +132,8 @@ pub fn run() {
             add_recording_marker,
             suppress_recording_keys,
             stop_recording,
-            inspect_recording_file
+            inspect_recording_file,
+            list_recording_files
         ])
         .setup(|app| {
             input::start_native_input_backend(app.handle().clone());

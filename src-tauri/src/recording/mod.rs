@@ -53,6 +53,29 @@ pub struct RecordingInspection {
     pub frames: Vec<RecordingFrame>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingFileSummary {
+    pub file_name: String,
+    pub size_bytes: u64,
+    pub start_unix_ms: Option<u64>,
+    pub end_unix_ms: Option<u64>,
+    pub fps: u16,
+    pub frame_count: u64,
+    pub marker_count: usize,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingTreeNode {
+    pub name: String,
+    pub path: String,
+    #[serde(rename = "type")]
+    pub node_type: String,
+    pub children: Vec<RecordingTreeNode>,
+    pub summary: Option<RecordingFileSummary>,
+}
+
 pub struct RecordingSession {
     fps: u16,
     start_time_ms: u64,
@@ -308,6 +331,116 @@ pub fn inspect_kbdrec(bytes: &[u8]) -> Result<RecordingInspection, String> {
     })
 }
 
+pub fn list_recording_files(root: PathBuf) -> Result<RecordingTreeNode, String> {
+    if !root.exists() {
+        return Ok(directory_node(&root, Vec::new()));
+    }
+
+    if !root.is_dir() {
+        return Err(format!(
+            "recording path is not a directory: {}",
+            root.display()
+        ));
+    }
+
+    scan_recording_directory(&root)
+}
+
+fn scan_recording_directory(path: &PathBuf) -> Result<RecordingTreeNode, String> {
+    let mut entries = std::fs::read_dir(path)
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+
+    entries.sort_by_key(|entry| {
+        let is_file = entry
+            .file_type()
+            .map(|kind| kind.is_file())
+            .unwrap_or(false);
+        (is_file, entry.file_name())
+    });
+
+    let mut children = Vec::new();
+
+    for entry in entries {
+        let entry_path = entry.path();
+        let file_type = entry.file_type().map_err(|error| error.to_string())?;
+
+        if file_type.is_dir() {
+            children.push(scan_recording_directory(&entry_path)?);
+        } else if is_kbdrec_file(&entry_path) {
+            children.push(file_node(&entry_path)?);
+        }
+    }
+
+    Ok(directory_node(path, children))
+}
+
+fn directory_node(path: &PathBuf, children: Vec<RecordingTreeNode>) -> RecordingTreeNode {
+    RecordingTreeNode {
+        name: path
+            .file_name()
+            .map(|name| name.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.to_string_lossy().to_string()),
+        path: path.to_string_lossy().to_string(),
+        node_type: "directory".to_string(),
+        children,
+        summary: None,
+    }
+}
+
+fn file_node(path: &PathBuf) -> Result<RecordingTreeNode, String> {
+    let summary = summarize_recording_file(path)?;
+
+    Ok(RecordingTreeNode {
+        name: summary.file_name.clone(),
+        path: path.to_string_lossy().to_string(),
+        node_type: "file".to_string(),
+        children: Vec::new(),
+        summary: Some(summary),
+    })
+}
+
+fn summarize_recording_file(path: &PathBuf) -> Result<RecordingFileSummary, String> {
+    let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
+    let decoded = binary::decode_kbdrec(&bytes)?;
+    let metadata = std::fs::metadata(path).map_err(|error| error.to_string())?;
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| "recording file has no file name".to_string())?
+        .to_string_lossy()
+        .to_string();
+    let (start_unix_ms, end_unix_ms) = parse_recording_file_times(&file_name);
+
+    Ok(RecordingFileSummary {
+        file_name,
+        size_bytes: metadata.len(),
+        start_unix_ms,
+        end_unix_ms,
+        fps: decoded.fps,
+        frame_count: decoded.frame_count,
+        marker_count: decoded.markers.len(),
+    })
+}
+
+fn is_kbdrec_file(path: &std::path::Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .map(|extension| extension.eq_ignore_ascii_case("kbdrec"))
+        .unwrap_or(false)
+}
+
+fn parse_recording_file_times(file_name: &str) -> (Option<u64>, Option<u64>) {
+    let Some(stem) = file_name.strip_suffix(".kbdrec") else {
+        return (None, None);
+    };
+    let Some((start, end)) = stem.split_once('-') else {
+        return (None, None);
+    };
+
+    (start.parse().ok(), end.parse().ok())
+}
+
 fn event_frame(event: &RecordingEvent) -> u64 {
     match event {
         RecordingEvent::KeyDown { frame, .. }
@@ -320,8 +453,8 @@ fn event_frame(event: &RecordingEvent) -> u64 {
 mod tests {
     use super::{
         binary::{decode_kbdrec, encode_kbdrec},
-        inspect_kbdrec, sample_frames, RecordingEvent, RecordingManager, RecordingSession,
-        RecordingSnapshot,
+        inspect_kbdrec, list_recording_files, parse_recording_file_times, sample_frames,
+        RecordingEvent, RecordingManager, RecordingSession, RecordingSnapshot,
     };
 
     #[test]
@@ -613,5 +746,56 @@ mod tests {
         assert_eq!(inspection.frames[1].keys, vec!["w".to_string()]);
         assert_eq!(inspection.frames[2].keys, vec!["w".to_string()]);
         assert!(inspection.frames[3].keys.is_empty());
+    }
+
+    #[test]
+    fn parses_recording_file_times_from_fixed_name() {
+        assert_eq!(
+            parse_recording_file_times("1784311866993-1784311907364.kbdrec"),
+            (Some(1784311866993), Some(1784311907364)),
+        );
+        assert_eq!(parse_recording_file_times("notes.kbdrec"), (None, None));
+    }
+
+    #[test]
+    fn lists_recording_files_recursively() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-list-test-{}",
+            std::process::id()
+        ));
+        let nested = root.join("nested");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&nested).unwrap();
+
+        let snapshot = {
+            let mut session = RecordingSession::new(120, 1000);
+            session.record_input(1008, "w", true);
+            session.add_marker(1016, "sync");
+            session.snapshot()
+        };
+        std::fs::write(
+            nested.join("1000-2000.kbdrec"),
+            encode_kbdrec(&snapshot).unwrap(),
+        )
+        .unwrap();
+        std::fs::write(root.join("ignore.txt"), "not a recording").unwrap();
+
+        let tree = list_recording_files(root.clone()).unwrap();
+        let nested_node = tree
+            .children
+            .iter()
+            .find(|node| node.name == "nested")
+            .unwrap();
+        let file_node = nested_node.children.first().unwrap();
+        let summary = file_node.summary.as_ref().unwrap();
+
+        assert_eq!(file_node.node_type, "file");
+        assert_eq!(summary.file_name, "1000-2000.kbdrec");
+        assert_eq!(summary.start_unix_ms, Some(1000));
+        assert_eq!(summary.end_unix_ms, Some(2000));
+        assert_eq!(summary.fps, 120);
+        assert_eq!(summary.marker_count, 1);
+
+        let _ = std::fs::remove_dir_all(root);
     }
 }
