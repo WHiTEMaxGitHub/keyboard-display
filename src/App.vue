@@ -29,6 +29,7 @@ import { estimateOverlaySize } from "./domain/overlaySize";
 import { effectiveRecordingFps } from "./domain/recordingConfig";
 import {
   INPUT_STATE_EVENT,
+  OVERLAY_ADJUST_MODE_EVENT,
   OVERLAY_CONFIG_EVENT,
   OVERLAY_MEASURED_EVENT,
   OVERLAY_STYLE_EVENT,
@@ -48,7 +49,7 @@ import {
 } from "./domain/recordingHotkeys";
 import type { RecordingConfig } from "./domain/defaultConfig";
 
-type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
+type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center" | "custom";
 
 const config = reactive(createDefaultConfig());
 const activeKeyIds = ref(new Set<string>());
@@ -58,6 +59,8 @@ const profileSourcePath = ref<string | null>(null);
 const profileChanged = ref(false);
 const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
+const customOverlayPosition = ref<{ x: number; y: number } | null>(null);
+const overlayAdjusting = ref(false);
 const recordingDirectory = ref("");
 const defaultRecordingDirectory = ref("");
 const silentRecording = ref(false);
@@ -94,6 +97,10 @@ type OverlayRuntimeConfig = {
   rows: typeof config.rows;
   keys: typeof config.keys;
   style: OverlayStyle;
+};
+
+type OverlayAdjustModePayload = {
+  enabled: boolean;
 };
 
 type RecordingInspectionEvent =
@@ -274,6 +281,17 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
 
   await resizeOverlayWindow(overlayWindow);
 
+  if (position === "custom" && customOverlayPosition.value) {
+    await overlayWindow.show();
+    await overlayWindow.setPosition(
+      new LogicalPosition(customOverlayPosition.value.x, customOverlayPosition.value.y),
+    );
+    isOverlayVisible.value = true;
+    await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+    return;
+  }
+  const presetPosition = position === "custom" ? "center" : position;
+
   const horizontalMargin = 16;
   const topMargin = 16;
   const bottomMargin = 24;
@@ -290,7 +308,7 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
   const yMax =
     workArea.position.y + workArea.size.height - overlaySize.height - bottomMargin + overlaySafePadding;
 
-  const positions: Record<OverlayPosition, LogicalPosition> = {
+  const positions: Record<Exclude<OverlayPosition, "custom">, LogicalPosition> = {
     "top-left": new LogicalPosition(xMin, yMin),
     "top-right": new LogicalPosition(xMax, yMin),
     "bottom-left": new LogicalPosition(xMin, yMax),
@@ -299,9 +317,50 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
   };
 
   await overlayWindow.show();
-  await overlayWindow.setPosition(positions[position]);
+  await overlayWindow.setPosition(positions[presetPosition]);
   isOverlayVisible.value = true;
   await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+}
+
+async function startOverlayAdjust() {
+  const overlayWindow = await ensureOverlayWindow();
+  if (!overlayWindow) {
+    return;
+  }
+
+  overlayAdjusting.value = true;
+  await setOverlayVisible(true, false);
+  await overlayWindow.setIgnoreCursorEvents(false);
+  await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: true });
+}
+
+async function saveOverlayAdjust() {
+  const overlayWindow = await Window.getByLabel("pov");
+  const monitor = (await currentMonitor()) ?? (await primaryMonitor());
+  if (!overlayWindow || !monitor) {
+    return;
+  }
+
+  const physicalPosition = await overlayWindow.outerPosition();
+  const logicalPosition = physicalPosition.toLogical(monitor.scaleFactor);
+  customOverlayPosition.value = {
+    x: logicalPosition.x,
+    y: logicalPosition.y,
+  };
+  overlayPosition.value = "custom";
+  overlayAdjusting.value = false;
+  markProfileChanged();
+  scheduleAppConfigSave();
+  await overlayWindow.setIgnoreCursorEvents(true);
+  await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
+}
+
+async function cancelOverlayAdjust() {
+  const overlayWindow = await Window.getByLabel("pov");
+  overlayAdjusting.value = false;
+  await overlayWindow?.setIgnoreCursorEvents(true);
+  await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
+  await moveOverlay(overlayPosition.value, false);
 }
 
 async function handleOverlayMeasured(measured: OverlayMeasuredPayload) {
@@ -321,6 +380,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
   profileSourcePath.value = sourcePath;
   profileChanged.value = false;
   overlayPosition.value = (loadedConfig.overlay.position as OverlayPosition) ?? "bottom-right";
+  customOverlayPosition.value = loadedConfig.overlay.customPosition ?? null;
 
   applyOverlayLayout(loadedConfig.overlay.layout);
   applyOverlayRows(loadedConfig.overlay.rows);
@@ -376,6 +436,7 @@ async function restoreAppConfig() {
   profileChanged.value = appConfig.currentProfile.changed;
   recentProfiles.value = appConfig.profiles.recentProfiles;
   overlayPosition.value = appConfig.currentProfile.overlay.position as OverlayPosition;
+  customOverlayPosition.value = appConfig.currentProfile.overlay.customPosition ?? null;
   recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
   silentRecording.value = appConfig.recording.silent ?? false;
   recordingHotkeys.value = appConfig.recording.hotkeys;
@@ -430,6 +491,7 @@ async function saveAppConfig() {
         style: config.style,
         rows: config.rows,
         keys: config.keys,
+        customPosition: customOverlayPosition.value,
       },
     },
     recording: {
@@ -464,6 +526,7 @@ async function exportAndApplyConfig() {
     config,
     visible: isOverlayVisible.value,
     position: overlayPosition.value,
+    customPosition: customOverlayPosition.value,
   });
   const path = await save({
     title: "Save keyboard display config",
@@ -494,6 +557,7 @@ async function overwriteAndApplyConfig() {
     config,
     visible: isOverlayVisible.value,
     position: overlayPosition.value,
+    customPosition: customOverlayPosition.value,
   });
   await invoke("save_config_file", { path: profileSourcePath.value, contents: json });
   profileChanged.value = false;
@@ -952,6 +1016,7 @@ onUnmounted(() => {
       :recording-inspection="recordingInspection"
       :recording-inspection-error="recordingInspectionError"
       :overlay-position="overlayPosition"
+      :overlay-adjusting="overlayAdjusting"
       :recording-hotkeys="recordingHotkeys"
       :hotkey-capture-target="hotkeyCaptureTarget"
       @update-overlay-style="updateOverlayStyle"
@@ -972,6 +1037,9 @@ onUnmounted(() => {
       @inspect-recording-path="inspectRecordingPath"
       @update-recording-hotkey-mode="updateRecordingHotkeyMode"
       @begin-hotkey-capture="beginHotkeyCapture"
+      @start-overlay-adjust="startOverlayAdjust"
+      @save-overlay-adjust="saveOverlayAdjust"
+      @cancel-overlay-adjust="cancelOverlayAdjust"
       @move-overlay="moveOverlay"
     />
   </div>

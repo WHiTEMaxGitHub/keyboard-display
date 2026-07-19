@@ -22,6 +22,10 @@ export type CurrentProfile = {
     style: AppConfig["style"];
     rows: AppConfig["rows"];
     keys: AppConfig["keys"];
+    customPosition?: {
+      x: number;
+      y: number;
+    } | null;
   };
 };
 
@@ -80,6 +84,7 @@ export function buildAppConfigFile({
         layout: currentProfile.overlay.layout,
         style: currentProfile.overlay.style,
         rows: currentProfile.overlay.rows,
+        customPosition: currentProfile.overlay.customPosition ?? null,
       },
     },
     recording,

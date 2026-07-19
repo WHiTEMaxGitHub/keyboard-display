@@ -1,8 +1,12 @@
 <script setup lang="ts">
-import { emitTo } from "@tauri-apps/api/event";
+import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { nextTick, onMounted, ref, watch } from "vue";
-import { OVERLAY_MEASURED_EVENT, type OverlayMeasuredPayload } from "../domain/inputEvents";
+import { nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  OVERLAY_ADJUST_MODE_EVENT,
+  OVERLAY_MEASURED_EVENT,
+  type OverlayMeasuredPayload,
+} from "../domain/inputEvents";
 import type { KeyBinding, OverlayLayout, OverlayRow, OverlayStyle } from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
 
@@ -16,12 +20,24 @@ const props = defineProps<{
 }>();
 
 const overlayRoot = ref<HTMLElement | null>(null);
+const adjusting = ref(false);
+let unlistenAdjustMode: UnlistenFn | undefined;
 
 onMounted(async () => {
   const currentWindow = getCurrentWindow();
   await currentWindow.setVisibleOnAllWorkspaces(true);
   await currentWindow.setIgnoreCursorEvents(true);
+  unlistenAdjustMode = await listen<{ enabled: boolean }>(
+    OVERLAY_ADJUST_MODE_EVENT,
+    (event) => {
+      adjusting.value = event.payload.enabled;
+    },
+  );
   await reportMeasuredSize();
+});
+
+onUnmounted(() => {
+  unlistenAdjustMode?.();
 });
 
 watch(
@@ -52,10 +68,22 @@ function nextAnimationFrame() {
     requestAnimationFrame(() => resolve());
   });
 }
+
+async function startDrag() {
+  if (!adjusting.value) {
+    return;
+  }
+
+  await getCurrentWindow().startDragging();
+}
 </script>
 
 <template>
-  <main ref="overlayRoot" class="overlay-root">
+  <main
+    ref="overlayRoot"
+    :class="['overlay-root', { adjusting }]"
+    @pointerdown="startDrag"
+  >
     <PovOverlay
       :layout="layout"
       :rows="rows"
@@ -75,5 +103,11 @@ function nextAnimationFrame() {
   justify-items: center;
   padding: 14px;
   background: transparent;
+}
+
+.overlay-root.adjusting {
+  cursor: move;
+  outline: 2px solid rgba(37, 211, 102, 0.75);
+  outline-offset: -2px;
 }
 </style>

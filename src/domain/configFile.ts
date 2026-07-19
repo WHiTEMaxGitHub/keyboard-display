@@ -18,6 +18,10 @@ export type OverlayConfigFile = {
   overlay: {
     visible?: boolean;
     position?: string;
+    customPosition?: {
+      x: number;
+      y: number;
+    } | null;
     layout: OverlayLayout;
     style: OverlayStyle;
     rows: OverlayRow[];
@@ -55,11 +59,13 @@ export function buildConfigFileJson({
   config,
   visible,
   position,
+  customPosition = null,
 }: {
   name: string;
   config: AppConfig;
   visible: boolean;
   position: string;
+  customPosition?: { x: number; y: number } | null;
 }): string {
   return `${JSON.stringify(
     {
@@ -68,6 +74,7 @@ export function buildConfigFileJson({
       overlay: {
         visible,
         position,
+        customPosition,
         layout: config.layout,
         style: config.style,
         rows: config.rows,
