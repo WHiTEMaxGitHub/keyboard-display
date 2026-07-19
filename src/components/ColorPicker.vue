@@ -30,6 +30,8 @@ const emit = defineEmits<{
 }>();
 
 const pickerOpen = ref(false);
+const colorTrigger = ref<HTMLButtonElement | null>(null);
+const popoverDirection = ref<"down" | "up">("down");
 const hexDraft = ref(normalizeHexColor(props.value));
 
 const rgb = computed(() => hexToRgb(hexDraft.value));
@@ -42,7 +44,23 @@ watch(
 );
 
 function togglePicker() {
+  if (!pickerOpen.value) {
+    updatePopoverDirection();
+  }
   pickerOpen.value = !pickerOpen.value;
+}
+
+function updatePopoverDirection() {
+  const trigger = colorTrigger.value;
+  if (!trigger) {
+    popoverDirection.value = "down";
+    return;
+  }
+
+  const rect = trigger.getBoundingClientRect();
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const spaceAbove = rect.top;
+  popoverDirection.value = spaceBelow < 300 && spaceAbove > spaceBelow ? "up" : "down";
 }
 
 function updateHex(event: Event) {
@@ -77,6 +95,7 @@ function commitColor(color: string) {
 <template>
   <div class="color-picker">
     <button
+      ref="colorTrigger"
       class="color-trigger"
       type="button"
       :aria-expanded="pickerOpen"
@@ -87,7 +106,10 @@ function commitColor(color: string) {
       <strong>{{ normalizeHexColor(value) }}</strong>
     </button>
     <Transition name="picker-popover">
-      <div v-if="pickerOpen" class="picker-panel">
+      <div
+        v-if="pickerOpen"
+        :class="['picker-panel', `picker-panel-${popoverDirection}`]"
+      >
         <label class="hex-row">
           <span>HEX</span>
           <input
@@ -203,17 +225,26 @@ function commitColor(color: string) {
 
 .picker-panel {
   position: absolute;
-  top: calc(100% + 8px);
   left: 0;
   z-index: 30;
   display: grid;
   gap: 12px;
   width: max(100%, 260px);
+  max-height: min(360px, calc(100vh - 32px));
+  overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
   padding: 12px;
+}
+
+.picker-panel-down {
+  top: calc(100% + 8px);
+}
+
+.picker-panel-up {
+  bottom: calc(100% + 8px);
 }
 
 .picker-popover-enter-active,
@@ -226,13 +257,21 @@ function commitColor(color: string) {
 .picker-popover-enter-from,
 .picker-popover-leave-to {
   opacity: 0;
-  transform: translateY(-6px) scale(0.98);
+  transform: translateY(var(--popover-enter-y, -6px)) scale(0.98);
 }
 
 .picker-popover-enter-to,
 .picker-popover-leave-from {
   opacity: 1;
   transform: translateY(0) scale(1);
+}
+
+.picker-panel-down {
+  --popover-enter-y: -6px;
+}
+
+.picker-panel-up {
+  --popover-enter-y: 6px;
 }
 
 .hex-row,
