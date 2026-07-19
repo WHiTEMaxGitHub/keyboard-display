@@ -129,18 +129,26 @@ function updateOpacity(event: Event) {
 
 function updateBackgroundRadius(event: Event) {
   const backgroundRadius = Number((event.target as HTMLInputElement).value);
-  emit("update-overlay-style", { ...props.config.style, backgroundRadius });
-}
-
-function updateBackgroundMode(event: Event) {
-  const backgroundMode = (event.target as HTMLSelectElement).value as OverlayStyle["backgroundMode"];
-  emit("update-overlay-style", { ...props.config.style, backgroundMode });
+  emit("update-overlay-style", {
+    ...props.config.style,
+    backgroundMode: "panel",
+    backgroundRadius,
+  });
 }
 
 function updateIdleKeyVisibility(event: Event) {
   const idleKeyVisibility = (event.target as HTMLSelectElement)
     .value as OverlayStyle["idleKeyVisibility"];
   emit("update-overlay-style", { ...props.config.style, idleKeyVisibility });
+}
+
+function updateBackplateTransparent(event: Event) {
+  const transparent = (event.target as HTMLInputElement).checked;
+  emit("update-overlay-style", {
+    ...props.config.style,
+    backgroundMode: "panel",
+    backgroundColor: setHexAlpha(props.config.style.backgroundColor, transparent ? 0 : 255),
+  });
 }
 
 function updateStyleColor(
@@ -152,8 +160,10 @@ function updateStyleColor(
     | "backgroundColor",
   color: string,
 ) {
+  const backgroundMode = field === "backgroundColor" ? "panel" : props.config.style.backgroundMode;
   emit("update-overlay-style", {
     ...props.config.style,
+    backgroundMode,
     [field]: normalizeHexColor(color, props.config.style[field]),
   });
 }
@@ -164,6 +174,19 @@ function rememberColor(color: string) {
     normalizedColor,
     ...recentColors.value.filter((recentColor) => recentColor !== normalizedColor),
   ].slice(0, 8);
+}
+
+function isBackplateTransparent() {
+  const normalizedColor = normalizeHexColor(props.config.style.backgroundColor);
+  return normalizedColor.length === 9 && normalizedColor.endsWith("00");
+}
+
+function setHexAlpha(color: string, alpha: number) {
+  const normalizedColor = normalizeHexColor(color);
+  const rgb = normalizedColor.slice(0, 7);
+  return `${rgb}${Math.min(255, Math.max(0, Math.round(alpha)))
+    .toString(16)
+    .padStart(2, "0")}`;
 }
 
 function updateAlwaysOnTop(event: Event) {
@@ -410,17 +433,6 @@ function updateRenderMarkers(event: Event) {
             />
             <span class="hint">Controls the whole POV overlay opacity.</span>
           </label>
-          <label class="settings-row">
-            <span>Background</span>
-            <select
-              class="select-control compact-select"
-              :value="config.style.backgroundMode"
-              @change="updateBackgroundMode"
-            >
-              <option value="transparent">Transparent</option>
-              <option value="panel">Rounded panel</option>
-            </select>
-          </label>
           <div class="appearance-control-grid">
             <label>
               Backplate radius
@@ -483,6 +495,14 @@ function updateRenderMarkers(event: Event) {
               @update:value="updateStyleColor('backgroundColor', $event)"
               @remember-color="rememberColor"
             />
+            <label class="backplate-transparent-toggle">
+              <input
+                :checked="isBackplateTransparent()"
+                type="checkbox"
+                @change="updateBackplateTransparent"
+              />
+              Transparent backplate
+            </label>
           </div>
         </article>
       </section>
@@ -988,6 +1008,23 @@ input[type="range"] {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+}
+
+.backplate-transparent-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  margin: 0;
+  color: #c9d1da;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.backplate-transparent-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: #25d366;
 }
 
 select {
