@@ -184,6 +184,7 @@ profile files should prefer `gap` for clarity.
   "maxFps": 1000,
   "syncFeedbackEnabled": true,
   "syncFeedbackDurationMs": 420,
+  "filenameTemplate": "${start}-${end}",
   "formatExtension": ".kbdrec",
   "primaryArtifact": "input-binary"
 }
@@ -198,6 +199,7 @@ profile files should prefer `gap` for clarity.
 | `maxFps` | number | Maximum allowed capture frame rate. Current default is `1000`. |
 | `syncFeedbackEnabled` | boolean | Whether sync markers should briefly flash the POV overlay border. |
 | `syncFeedbackDurationMs` | number | Border flash duration in milliseconds. |
+| `filenameTemplate` | string | Recording file name template. Supported variables: `${start}`, `${end}`, `${profileName}`, `${fps}`. |
 | `formatExtension` | string | Recording extension. Current value is `.kbdrec`. |
 | `primaryArtifact` | string | Recording strategy. Current value is `input-binary`. |
 
@@ -287,6 +289,7 @@ config may contain local absolute paths.
     "maxFps": 1000,
     "syncFeedbackEnabled": true,
     "syncFeedbackDurationMs": 420,
+    "filenameTemplate": "${start}-${end}",
     "formatExtension": ".kbdrec",
     "primaryArtifact": "input-binary"
   },

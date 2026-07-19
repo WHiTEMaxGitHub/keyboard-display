@@ -30,6 +30,7 @@ const estimatedRecordingBytesPerSecond = computed(() =>
 );
 const customFpsDraft = ref(String(props.config.recording.customFps));
 const syncFeedbackDurationDraft = ref(String(props.config.recording.syncFeedbackDurationMs));
+const filenameTemplateDraft = ref(props.config.recording.filenameTemplate);
 
 watch(
   () => props.config.recording.customFps,
@@ -42,6 +43,13 @@ watch(
   () => props.config.recording.syncFeedbackDurationMs,
   (durationMs) => {
     syncFeedbackDurationDraft.value = String(durationMs);
+  },
+);
+
+watch(
+  () => props.config.recording.filenameTemplate,
+  (filenameTemplate) => {
+    filenameTemplateDraft.value = filenameTemplate;
   },
 );
 
@@ -116,6 +124,19 @@ function commitCustomFps() {
     ...props.config.recording,
     customFps,
     customFpsEnabled: true,
+  });
+}
+
+function updateFilenameTemplate(event: Event) {
+  filenameTemplateDraft.value = (event.target as HTMLInputElement).value;
+}
+
+function commitFilenameTemplate() {
+  const filenameTemplate = filenameTemplateDraft.value.trim() || "${start}-${end}";
+  filenameTemplateDraft.value = filenameTemplate;
+  emit("update-recording-config", {
+    ...props.config.recording,
+    filenameTemplate,
   });
 }
 
@@ -273,6 +294,20 @@ function formatHotkey(keys: string[]) {
       <span>Primary artifact</span>
       <strong>{{ config.recording.formatExtension }}</strong>
     </div>
+    <label class="filename-template-row">
+      <span>Filename template</span>
+      <input
+        :value="filenameTemplateDraft"
+        type="text"
+        placeholder="${start}-${end}"
+        @blur="commitFilenameTemplate"
+        @change="commitFilenameTemplate"
+        @input="updateFilenameTemplate"
+      />
+    </label>
+    <p class="quiet">
+      Variables: ${start}, ${end}, ${profileName}, ${fps}
+    </p>
     <p class="quiet">
       Input frames are stored as compact binary state, then replayed for
       rendering or export.
@@ -388,6 +423,32 @@ function formatHotkey(keys: string[]) {
   background: #202630;
   color: #dfe5ec;
   padding: 0 10px;
+}
+
+.filename-template-row {
+  display: grid;
+  gap: 7px;
+  margin: 16px 0 0;
+  color: #c9d1da;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.filename-template-row input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  font: inherit;
+  padding: 0 10px;
+}
+
+.filename-template-row input:focus {
+  border-color: rgba(37, 211, 102, 0.55);
+  outline: 2px solid rgba(37, 211, 102, 0.14);
+  outline-offset: 0;
 }
 
 .fps-input:disabled {

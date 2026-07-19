@@ -1,4 +1,5 @@
 import type { RecordingConfig } from "./defaultConfig";
+import { sanitizeRecordingFilenameTemplate } from "./recordingFilename";
 
 export function clampRecordingFps(fps: number, maxFps: number): number {
   return Math.min(Math.max(Math.round(fps), 1), maxFps);
@@ -22,5 +23,6 @@ export function normalizeRecordingConfig(recording: RecordingConfig): RecordingC
     maxFps,
     syncFeedbackEnabled: recording.syncFeedbackEnabled ?? true,
     syncFeedbackDurationMs: Math.max(100, Math.round(recording.syncFeedbackDurationMs ?? 420)),
+    filenameTemplate: sanitizeRecordingFilenameTemplate(recording.filenameTemplate ?? ""),
   };
 }

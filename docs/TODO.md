@@ -161,7 +161,7 @@
   - It should not rename the underlying `.kbdrec` file.
   - Use the sidecar metadata file as the storage location.
 
-- [ ] Add configurable recording filename templates later.
+- [x] Add configurable recording filename templates later.
   - Support a VS Code-like `${...}` template style.
   - Candidate variables:
     - `${start}`

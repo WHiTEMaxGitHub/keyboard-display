@@ -98,8 +98,17 @@ fn suppress_recording_keys(
 fn stop_recording(
     state: tauri::State<'_, RecordingManager>,
     output_dir: std::path::PathBuf,
+    filename_template: String,
+    profile_name: String,
+    fps: u16,
 ) -> Result<recording::StopRecordingResult, String> {
-    state.stop(output_dir, recording::unix_now_ms()?)
+    state.stop_with_filename_template(
+        output_dir,
+        recording::unix_now_ms()?,
+        &filename_template,
+        &profile_name,
+        fps,
+    )
 }
 
 #[tauri::command]

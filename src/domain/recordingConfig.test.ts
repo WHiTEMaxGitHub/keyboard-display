@@ -21,6 +21,7 @@ describe("recording config", () => {
       maxFps: 1000,
       syncFeedbackEnabled: true,
       syncFeedbackDurationMs: 420,
+      filenameTemplate: "${start}-${end}",
       formatExtension: ".kbdrec",
       primaryArtifact: "input-binary",
     });
@@ -42,5 +43,6 @@ describe("recording config", () => {
 
     expect(recording.syncFeedbackEnabled).toBe(true);
     expect(recording.syncFeedbackDurationMs).toBe(420);
+    expect(recording.filenameTemplate).toBe("${start}-${end}");
   });
 });

@@ -253,6 +253,17 @@ impl RecordingManager {
     }
 
     pub fn stop(&self, output_dir: PathBuf, now_ms: u64) -> Result<StopRecordingResult, String> {
+        self.stop_with_filename_template(output_dir, now_ms, "${start}-${end}", "", 0)
+    }
+
+    pub fn stop_with_filename_template(
+        &self,
+        output_dir: PathBuf,
+        now_ms: u64,
+        filename_template: &str,
+        profile_name: &str,
+        fps: u16,
+    ) -> Result<StopRecordingResult, String> {
         let mut session = self.session.lock().map_err(|error| error.to_string())?;
         let Some(active_session) = session.take() else {
             return Err("recording has not started".to_string());
@@ -260,16 +271,81 @@ impl RecordingManager {
 
         std::fs::create_dir_all(&output_dir).map_err(|error| error.to_string())?;
 
-        let path = output_dir.join(format!(
-            "{}-{}.kbdrec",
-            active_session.start_unix_ms, now_ms
-        ));
+        let file_name = format_recording_file_name(
+            filename_template,
+            active_session.start_unix_ms,
+            now_ms,
+            profile_name,
+            if fps == 0 {
+                active_session.session.fps
+            } else {
+                fps
+            },
+        );
+        let path = output_dir.join(file_name);
         let contents = binary::encode_kbdrec(&active_session.session.snapshot())?;
         std::fs::write(&path, contents).map_err(|error| error.to_string())?;
 
         Ok(StopRecordingResult {
             path: path.to_string_lossy().to_string(),
         })
+    }
+}
+
+pub fn format_recording_file_name(
+    filename_template: &str,
+    start_unix_ms: u64,
+    end_unix_ms: u64,
+    profile_name: &str,
+    fps: u16,
+) -> String {
+    let template = if filename_template.trim().is_empty() {
+        "${start}-${end}"
+    } else {
+        filename_template.trim()
+    };
+    let expanded = template
+        .replace("${start}", &start_unix_ms.to_string())
+        .replace("${end}", &end_unix_ms.to_string())
+        .replace("${profileName}", profile_name)
+        .replace("${fps}", &fps.to_string());
+    let file_name = sanitize_file_name(&expanded);
+
+    if file_name.to_ascii_lowercase().ends_with(".kbdrec") {
+        file_name
+    } else {
+        format!("{file_name}.kbdrec")
+    }
+}
+
+fn sanitize_file_name(file_name: &str) -> String {
+    let mut sanitized = String::new();
+    let mut previous_dash = false;
+
+    for character in file_name.chars() {
+        let next = if character == '/' || character == '\\' || character.is_control() {
+            '-'
+        } else {
+            character
+        };
+
+        if next == '-' {
+            if previous_dash {
+                continue;
+            }
+            previous_dash = true;
+        } else {
+            previous_dash = false;
+        }
+
+        sanitized.push(next);
+    }
+
+    let sanitized = sanitized.trim().to_string();
+    if sanitized.is_empty() {
+        "recording".to_string()
+    } else {
+        sanitized
     }
 }
 
@@ -568,10 +644,10 @@ fn event_frame(event: &RecordingEvent) -> u64 {
 mod tests {
     use super::{
         binary::{decode_kbdrec, encode_kbdrec},
-        create_recording_folder, inspect_kbdrec, list_recording_files, parse_recording_file_times,
-        read_recording_metadata, sample_frames, save_recording_metadata, RecordingEvent,
-        RecordingManager, RecordingMarkerNote, RecordingMetadata, RecordingSession,
-        RecordingSnapshot,
+        create_recording_folder, format_recording_file_name, inspect_kbdrec, list_recording_files,
+        parse_recording_file_times, read_recording_metadata, sample_frames,
+        save_recording_metadata, RecordingEvent, RecordingManager, RecordingMarkerNote,
+        RecordingMetadata, RecordingSession, RecordingSnapshot,
     };
 
     #[test]
@@ -766,6 +842,44 @@ mod tests {
         assert_eq!(decoded.frames.len(), 2);
         assert!(decoded.frames[0].keys.is_empty());
         assert_eq!(decoded.frames[1].keys, vec!["w"]);
+
+        let _ = std::fs::remove_dir_all(output_dir);
+    }
+
+    #[test]
+    fn formats_recording_file_name_from_template() {
+        assert_eq!(
+            format_recording_file_name("${profileName}-${fps}-${start}", 1000, 2000, "Aim", 120),
+            "Aim-120-1000.kbdrec",
+        );
+        assert_eq!(
+            format_recording_file_name("../${profileName}\n${end}", 1000, 2000, "CS/POV", 60),
+            "..-CS-POV-2000.kbdrec",
+        );
+    }
+
+    #[test]
+    fn manager_uses_filename_template_when_writing_recording() {
+        let output_dir = std::env::temp_dir().join(format!(
+            "keyboard-display-recording-template-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&output_dir);
+        let manager = RecordingManager::new();
+
+        manager.start(60, 1000, 1000).unwrap();
+        manager.record_input(1016, "w", true).unwrap();
+        let result = manager
+            .stop_with_filename_template(
+                output_dir.clone(),
+                1200,
+                "${profileName}-${fps}-${start}",
+                "Aim",
+                60,
+            )
+            .unwrap();
+
+        assert!(result.path.ends_with("Aim-60-1000.kbdrec"));
 
         let _ = std::fs::remove_dir_all(output_dir);
     }

@@ -144,7 +144,8 @@
     "customFps": 600,
     "maxFps": 1000,
     "syncFeedbackEnabled": true,
-    "syncFeedbackDurationMs": 420
+    "syncFeedbackDurationMs": 420,
+    "filenameTemplate": "${start}-${end}"
   },
   "export": {
     "defaultFormat": "webm",

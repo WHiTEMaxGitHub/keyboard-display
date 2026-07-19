@@ -59,6 +59,7 @@ export type RecordingConfig = {
   maxFps: number;
   syncFeedbackEnabled: boolean;
   syncFeedbackDurationMs: number;
+  filenameTemplate: string;
   formatExtension: ".kbdrec";
   primaryArtifact: "input-binary";
 };
@@ -231,6 +232,7 @@ export function createDefaultConfig(): AppConfig {
       maxFps: 1000,
       syncFeedbackEnabled: true,
       syncFeedbackDurationMs: 420,
+      filenameTemplate: "${start}-${end}",
       formatExtension: ".kbdrec",
       primaryArtifact: "input-binary",
     },

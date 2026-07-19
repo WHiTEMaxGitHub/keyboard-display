@@ -546,6 +546,9 @@ async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
 
   const result = await invoke<{ path: string }>("stop_recording", {
     outputDir: await resolveRecordingDirectory(),
+    filenameTemplate: config.recording.filenameTemplate,
+    profileName: profileName.value,
+    fps: effectiveRecordingFps(config.recording),
   });
   isRecording.value = false;
   activeRecordingHotkeys.value = null;
