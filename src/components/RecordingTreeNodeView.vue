@@ -49,6 +49,47 @@ function toggleExpanded() {
   expanded.value = !expanded.value;
 }
 
+function collapseDuration(element: HTMLElement) {
+  return `${Math.min(420, Math.max(180, element.scrollHeight * 1.25))}ms`;
+}
+
+function setCollapseDuration(element: HTMLElement) {
+  element.style.setProperty("--collapse-duration", collapseDuration(element));
+}
+
+function beforeEnter(element: Element) {
+  const el = element as HTMLElement;
+  setCollapseDuration(el);
+  el.style.height = "0";
+}
+
+function enter(element: Element) {
+  const el = element as HTMLElement;
+  el.style.height = `${el.scrollHeight}px`;
+}
+
+function afterEnter(element: Element) {
+  const el = element as HTMLElement;
+  el.style.height = "auto";
+}
+
+function beforeLeave(element: Element) {
+  const el = element as HTMLElement;
+  setCollapseDuration(el);
+  el.style.height = `${el.scrollHeight}px`;
+  void el.offsetHeight;
+}
+
+function leave(element: Element) {
+  const el = element as HTMLElement;
+  el.style.height = "0";
+}
+
+function afterLeave(element: Element) {
+  const el = element as HTMLElement;
+  el.style.height = "";
+}
+
 function formatFileSize(bytes: number) {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -82,7 +123,15 @@ function displayTitle(node: RecordingTreeNode) {
         <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
         <strong>{{ node.name }}</strong>
       </button>
-      <Transition name="tree-collapse">
+      <Transition
+        name="tree-collapse"
+        @before-enter="beforeEnter"
+        @enter="enter"
+        @after-enter="afterEnter"
+        @before-leave="beforeLeave"
+        @leave="leave"
+        @after-leave="afterLeave"
+      >
         <div v-show="expanded && node.children.length > 0" class="tree-children-shell">
           <div class="tree-children">
             <RecordingTreeNodeView
@@ -193,11 +242,12 @@ function displayTitle(node: RecordingTreeNode) {
 
 .tree-children-shell {
   clip-path: inset(0 0 0 0);
+  height: auto;
   overflow: hidden;
   opacity: 1;
   transform: translateY(0) scaleY(1);
   transform-origin: top;
-  will-change: opacity, transform, clip-path;
+  will-change: height, opacity, transform, clip-path;
 }
 
 .tree-children {
@@ -212,9 +262,10 @@ function displayTitle(node: RecordingTreeNode) {
 .tree-collapse-enter-active,
 .tree-collapse-leave-active {
   transition:
-    opacity 180ms ease,
-    transform 240ms cubic-bezier(0.16, 1, 0.3, 1),
-    clip-path 240ms cubic-bezier(0.16, 1, 0.3, 1);
+    height var(--collapse-duration, 240ms) cubic-bezier(0.16, 1, 0.3, 1),
+    opacity calc(var(--collapse-duration, 240ms) * 0.75) ease,
+    transform var(--collapse-duration, 240ms) cubic-bezier(0.16, 1, 0.3, 1),
+    clip-path var(--collapse-duration, 240ms) cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .tree-collapse-enter-from,
