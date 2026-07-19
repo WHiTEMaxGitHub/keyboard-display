@@ -2,8 +2,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
+  LogicalPosition,
   LogicalSize,
-  PhysicalPosition,
   Window,
   currentMonitor,
   primaryMonitor,
@@ -268,19 +268,22 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
   await resizeOverlayWindow(overlayWindow);
 
   const margin = 24;
-  const overlaySize = await overlayWindow.outerSize();
-  const workArea = monitor.workArea;
+  const overlaySize = estimateOverlaySize(config.layout, config.rows, config.style);
+  const workArea = {
+    position: monitor.workArea.position.toLogical(monitor.scaleFactor),
+    size: monitor.workArea.size.toLogical(monitor.scaleFactor),
+  };
   const xMin = workArea.position.x + margin;
   const yMin = workArea.position.y + margin;
   const xMax = workArea.position.x + workArea.size.width - overlaySize.width - margin;
   const yMax = workArea.position.y + workArea.size.height - overlaySize.height - margin;
 
-  const positions: Record<OverlayPosition, PhysicalPosition> = {
-    "top-left": new PhysicalPosition(xMin, yMin),
-    "top-right": new PhysicalPosition(xMax, yMin),
-    "bottom-left": new PhysicalPosition(xMin, yMax),
-    "bottom-right": new PhysicalPosition(xMax, yMax),
-    center: new PhysicalPosition((xMin + xMax) / 2, (yMin + yMax) / 2),
+  const positions: Record<OverlayPosition, LogicalPosition> = {
+    "top-left": new LogicalPosition(xMin, yMin),
+    "top-right": new LogicalPosition(xMax, yMin),
+    "bottom-left": new LogicalPosition(xMin, yMax),
+    "bottom-right": new LogicalPosition(xMax, yMax),
+    center: new LogicalPosition((xMin + xMax) / 2, (yMin + yMax) / 2),
   };
 
   await overlayWindow.show();
