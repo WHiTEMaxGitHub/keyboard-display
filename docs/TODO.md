@@ -166,7 +166,12 @@
   - Candidate variables:
     - `${start}`
     - `${end}`
+    - `${startDate}`
+    - `${startTime}`
+    - `${endTime}`
+    - `${duration}`
     - `${profileName}`
+    - `${profileSlug}`
     - `${fps}`
   - Keep this lower priority than the browser and sidecar metadata.
 

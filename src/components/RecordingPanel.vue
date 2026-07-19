@@ -306,7 +306,8 @@ function formatHotkey(keys: string[]) {
       />
     </label>
     <p class="quiet">
-      Variables: ${start}, ${end}, ${profileName}, ${fps}
+      Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime},
+      ${duration}, ${profileName}, ${profileSlug}, ${fps}
     </p>
     <p class="quiet">
       Input frames are stored as compact binary state, then replayed for

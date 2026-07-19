@@ -30,6 +30,21 @@ describe("recording filename templates", () => {
     ).toBe("Aim Warmup-120-1000.kbdrec");
   });
 
+  it("expands readable time and slug variables", () => {
+    const start = new Date(2026, 6, 19, 16, 42, 8).getTime();
+    const end = start + 40_000;
+
+    expect(
+      formatRecordingFileName({
+        template: "${profileSlug}-${startDate}-${startTime}-${endTime}-${duration}-${fps}fps",
+        start,
+        end,
+        profileName: "CS POV / Aim",
+        fps: 120,
+      }),
+    ).toBe("cs-pov-aim-2026-07-19-16-42-08-16-42-48-00-00-40-120fps.kbdrec");
+  });
+
   it("removes path separators and control characters", () => {
     expect(
       formatRecordingFileName({
