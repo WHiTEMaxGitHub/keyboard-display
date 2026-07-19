@@ -20,6 +20,10 @@ type RecordingFileSummary = {
   fps: number;
   frameCount: number;
   markerCount: number;
+  markers: Array<{
+    frame: number;
+    name: string;
+  }>;
   metadata: RecordingMetadata;
 };
 
@@ -127,8 +131,34 @@ function hasFileDetails(summary: RecordingFileSummary | null) {
     Boolean(summary.metadata.description) ||
     summary.metadata.tags.length > 0 ||
     summary.metadata.markerNotes.length > 0 ||
+    summary.markers.length > 0 ||
     summary.markerCount > 0
   );
+}
+
+function markerNoteFor(summary: RecordingFileSummary, marker: { frame: number; name: string }) {
+  return summary.metadata.markerNotes.find(
+    (markerNote) => markerNote.frame === marker.frame && markerNote.name === marker.name,
+  );
+}
+
+function formatMarkerTime(frame: number, fps: number) {
+  const safeFps = Math.max(Math.floor(fps), 1);
+  const totalSeconds = Math.floor(frame / safeFps);
+  const frameInSecond = frame % safeFps;
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}:${padFrame(frameInSecond, safeFps)} @ ${safeFps}fps`;
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function padFrame(frame: number, fps: number) {
+  return String(frame).padStart(String(Math.max(fps - 1, 0)).length, "0");
 }
 </script>
 
@@ -213,13 +243,14 @@ function hasFileDetails(summary: RecordingFileSummary | null) {
               <span>{{ node.summary.markerCount }} markers</span>
             </div>
             <div
-              v-for="markerNote in node.summary.metadata.markerNotes"
-              :key="`${markerNote.frame}-${markerNote.name}-${markerNote.note}`"
+              v-for="marker in node.summary.markers"
+              :key="`${marker.frame}-${marker.name}`"
               class="marker-note-row"
             >
-              <strong>{{ markerNote.name || "marker" }}</strong>
-              <span>frame {{ markerNote.frame }}</span>
-              <span>{{ markerNote.note }}</span>
+              <strong>{{ marker.name || "marker" }}</strong>
+              <span>frame {{ marker.frame }}</span>
+              <span>{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
+              <span>{{ markerNoteFor(node.summary, marker)?.note || "" }}</span>
             </div>
           </div>
         </div>
@@ -368,7 +399,11 @@ function hasFileDetails(summary: RecordingFileSummary | null) {
 }
 
 .marker-note-row {
-  grid-template-columns: minmax(80px, 0.7fr) minmax(74px, auto) minmax(120px, 1fr);
+  grid-template-columns:
+    minmax(80px, 0.8fr)
+    minmax(74px, auto)
+    minmax(160px, auto)
+    minmax(120px, 1fr);
   align-items: start;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 8px;

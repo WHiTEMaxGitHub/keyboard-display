@@ -46,6 +46,10 @@ type RecordingFileSummary = {
   fps: number;
   frameCount: number;
   markerCount: number;
+  markers: Array<{
+    frame: number;
+    name: string;
+  }>;
   metadata: RecordingMetadata;
 };
 

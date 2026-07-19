@@ -64,7 +64,15 @@ pub struct RecordingFileSummary {
     pub fps: u16,
     pub frame_count: u64,
     pub marker_count: usize,
+    pub markers: Vec<RecordingMarkerSummary>,
     pub metadata: RecordingMetadata,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingMarkerSummary {
+    pub frame: u64,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -655,6 +663,14 @@ fn summarize_recording_file(path: &PathBuf) -> Result<RecordingFileSummary, Stri
         fps: decoded.fps,
         frame_count: decoded.frame_count,
         marker_count: decoded.markers.len(),
+        markers: decoded
+            .markers
+            .into_iter()
+            .map(|marker| RecordingMarkerSummary {
+                frame: marker.frame,
+                name: marker.name,
+            })
+            .collect(),
         metadata: read_recording_metadata(path.clone())?,
     })
 }
@@ -1115,6 +1131,8 @@ mod tests {
         assert_eq!(summary.end_unix_ms, Some(2000));
         assert_eq!(summary.fps, 120);
         assert_eq!(summary.marker_count, 1);
+        assert_eq!(summary.markers[0].frame, 2);
+        assert_eq!(summary.markers[0].name, "sync");
 
         let _ = std::fs::remove_dir_all(root);
     }
