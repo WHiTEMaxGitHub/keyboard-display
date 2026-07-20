@@ -181,6 +181,9 @@ async function updateOverlayStyle(style: OverlayStyle) {
   await resizeOverlayWindow(overlayWindow);
   await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
   await emitTo<OverlayStyle>("pov", OVERLAY_STYLE_EVENT, style);
+  if (isOverlayVisible.value && overlayPosition.value !== "custom") {
+    await moveOverlay(overlayPosition.value, false);
+  }
 }
 
 async function resizeOverlayWindow(overlayWindow?: Window | null) {
