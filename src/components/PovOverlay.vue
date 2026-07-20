@@ -20,6 +20,10 @@ const props = defineProps<{
   adjusting?: boolean;
 }>();
 
+const emit = defineEmits<{
+  "start-drag": [];
+}>();
+
 const platformKey = computed(() => detectPlatformKey());
 
 function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: OverlayStyle) {
@@ -65,6 +69,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
         { 'sync-feedback-active': syncFeedbackActive },
         { adjusting },
       ]"
+      @mousedown="adjusting && emit('start-drag')"
     >
       <div class="backplate" aria-hidden="true"></div>
 

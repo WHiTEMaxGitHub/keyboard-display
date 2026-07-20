@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { onMounted, onUnmounted, ref } from "vue";
-import { OVERLAY_ADJUST_MODE_EVENT } from "../domain/inputEvents";
+import { OVERLAY_ADJUST_MODE_EVENT, OVERLAY_READY_EVENT } from "../domain/inputEvents";
 import type { KeyBinding, OverlayLayout, OverlayRow, OverlayStyle } from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
 
@@ -32,6 +32,7 @@ onMounted(async () => {
       await setClickThrough(!event.payload.enabled);
     },
   );
+  await emitTo("config", OVERLAY_READY_EVENT);
 });
 
 onUnmounted(() => {
@@ -40,6 +41,16 @@ onUnmounted(() => {
 
 function clearSelection() {
   window.getSelection()?.removeAllRanges();
+}
+
+async function startDrag() {
+  if (!adjusting.value) {
+    return;
+  }
+
+  clearSelection();
+  await setClickThrough(false);
+  await getCurrentWindow().startDragging();
 }
 
 async function setClickThrough(enabled: boolean) {
@@ -66,6 +77,7 @@ async function setClickThrough(enabled: boolean) {
       :overlay-style="overlayStyle"
       :sync-feedback-active="syncFeedbackActive"
       :adjusting="adjusting"
+      @start-drag="startDrag"
     />
   </main>
 </template>

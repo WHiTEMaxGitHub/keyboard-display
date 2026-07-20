@@ -31,6 +31,7 @@ import {
   INPUT_STATE_EVENT,
   OVERLAY_ADJUST_MODE_EVENT,
   OVERLAY_CONFIG_EVENT,
+  OVERLAY_READY_EVENT,
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
   OVERLAY_VISIBLE_EVENT,
@@ -94,6 +95,7 @@ function normalizeOverlayPosition(position: string | null | undefined): OverlayP
 
 let unlistenInputState: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
+let unlistenOverlayReady: UnlistenFn | undefined;
 let syncFeedbackTimer: number | undefined;
 let appConfigSaveTimer: number | undefined;
 let stopAppConfigWatch: WatchStopHandle | undefined;
@@ -323,6 +325,7 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
 }
 
 async function startOverlayAdjust() {
+  overlayAdjusting.value = true;
   const existingWindow = await Window.getByLabel("pov");
   await existingWindow?.destroy();
   const overlayWindow = await ensureOverlayWindow(true);
@@ -330,12 +333,24 @@ async function startOverlayAdjust() {
     return;
   }
 
-  overlayAdjusting.value = true;
   await syncOverlayWindow(overlayWindow);
   await overlayWindow.show();
   isOverlayVisible.value = true;
   await setOverlayClickThrough(false);
   await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: true });
+}
+
+async function handleOverlayReady() {
+  const overlayWindow = await Window.getByLabel("pov");
+  if (!overlayWindow) {
+    return;
+  }
+
+  await syncOverlayWindow(overlayWindow);
+  if (overlayAdjusting.value) {
+    await setOverlayClickThrough(false);
+    await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: true });
+  }
 }
 
 async function saveOverlayAdjust() {
@@ -951,6 +966,12 @@ onMounted(async () => {
         isOverlayVisible.value = event.payload;
       },
     );
+    unlistenOverlayReady = await listen(
+      OVERLAY_READY_EVENT,
+      () => {
+        void handleOverlayReady();
+      },
+    );
   }
 
   window.addEventListener("keydown", handleKeydown);
@@ -979,6 +1000,7 @@ onUnmounted(() => {
   stopAppConfigWatch?.();
   unlistenInputState?.();
   unlistenOverlayStyle?.();
+  unlistenOverlayReady?.();
   window.removeEventListener("keydown", handleKeydown);
   window.removeEventListener("keyup", handleKeyup);
   window.removeEventListener("mousedown", handleMousedown);
