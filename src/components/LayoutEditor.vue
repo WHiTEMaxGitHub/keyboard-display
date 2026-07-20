@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reactive, ref, watch } from "vue";
 import {
   addRow,
   addGapToRow,
@@ -26,6 +27,16 @@ const emit = defineEmits<{
 }>();
 
 const keyGroups: KeyBinding["group"][] = ["mouse", "movement", "modifier", "action"];
+const collapsedRows = reactive(new Set<number>());
+const draggingItem = ref<{ rowIndex: number; itemIndex: number } | null>(null);
+const widthDrafts = reactive(new Map<string, string>());
+
+watch(
+  () => props.rows,
+  () => {
+    widthDrafts.clear();
+  },
+);
 
 function addKey(rowIndex: number) {
   emit("update-rows", addKeyToRow(props.rows, rowIndex));
@@ -47,12 +58,36 @@ function shiftRow(rowIndex: number, offset: -1 | 1) {
   emit("update-rows", moveRow(props.rows, rowIndex, rowIndex + offset));
 }
 
+function toggleRow(rowIndex: number) {
+  if (collapsedRows.has(rowIndex)) {
+    collapsedRows.delete(rowIndex);
+  } else {
+    collapsedRows.add(rowIndex);
+  }
+}
+
+function rowSummary(row: OverlayRow) {
+  const keyCount = row.filter(isKeyBinding).length;
+  const gapCount = row.length - keyCount;
+  return `${keyCount} keys · ${gapCount} gaps · ${row.length} items`;
+}
+
 function removeItem(rowIndex: number, itemIndex: number) {
   emit("update-rows", removeRowItem(props.rows, rowIndex, itemIndex));
 }
 
-function shiftItem(rowIndex: number, itemIndex: number, offset: -1 | 1) {
-  emit("update-rows", moveRowItem(props.rows, rowIndex, itemIndex, itemIndex + offset));
+function beginDrag(rowIndex: number, itemIndex: number) {
+  draggingItem.value = { rowIndex, itemIndex };
+}
+
+function dropItem(rowIndex: number, itemIndex: number) {
+  if (!draggingItem.value || draggingItem.value.rowIndex !== rowIndex) {
+    draggingItem.value = null;
+    return;
+  }
+
+  emit("update-rows", moveRowItem(props.rows, rowIndex, draggingItem.value.itemIndex, itemIndex));
+  draggingItem.value = null;
 }
 
 function updateKeyField(
@@ -70,15 +105,39 @@ function updateKeyField(
   } as OverlayRowItem));
 }
 
+function widthDraftKey(rowIndex: number, itemIndex: number) {
+  return `${rowIndex}-${itemIndex}`;
+}
+
+function widthDraft(rowIndex: number, itemIndex: number, value: number) {
+  return widthDrafts.get(widthDraftKey(rowIndex, itemIndex)) ?? String(value);
+}
+
+function updateWidthDraft(rowIndex: number, itemIndex: number, event: Event) {
+  widthDrafts.set(widthDraftKey(rowIndex, itemIndex), (event.target as HTMLInputElement).value);
+}
+
+function commitKeyWidth(rowIndex: number, itemIndex: number, item: KeyBinding) {
+  const key = widthDraftKey(rowIndex, itemIndex);
+  const widthUnit = Math.max(0.1, Number(widthDrafts.get(key) ?? item.widthUnit));
+  widthDrafts.delete(key);
+  emit("update-rows", updateRowItem(props.rows, rowIndex, itemIndex, {
+    ...item,
+    widthUnit,
+  }));
+}
+
 function updateGapWidth(
   rowIndex: number,
   itemIndex: number,
   item: GapBinding,
-  event: Event,
 ) {
+  const key = widthDraftKey(rowIndex, itemIndex);
+  const widthUnit = Math.max(0.1, Number(widthDrafts.get(key) ?? item.widthUnit));
+  widthDrafts.delete(key);
   emit("update-rows", updateRowItem(props.rows, rowIndex, itemIndex, {
     ...item,
-    widthUnit: Number((event.target as HTMLInputElement).value),
+    widthUnit,
   }));
 }
 </script>
@@ -94,7 +153,11 @@ function updateGapWidth(
       class="row-editor"
     >
       <div class="row-editor-header">
-        <h3>Row {{ rowIndex + 1 }}</h3>
+        <button class="row-title-button" type="button" @click="toggleRow(rowIndex)">
+          <span>{{ collapsedRows.has(rowIndex) ? "▸" : "▾" }}</span>
+          <strong>Row {{ rowIndex + 1 }}</strong>
+          <small>{{ rowSummary(row) }}</small>
+        </button>
         <div class="row-actions">
           <button type="button" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</button>
           <button type="button" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</button>
@@ -104,11 +167,13 @@ function updateGapWidth(
         </div>
       </div>
 
-      <div class="row-item-list">
+      <div v-if="!collapsedRows.has(rowIndex)" class="row-item-list">
         <div
           v-for="(item, itemIndex) in row"
           :key="`${rowIndex}-${itemIndex}`"
           class="row-item-editor"
+          @dragover.prevent
+          @drop="dropItem(rowIndex, itemIndex)"
         >
           <template v-if="isKeyBinding(item)">
             <label>
@@ -128,11 +193,13 @@ function updateGapWidth(
             <label>
               Width
               <input
-                :value="item.widthUnit"
+                :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
                 min="0.1"
                 step="0.05"
                 type="number"
-                @input="updateKeyField(rowIndex, itemIndex, item, 'widthUnit', $event)"
+                @blur="commitKeyWidth(rowIndex, itemIndex, item)"
+                @change="commitKeyWidth(rowIndex, itemIndex, item)"
+                @input="updateWidthDraft(rowIndex, itemIndex, $event)"
               />
             </label>
           </template>
@@ -141,25 +208,26 @@ function updateGapWidth(
             <label>
               Width
               <input
-                :value="item.widthUnit"
+                :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
                 min="0.1"
                 step="0.05"
                 type="number"
-                @input="updateGapWidth(rowIndex, itemIndex, item, $event)"
+                @blur="updateGapWidth(rowIndex, itemIndex, item)"
+                @change="updateGapWidth(rowIndex, itemIndex, item)"
+                @input="updateWidthDraft(rowIndex, itemIndex, $event)"
               />
             </label>
           </template>
           <button class="remove-button" type="button" @click="removeItem(rowIndex, itemIndex)">
             Delete
           </button>
-          <div class="item-move-actions">
-            <button type="button" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
-              Left
-            </button>
-            <button type="button" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
-              Right
-            </button>
-          </div>
+          <span
+            class="drag-hint"
+            draggable="true"
+            @dragstart="beginDrag(rowIndex, itemIndex)"
+          >
+            Drag
+          </span>
         </div>
       </div>
     </article>
@@ -204,10 +272,30 @@ function updateGapWidth(
   gap: 12px;
 }
 
-.row-editor-header h3 {
-  margin: 0;
+.row-title-button {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
   color: #dfe5ec;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.row-title-button strong {
   font-size: 14px;
+}
+
+.row-title-button small {
+  overflow: hidden;
+  color: #9ca7b4;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row-actions {
@@ -218,7 +306,7 @@ function updateGapWidth(
 
 .row-actions button,
 .remove-button,
-.item-move-actions button {
+.drag-hint {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
@@ -230,14 +318,12 @@ function updateGapWidth(
 }
 
 .row-actions button:hover,
-.remove-button:hover,
-.item-move-actions button:hover {
+.remove-button:hover {
   background: #29313d;
 }
 
 .row-actions button:disabled,
-.remove-button:disabled,
-.item-move-actions button:disabled {
+.remove-button:disabled {
   cursor: not-allowed;
   opacity: 0.42;
 }
@@ -295,9 +381,12 @@ function updateGapWidth(
   color: #ffb3b3;
 }
 
-.item-move-actions {
-  display: flex;
-  gap: 6px;
+.drag-hint {
+  display: grid;
+  place-items: center;
+  color: #9ca7b4;
+  cursor: grab;
+  font-size: 12px;
 }
 
 @media (max-width: 920px) {
