@@ -211,13 +211,17 @@ function updateGapWidth(
 .row-item-editor input,
 .row-item-editor select {
   min-width: 0;
-  min-height: 32px;
+  height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
   background: #202630;
   color: #dfe5ec;
   font: inherit;
   padding: 0 9px;
+}
+
+.row-item-editor select {
+  line-height: 34px;
 }
 
 .gap-label {
