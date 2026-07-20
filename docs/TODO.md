@@ -32,6 +32,7 @@
 ## Profile editor
 
 - [ ] Add a visual profile/config editor window.
+  - Current first pass adds a Layout Editor subtab for editing existing rows.
   - Users should be able to edit `overlay.rows` without hand-writing JSON.
   - Support adding, deleting, and reordering rows.
   - Support adding, deleting, and reordering key and gap items within a row.

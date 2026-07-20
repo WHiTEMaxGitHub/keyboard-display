@@ -15,10 +15,12 @@ import ColorPicker from "./ColorPicker.vue";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import ExportPanel from "./ExportPanel.vue";
+import LayoutEditor from "./LayoutEditor.vue";
 import RecordingPanel from "./RecordingPanel.vue";
 import WindowPanel from "./WindowPanel.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
+type LayoutSubPage = "summary" | "editor";
 type RecordingSubPage = "control" | "files";
 
 type RecordingInspectionFrame = {
@@ -40,6 +42,7 @@ type RecordingInspection = {
 };
 
 const activePage = ref<ConfigPage>("overview");
+const layoutSubPage = ref<LayoutSubPage>("summary");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
 
@@ -72,6 +75,7 @@ const layoutRows = computed(() => {
 
 const emit = defineEmits<{
   "update-overlay-style": [style: OverlayStyle];
+  "update-overlay-rows": [rows: AppConfig["rows"]];
   "update-overlay-visible": [visible: boolean];
   "load-config": [];
   "refresh-pov": [];
@@ -330,6 +334,22 @@ function updateRenderMarkers(event: Event) {
       <section v-else-if="activePage === 'layout'" class="page-stack">
         <article class="panel">
           <h2>Layout</h2>
+          <div class="page-tabs">
+            <button
+              :class="{ active: layoutSubPage === 'summary' }"
+              type="button"
+              @click="layoutSubPage = 'summary'"
+            >
+              Summary
+            </button>
+            <button
+              :class="{ active: layoutSubPage === 'editor' }"
+              type="button"
+              @click="layoutSubPage = 'editor'"
+            >
+              Editor
+            </button>
+          </div>
           <div class="field-row">
             <span>Unit size</span>
             <strong>{{ config.layout.unitPx }}px</strong>
@@ -342,7 +362,7 @@ function updateRenderMarkers(event: Event) {
             <span>Visible keys</span>
             <strong>{{ config.keys.length }}</strong>
           </div>
-          <div class="layout-line-list">
+          <div v-if="layoutSubPage === 'summary'" class="layout-line-list">
             <div v-for="line in layoutRows" :key="line.row" class="layout-line">
               <span class="line-label">Line {{ line.row }}:</span>
               <span class="line-keys">
@@ -356,6 +376,11 @@ function updateRenderMarkers(event: Event) {
               </span>
             </div>
           </div>
+          <LayoutEditor
+            v-else
+            :rows="config.rows"
+            @update-rows="emit('update-overlay-rows', $event)"
+          />
         </article>
       </section>
 
@@ -695,6 +720,33 @@ h2 {
 .recent-profile-control select:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+.page-tabs {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #151a20;
+  padding: 4px;
+}
+
+.page-tabs button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #9ca7b4;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.page-tabs button.active,
+.page-tabs button:hover {
+  background: rgba(37, 211, 102, 0.14);
+  color: #eafff0;
 }
 
 .layout-line-list {

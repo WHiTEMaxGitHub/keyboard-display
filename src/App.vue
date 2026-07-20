@@ -186,6 +186,22 @@ async function updateOverlayStyle(style: OverlayStyle) {
   }
 }
 
+async function updateOverlayRows(rows: typeof config.rows) {
+  applyOverlayRows(rows);
+  markProfileChanged();
+  const overlayWindow = await Window.getByLabel("pov");
+  await resizeOverlayWindow(overlayWindow);
+  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
+    layout: config.layout,
+    rows: config.rows,
+    keys: config.keys,
+    style: config.style,
+  });
+  if (isOverlayVisible.value && overlayPosition.value !== "custom") {
+    await moveOverlay(overlayPosition.value, false);
+  }
+}
+
 async function resizeOverlayWindow(overlayWindow?: Window | null) {
   const targetWindow = overlayWindow ?? (await Window.getByLabel("pov"));
 
@@ -1054,6 +1070,7 @@ onUnmounted(() => {
       :recording-hotkeys="recordingHotkeys"
       :hotkey-capture-target="hotkeyCaptureTarget"
       @update-overlay-style="updateOverlayStyle"
+      @update-overlay-rows="updateOverlayRows"
       @update-overlay-visible="setOverlayVisible"
       @load-config="loadConfig"
       @refresh-pov="applyConfigToOverlay"
