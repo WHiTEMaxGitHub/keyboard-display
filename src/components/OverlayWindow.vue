@@ -68,7 +68,10 @@ async function setClickThrough(enabled: boolean) {
 </script>
 
 <template>
-  <main :class="['overlay-root', { adjusting }]">
+  <main
+    :class="['overlay-root', { adjusting }]"
+    @mousedown.prevent.stop="startDrag"
+  >
     <PovOverlay
       :layout="layout"
       :rows="rows"

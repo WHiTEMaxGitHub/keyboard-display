@@ -327,6 +327,11 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
 async function startOverlayAdjust() {
   overlayAdjusting.value = true;
   const existingWindow = await Window.getByLabel("pov");
+  const monitor = (await currentMonitor()) ?? (await primaryMonitor());
+  const previousPosition =
+    existingWindow && monitor
+      ? (await existingWindow.outerPosition()).toLogical(monitor.scaleFactor)
+      : null;
   await existingWindow?.destroy();
   const overlayWindow = await ensureOverlayWindow(true);
   if (!overlayWindow) {
@@ -334,6 +339,9 @@ async function startOverlayAdjust() {
   }
 
   await syncOverlayWindow(overlayWindow);
+  if (previousPosition) {
+    await overlayWindow.setPosition(new LogicalPosition(previousPosition.x, previousPosition.y));
+  }
   await overlayWindow.show();
   isOverlayVisible.value = true;
   await setOverlayClickThrough(false);
