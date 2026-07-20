@@ -9,6 +9,7 @@ import {
   removeRow,
   removeRowItem,
   updateRowItem,
+  validateKeyId,
 } from "../domain/layoutEditor";
 import {
   isKeyBinding,
@@ -26,15 +27,18 @@ const emit = defineEmits<{
   "update-rows": [rows: OverlayRow[]];
 }>();
 
-const keyGroups: KeyBinding["group"][] = ["mouse", "movement", "modifier", "action"];
 const collapsedRows = reactive(new Set<number>());
 const draggingItem = ref<{ rowIndex: number; itemIndex: number } | null>(null);
 const widthDrafts = reactive(new Map<string, string>());
+const textDrafts = reactive(new Map<string, string>());
+const idErrors = reactive(new Map<string, string>());
 
 watch(
   () => props.rows,
   () => {
     widthDrafts.clear();
+    textDrafts.clear();
+    idErrors.clear();
   },
 );
 
@@ -72,6 +76,12 @@ function rowSummary(row: OverlayRow) {
   return `${keyCount} keys · ${gapCount} gaps · ${row.length} items`;
 }
 
+function itemSummary(item: OverlayRowItem) {
+  return isKeyBinding(item)
+    ? `${item.label} · ${item.id} · ${item.widthUnit}u`
+    : `${item.type} · ${item.widthUnit}u`;
+}
+
 function removeItem(rowIndex: number, itemIndex: number) {
   emit("update-rows", removeRowItem(props.rows, rowIndex, itemIndex));
 }
@@ -99,19 +109,55 @@ function dropItem(rowIndex: number, itemIndex: number, event: DragEvent) {
   draggingItem.value = null;
 }
 
-function updateKeyField(
+function textDraftKey(
+  rowIndex: number,
+  itemIndex: number,
+  field: "id" | "label",
+) {
+  return `${rowIndex}-${itemIndex}-${field}`;
+}
+
+function textDraft(
+  rowIndex: number,
+  itemIndex: number,
+  field: "id" | "label",
+  value: string,
+) {
+  return textDrafts.get(textDraftKey(rowIndex, itemIndex, field)) ?? value;
+}
+
+function updateTextDraft(
+  rowIndex: number,
+  itemIndex: number,
+  field: "id" | "label",
+  event: Event,
+) {
+  textDrafts.set(textDraftKey(rowIndex, itemIndex, field), (event.target as HTMLInputElement).value);
+}
+
+function commitKeyText(
   rowIndex: number,
   itemIndex: number,
   item: KeyBinding,
-  field: keyof Pick<KeyBinding, "id" | "label" | "group" | "widthUnit">,
-  event: Event,
+  field: "id" | "label",
 ) {
-  const target = event.target as HTMLInputElement | HTMLSelectElement;
-  const value = field === "widthUnit" ? Number(target.value) : target.value;
+  const key = textDraftKey(rowIndex, itemIndex, field);
+  const value = (textDrafts.get(key) ?? item[field]).trim();
+
+  if (field === "id") {
+    const error = validateKeyId(value, props.rows, item.id);
+    if (error) {
+      idErrors.set(widthDraftKey(rowIndex, itemIndex), error);
+      return;
+    }
+    idErrors.delete(widthDraftKey(rowIndex, itemIndex));
+  }
+
+  textDrafts.delete(key);
   emit("update-rows", updateRowItem(props.rows, rowIndex, itemIndex, {
     ...item,
     [field]: value,
-  } as OverlayRowItem));
+  }));
 }
 
 function widthDraftKey(rowIndex: number, itemIndex: number) {
@@ -184,20 +230,37 @@ function updateGapWidth(
           @dragover.prevent
           @drop="dropItem(rowIndex, itemIndex, $event)"
         >
+          <button
+            class="item-grip"
+            type="button"
+            draggable="true"
+            @dragend="endDrag"
+            @dragstart="beginDrag(rowIndex, itemIndex, $event)"
+          >
+            ⋮⋮
+          </button>
+          <div class="item-summary">{{ itemSummary(item) }}</div>
           <template v-if="isKeyBinding(item)">
             <label>
               ID
-              <input :value="item.id" @input="updateKeyField(rowIndex, itemIndex, item, 'id', $event)" />
+              <input
+                :value="textDraft(rowIndex, itemIndex, 'id', item.id)"
+                @blur="commitKeyText(rowIndex, itemIndex, item, 'id')"
+                @change="commitKeyText(rowIndex, itemIndex, item, 'id')"
+                @input="updateTextDraft(rowIndex, itemIndex, 'id', $event)"
+              />
+              <span v-if="idErrors.get(widthDraftKey(rowIndex, itemIndex))" class="field-error">
+                {{ idErrors.get(widthDraftKey(rowIndex, itemIndex)) }}
+              </span>
             </label>
             <label>
               Label
-              <input :value="item.label" @input="updateKeyField(rowIndex, itemIndex, item, 'label', $event)" />
-            </label>
-            <label>
-              Group
-              <select :value="item.group" @change="updateKeyField(rowIndex, itemIndex, item, 'group', $event)">
-                <option v-for="group in keyGroups" :key="group" :value="group">{{ group }}</option>
-              </select>
+              <input
+                :value="textDraft(rowIndex, itemIndex, 'label', item.label)"
+                @blur="commitKeyText(rowIndex, itemIndex, item, 'label')"
+                @change="commitKeyText(rowIndex, itemIndex, item, 'label')"
+                @input="updateTextDraft(rowIndex, itemIndex, 'label', $event)"
+              />
             </label>
             <label>
               Width
@@ -230,14 +293,6 @@ function updateGapWidth(
           <button class="remove-button" type="button" @click="removeItem(rowIndex, itemIndex)">
             Delete
           </button>
-          <span
-            class="drag-hint"
-            draggable="true"
-            @dragend="endDrag"
-            @dragstart="beginDrag(rowIndex, itemIndex, $event)"
-          >
-            Drag
-          </span>
         </div>
       </div>
     </article>
@@ -315,8 +370,7 @@ function updateGapWidth(
 }
 
 .row-actions button,
-.remove-button,
-.drag-hint {
+.remove-button {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
@@ -345,13 +399,36 @@ function updateGapWidth(
 
 .row-item-editor {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
+  grid-template-columns: 32px minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto;
   align-items: end;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 7px;
   background: #10141a;
   padding: 10px;
+}
+
+.item-grip {
+  display: grid;
+  place-items: center;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #9ca7b4;
+  cursor: grab;
+  font-weight: 900;
+}
+
+.item-summary {
+  align-self: center;
+  min-width: 0;
+  overflow: hidden;
+  color: #dfe5ec;
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row-item-editor label {
@@ -391,12 +468,10 @@ function updateGapWidth(
   color: #ffb3b3;
 }
 
-.drag-hint {
-  display: grid;
-  place-items: center;
-  color: #9ca7b4;
-  cursor: grab;
-  font-size: 12px;
+.field-error {
+  color: #ff8f8f;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 @media (max-width: 920px) {

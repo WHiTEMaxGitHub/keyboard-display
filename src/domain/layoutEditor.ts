@@ -1,4 +1,4 @@
-import type { OverlayRow, OverlayRowItem } from "./defaultConfig";
+import { isKeyBinding, type OverlayRow, type OverlayRowItem } from "./defaultConfig";
 
 export function addRow(rows: OverlayRow[]): OverlayRow[] {
   return [...cloneRows(rows), []];
@@ -65,6 +65,24 @@ export function removeRowItem(
   return updateRows(rows, rowIndex, (row) =>
     row.filter((_, currentIndex) => currentIndex !== itemIndex).map((item) => ({ ...item })),
   );
+}
+
+export function validateKeyId(id: string, rows: OverlayRow[], currentId = ""): string {
+  const trimmedId = id.trim();
+  if (!trimmedId) {
+    return "Key ID is required.";
+  }
+
+  if (!/^[a-z0-9-]+$/.test(trimmedId)) {
+    return "Use lowercase letters, numbers, and hyphens only.";
+  }
+
+  const duplicate = rows
+    .flat()
+    .filter(isKeyBinding)
+    .some((key) => key.id === trimmedId && key.id !== currentId);
+
+  return duplicate ? "Key ID already exists." : "";
 }
 
 function updateRows(

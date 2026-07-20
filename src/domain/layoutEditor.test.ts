@@ -3,6 +3,7 @@ import {
   addRow,
   addGapToRow,
   addKeyToRow,
+  validateKeyId,
   moveRow,
   moveRowItem,
   removeRow,
@@ -71,5 +72,17 @@ describe("layout editor helpers", () => {
       { type: "gap", widthUnit: 1 },
       { type: "key", id: "b", label: "B", group: "movement", widthUnit: 1 },
     ]);
+  });
+
+  it("validates key ids", () => {
+    const rows: OverlayRow[] = [[
+      { type: "key", id: "w", label: "W", group: "movement", widthUnit: 1 },
+    ]];
+
+    expect(validateKeyId("new-key", rows)).toBe("");
+    expect(validateKeyId("", rows)).toBe("Key ID is required.");
+    expect(validateKeyId("Bad Key", rows)).toBe("Use lowercase letters, numbers, and hyphens only.");
+    expect(validateKeyId("w", rows)).toBe("Key ID already exists.");
+    expect(validateKeyId("w", rows, "w")).toBe("");
   });
 });
