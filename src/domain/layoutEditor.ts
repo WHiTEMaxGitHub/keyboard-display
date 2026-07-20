@@ -1,5 +1,26 @@
 import type { OverlayRow, OverlayRowItem } from "./defaultConfig";
 
+export function addRow(rows: OverlayRow[]): OverlayRow[] {
+  return [...cloneRows(rows), []];
+}
+
+export function removeRow(rows: OverlayRow[], rowIndex: number): OverlayRow[] {
+  return cloneRows(rows).filter((_, currentIndex) => currentIndex !== rowIndex);
+}
+
+export function moveRow(rows: OverlayRow[], fromIndex: number, toIndex: number): OverlayRow[] {
+  return moveArrayItem(cloneRows(rows), fromIndex, toIndex);
+}
+
+export function moveRowItem(
+  rows: OverlayRow[],
+  rowIndex: number,
+  fromIndex: number,
+  toIndex: number,
+): OverlayRow[] {
+  return updateRows(rows, rowIndex, (row) => moveArrayItem(row, fromIndex, toIndex));
+}
+
 export function addKeyToRow(rows: OverlayRow[], rowIndex: number): OverlayRow[] {
   return updateRows(rows, rowIndex, (row) => [
     ...row,
@@ -51,9 +72,30 @@ function updateRows(
   rowIndex: number,
   updateRow: (row: OverlayRow) => OverlayRow,
 ): OverlayRow[] {
-  return rows.map((row, currentIndex) =>
+  return cloneRows(rows).map((row, currentIndex) =>
     currentIndex === rowIndex
-      ? updateRow(row.map((item) => ({ ...item })))
-      : row.map((item) => ({ ...item })),
+      ? updateRow(row)
+      : row,
   );
+}
+
+function cloneRows(rows: OverlayRow[]): OverlayRow[] {
+  return rows.map((row) => row.map((item) => ({ ...item })));
+}
+
+function moveArrayItem<T>(items: T[], fromIndex: number, toIndex: number): T[] {
+  const nextItems = [...items];
+  if (
+    fromIndex < 0 ||
+    fromIndex >= nextItems.length ||
+    toIndex < 0 ||
+    toIndex >= nextItems.length ||
+    fromIndex === toIndex
+  ) {
+    return nextItems;
+  }
+
+  const [item] = nextItems.splice(fromIndex, 1);
+  nextItems.splice(toIndex, 0, item);
+  return nextItems;
 }

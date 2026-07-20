@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import {
+  addRow,
   addGapToRow,
   addKeyToRow,
+  moveRow,
+  moveRowItem,
+  removeRow,
   removeRowItem,
   updateRowItem,
 } from "../domain/layoutEditor";
@@ -31,8 +35,24 @@ function addGap(rowIndex: number) {
   emit("update-rows", addGapToRow(props.rows, rowIndex));
 }
 
+function appendRow() {
+  emit("update-rows", addRow(props.rows));
+}
+
+function deleteRow(rowIndex: number) {
+  emit("update-rows", removeRow(props.rows, rowIndex));
+}
+
+function shiftRow(rowIndex: number, offset: -1 | 1) {
+  emit("update-rows", moveRow(props.rows, rowIndex, rowIndex + offset));
+}
+
 function removeItem(rowIndex: number, itemIndex: number) {
   emit("update-rows", removeRowItem(props.rows, rowIndex, itemIndex));
+}
+
+function shiftItem(rowIndex: number, itemIndex: number, offset: -1 | 1) {
+  emit("update-rows", moveRowItem(props.rows, rowIndex, itemIndex, itemIndex + offset));
 }
 
 function updateKeyField(
@@ -65,6 +85,9 @@ function updateGapWidth(
 
 <template>
   <div class="layout-editor">
+    <div class="editor-toolbar">
+      <button type="button" @click="appendRow">Add row</button>
+    </div>
     <article
       v-for="(row, rowIndex) in rows"
       :key="rowIndex"
@@ -73,8 +96,11 @@ function updateGapWidth(
       <div class="row-editor-header">
         <h3>Row {{ rowIndex + 1 }}</h3>
         <div class="row-actions">
+          <button type="button" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</button>
+          <button type="button" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</button>
           <button type="button" @click="addKey(rowIndex)">Add key</button>
           <button type="button" @click="addGap(rowIndex)">Add gap</button>
+          <button type="button" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">Delete row</button>
         </div>
       </div>
 
@@ -126,6 +152,14 @@ function updateGapWidth(
           <button class="remove-button" type="button" @click="removeItem(rowIndex, itemIndex)">
             Delete
           </button>
+          <div class="item-move-actions">
+            <button type="button" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
+              Left
+            </button>
+            <button type="button" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
+              Right
+            </button>
+          </div>
         </div>
       </div>
     </article>
@@ -136,6 +170,22 @@ function updateGapWidth(
 .layout-editor {
   display: grid;
   gap: 14px;
+}
+
+.editor-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.editor-toolbar button {
+  min-height: 32px;
+  border: 1px solid rgba(37, 211, 102, 0.3);
+  border-radius: 7px;
+  background: rgba(37, 211, 102, 0.12);
+  color: #eafff0;
+  cursor: pointer;
+  font-weight: 800;
+  padding: 0 10px;
 }
 
 .row-editor {
@@ -167,7 +217,8 @@ function updateGapWidth(
 }
 
 .row-actions button,
-.remove-button {
+.remove-button,
+.item-move-actions button {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
@@ -179,8 +230,16 @@ function updateGapWidth(
 }
 
 .row-actions button:hover,
-.remove-button:hover {
+.remove-button:hover,
+.item-move-actions button:hover {
   background: #29313d;
+}
+
+.row-actions button:disabled,
+.remove-button:disabled,
+.item-move-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
 .row-item-list {
@@ -190,7 +249,7 @@ function updateGapWidth(
 
 .row-item-editor {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
   align-items: end;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -234,6 +293,11 @@ function updateGapWidth(
 
 .remove-button {
   color: #ffb3b3;
+}
+
+.item-move-actions {
+  display: flex;
+  gap: 6px;
 }
 
 @media (max-width: 920px) {

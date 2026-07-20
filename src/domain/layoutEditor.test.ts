@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  addRow,
   addGapToRow,
   addKeyToRow,
+  moveRow,
+  moveRowItem,
+  removeRow,
   removeRowItem,
   updateRowItem,
 } from "./layoutEditor";
@@ -41,5 +45,31 @@ describe("layout editor helpers", () => {
     expect(removeRowItem(rows, 0, 0)).toEqual([[
       { type: "key", id: "w", label: "W", group: "movement", widthUnit: 1 },
     ]]);
+  });
+
+  it("adds and removes rows", () => {
+    const rows: OverlayRow[] = [[{ type: "gap", widthUnit: 1 }]];
+
+    expect(addRow(rows)).toEqual([[{ type: "gap", widthUnit: 1 }], []]);
+    expect(removeRow(addRow(rows), 0)).toEqual([[]]);
+  });
+
+  it("moves rows and items", () => {
+    const rows: OverlayRow[] = [
+      [{ type: "key", id: "a", label: "A", group: "movement", widthUnit: 1 }],
+      [
+        { type: "key", id: "b", label: "B", group: "movement", widthUnit: 1 },
+        { type: "gap", widthUnit: 1 },
+      ],
+    ];
+
+    expect(moveRow(rows, 0, 1).map((row) => row[0])).toEqual([
+      { type: "key", id: "b", label: "B", group: "movement", widthUnit: 1 },
+      { type: "key", id: "a", label: "A", group: "movement", widthUnit: 1 },
+    ]);
+    expect(moveRowItem(rows, 1, 0, 1)[1]).toEqual([
+      { type: "gap", widthUnit: 1 },
+      { type: "key", id: "b", label: "B", group: "movement", widthUnit: 1 },
+    ]);
   });
 });
