@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BasePanel from "./BasePanel.vue";
+
 defineProps<{
   renderMarkers: boolean;
 }>();
@@ -9,7 +11,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <article class="panel wide-panel">
+  <BasePanel wide>
     <h2>Export</h2>
     <div class="field-row">
       <span>Transparent overlay</span>
@@ -31,27 +33,10 @@ const emit = defineEmits<{
       Video is generated from the input timeline, so size and format can be
       tuned after recording.
     </p>
-  </article>
+  </BasePanel>
 </template>
 
 <style scoped>
-.panel {
-  min-height: 190px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #171b22;
-  padding: 18px;
-}
-
-.wide-panel {
-  max-width: 760px;
-}
-
-.panel h2 {
-  margin: 0 0 16px;
-  letter-spacing: 0;
-}
-
 .field-row {
   display: flex;
   justify-content: space-between;

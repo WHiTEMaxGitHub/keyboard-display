@@ -208,6 +208,22 @@ const emit = defineEmits<{
   .sidebar {
     border-right: 0;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 22px 14px;
+  }
+
+  .brand div,
+  .nav-list button span,
+  .subnav-list {
+    display: none;
+  }
+
+  .brand,
+  .nav-list button {
+    justify-content: center;
+  }
+
+  .collapse-button {
+    margin-left: 0;
   }
 }
 </style>

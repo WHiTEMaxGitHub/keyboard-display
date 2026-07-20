@@ -652,6 +652,7 @@ h2 {
 }
 
 .panel {
+  box-sizing: border-box;
   min-height: 190px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
@@ -660,7 +661,7 @@ h2 {
 }
 
 .wide-panel {
-  max-width: 760px;
+  width: 100%;
 }
 
 .panel h2 {

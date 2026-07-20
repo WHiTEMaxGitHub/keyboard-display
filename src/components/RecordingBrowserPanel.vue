@@ -5,6 +5,7 @@ import {
   buildRecordingTimelineMarkers,
   type RecordingTimelineMarker,
 } from "../domain/recordingTimeline";
+import BasePanel from "./BasePanel.vue";
 import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
 
 type RecordingInspectionEvent =
@@ -302,7 +303,7 @@ function padFrame(frame: number, fps: number) {
 </script>
 
 <template>
-  <article class="panel wide-panel">
+  <BasePanel wide>
     <h2>Recordings</h2>
     <div class="section-header">
       <h3>Recording files</h3>
@@ -486,27 +487,10 @@ function padFrame(frame: number, fps: number) {
         </div>
       </div>
     </div>
-  </article>
+  </BasePanel>
 </template>
 
 <style scoped>
-.panel {
-  min-height: 190px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #171b22;
-  padding: 18px;
-}
-
-.wide-panel {
-  max-width: 860px;
-}
-
-.panel h2 {
-  margin: 0 0 16px;
-  letter-spacing: 0;
-}
-
 .field-row {
   display: flex;
   justify-content: space-between;

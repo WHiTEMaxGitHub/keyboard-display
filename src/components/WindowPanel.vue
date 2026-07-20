@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BasePanel from "./BasePanel.vue";
+
 defineProps<{
   overlayPosition: string;
   overlayVisible: boolean;
@@ -19,7 +21,7 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <article class="panel wide-panel">
+  <BasePanel wide>
     <h2>Window</h2>
     <div class="field-row">
       <span>Position</span>
@@ -66,27 +68,10 @@ const emit = defineEmits<{
         <button type="button" @click="emit('move-overlay', 'bottom-right')">Bottom right</button>
       </div>
     </div>
-  </article>
+  </BasePanel>
 </template>
 
 <style scoped>
-.panel {
-  min-height: 190px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #171b22;
-  padding: 18px;
-}
-
-.wide-panel {
-  max-width: 760px;
-}
-
-.panel h2 {
-  margin: 0 0 16px;
-  letter-spacing: 0;
-}
-
 .field-row {
   display: flex;
   justify-content: space-between;

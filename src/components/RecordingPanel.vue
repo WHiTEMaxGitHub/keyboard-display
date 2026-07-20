@@ -10,6 +10,7 @@ import {
   formatBytesPerSecond,
 } from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
+import BasePanel from "./BasePanel.vue";
 
 const props = defineProps<{
   config: AppConfig;
@@ -167,7 +168,7 @@ function formatHotkey(keys: string[]) {
 </script>
 
 <template>
-  <article class="panel wide-panel">
+  <BasePanel wide>
     <h2>Recording</h2>
     <div class="field-row">
       <span>Save folder</span>
@@ -255,18 +256,18 @@ function formatHotkey(keys: string[]) {
         </button>
       </div>
     </div>
-    <div class="segmented" aria-label="Capture frame rate">
-      <button
-        v-for="fps in config.recording.fpsOptions"
-        :key="fps"
-        :class="{ selected: !config.recording.customFpsEnabled && fps === config.recording.defaultFps }"
-        type="button"
-        @click="selectRecordingFps(fps)"
-      >
-        {{ fps }}fps
-      </button>
-    </div>
-    <div class="fps-config-row">
+    <div class="fps-picker-row" aria-label="Capture frame rate">
+      <div class="segmented">
+        <button
+          v-for="fps in config.recording.fpsOptions"
+          :key="fps"
+          :class="{ selected: !config.recording.customFpsEnabled && fps === config.recording.defaultFps }"
+          type="button"
+          @click="selectRecordingFps(fps)"
+        >
+          {{ fps }}fps
+        </button>
+      </div>
       <label class="toggle-row">
         <input
           :checked="config.recording.customFpsEnabled"
@@ -319,27 +320,10 @@ function formatHotkey(keys: string[]) {
     <p v-if="recordingStatusMessage" class="status-text">
       {{ recordingStatusMessage }}
     </p>
-  </article>
+  </BasePanel>
 </template>
 
 <style scoped>
-.panel {
-  min-height: 190px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #171b22;
-  padding: 18px;
-}
-
-.wide-panel {
-  max-width: 760px;
-}
-
-.panel h2 {
-  margin: 0 0 16px;
-  letter-spacing: 0;
-}
-
 .field-row {
   display: flex;
   justify-content: space-between;
@@ -532,10 +516,17 @@ select:focus {
   outline-offset: 0;
 }
 
+.fps-picker-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
 .segmented {
   display: flex;
   gap: 8px;
-  margin-bottom: 16px;
 }
 
 .segmented button {
