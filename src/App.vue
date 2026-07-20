@@ -1090,18 +1090,16 @@ input {
 }
 
 .overlay-surface {
-  width: 100vw;
-  height: 100vh;
+  width: max-content;
+  height: max-content;
   overflow: hidden;
 }
 
 .overlay-window {
-  display: flex;
-  width: 100vw;
-  min-height: 100vh;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  width: max-content;
+  min-height: 0;
   background: transparent;
-  padding: 14px;
+  padding: 0;
 }
 </style>
