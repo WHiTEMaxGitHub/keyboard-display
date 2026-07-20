@@ -1,14 +1,4 @@
 <script setup lang="ts">
-import {
-  Clapperboard,
-  Eye,
-  Keyboard,
-  MonitorCog,
-  MonitorUp,
-  Palette,
-  SlidersHorizontal,
-  Video,
-} from "@lucide/vue";
 import { computed, ref } from "vue";
 import { normalizeHexColor } from "../domain/colorPicker";
 import {
@@ -22,7 +12,11 @@ import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recor
 import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
 import ColorPicker from "./ColorPicker.vue";
+import ConfigSidebar from "./ConfigSidebar.vue";
+import ConfigTopbar from "./ConfigTopbar.vue";
+import ExportPanel from "./ExportPanel.vue";
 import RecordingPanel from "./RecordingPanel.vue";
+import WindowPanel from "./WindowPanel.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
 type RecordingSubPage = "control" | "files";
@@ -48,24 +42,6 @@ type RecordingInspection = {
 const activePage = ref<ConfigPage>("overview");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
-
-const navItems: Array<{
-  id: ConfigPage;
-  label: string;
-  icon: typeof Eye;
-}> = [
-  { id: "overview", label: "Overview", icon: Eye },
-  { id: "layout", label: "Layout", icon: MonitorUp },
-  { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "window", label: "Window", icon: MonitorCog },
-  { id: "recording", label: "Recording", icon: Clapperboard },
-  { id: "export", label: "Export", icon: Video },
-];
-
-const recordingNavItems: Array<{ id: RecordingSubPage; label: string }> = [
-  { id: "control", label: "Control" },
-  { id: "files", label: "Files" },
-];
 
 const props = defineProps<{
   config: AppConfig;
@@ -253,59 +229,19 @@ function updateRenderMarkers(event: Event) {
 
 <template>
   <main class="config-shell">
-    <aside class="sidebar" aria-label="Workspace navigation">
-      <div class="brand">
-        <Keyboard :size="22" aria-hidden="true" />
-        <div>
-          <strong>Keyboard Display</strong>
-          <span>Desktop POV overlay</span>
-        </div>
-      </div>
-
-      <nav class="nav-list" aria-label="Configuration pages">
-        <template v-for="item in navItems" :key="item.id">
-          <button
-            :class="{ active: activePage === item.id }"
-            type="button"
-            @click="activePage = item.id"
-          >
-            <component :is="item.icon" :size="18" aria-hidden="true" />
-            {{ item.label }}
-          </button>
-          <div v-if="item.id === 'recording' && activePage === 'recording'" class="subnav-list">
-            <button
-              v-for="child in recordingNavItems"
-              :key="child.id"
-              :class="{ active: recordingSubPage === child.id }"
-              type="button"
-              @click="recordingSubPage = child.id"
-            >
-              {{ child.label }}
-            </button>
-          </div>
-        </template>
-      </nav>
-    </aside>
+    <ConfigSidebar
+      :active-page="activePage"
+      :recording-sub-page="recordingSubPage"
+      @update-active-page="activePage = $event"
+      @update-recording-sub-page="recordingSubPage = $event"
+    />
 
     <section class="workspace">
-      <header class="topbar">
-        <div>
-          <p>Configuration</p>
-          <h1>POV overlay control panel</h1>
-        </div>
-        <div class="topbar-actions">
-          <button class="load-config-button" type="button" @click="loadConfigFile">
-            <SlidersHorizontal :size="15" aria-hidden="true" />
-            Load config
-          </button>
-          <button class="save-apply-button" type="button" @click="exportAndApplyConfig">
-            Export & Apply
-          </button>
-          <button class="save-apply-button" type="button" @click="overwriteAndApplyConfig">
-            Overwrite & Apply
-          </button>
-        </div>
-      </header>
+      <ConfigTopbar
+        @load-config="loadConfigFile"
+        @export-and-apply-config="exportAndApplyConfig"
+        @overwrite-and-apply-config="overwriteAndApplyConfig"
+      />
 
       <section v-if="activePage === 'overview'" class="page-stack">
         <section class="preview-band" aria-label="Live preview">
@@ -525,54 +461,18 @@ function updateRenderMarkers(event: Event) {
       </section>
 
       <section v-else-if="activePage === 'window'" class="page-stack">
-        <article class="panel wide-panel">
-          <h2>Window</h2>
-          <div class="field-row">
-            <span>Position</span>
-            <strong>{{ overlayPosition }}</strong>
-          </div>
-          <div class="adjust-control">
-            <span>Visual adjust</span>
-            <div class="adjust-actions">
-              <button
-                v-if="!overlayAdjusting"
-                type="button"
-                @click="startOverlayAdjust"
-              >
-                Adjust position
-              </button>
-              <template v-else>
-                <button type="button" @click="saveOverlayAdjust">Save position</button>
-                <button type="button" @click="cancelOverlayAdjust">Cancel</button>
-              </template>
-            </div>
-          </div>
-          <label class="toggle-row">
-            <input
-              :checked="overlayVisible"
-              type="checkbox"
-              @change="updateOverlayVisible"
-            />
-            Show POV overlay
-          </label>
-          <label class="toggle-row">
-            <input
-              :checked="config.style.alwaysOnTop"
-              type="checkbox"
-              @change="updateAlwaysOnTop"
-            />
-            Always on top
-          </label>
-          <div class="position-control">
-            <span>Position</span>
-            <div class="position-grid">
-              <button type="button" @click="moveOverlay('top-left')">Top left</button>
-              <button type="button" @click="moveOverlay('top-right')">Top right</button>
-              <button type="button" @click="moveOverlay('bottom-left')">Bottom left</button>
-              <button type="button" @click="moveOverlay('bottom-right')">Bottom right</button>
-            </div>
-          </div>
-        </article>
+        <WindowPanel
+          :overlay-position="overlayPosition"
+          :overlay-visible="overlayVisible"
+          :always-on-top="config.style.alwaysOnTop"
+          :overlay-adjusting="overlayAdjusting"
+          @update-overlay-visible="updateOverlayVisible"
+          @update-always-on-top="updateAlwaysOnTop"
+          @start-overlay-adjust="startOverlayAdjust"
+          @save-overlay-adjust="saveOverlayAdjust"
+          @cancel-overlay-adjust="cancelOverlayAdjust"
+          @move-overlay="moveOverlay"
+        />
       </section>
 
       <section v-else-if="activePage === 'recording' && recordingSubPage === 'control'" class="page-stack">
@@ -613,29 +513,10 @@ function updateRenderMarkers(event: Event) {
       </section>
 
       <section v-else-if="activePage === 'export'" class="page-stack">
-        <article class="panel wide-panel">
-          <h2>Export</h2>
-          <div class="field-row">
-            <span>Transparent overlay</span>
-            <strong>WebM</strong>
-          </div>
-          <div class="field-row">
-            <span>Compatible video</span>
-            <strong>MP4</strong>
-          </div>
-          <label class="toggle-row">
-            <input
-              :checked="config.export.renderMarkers"
-              type="checkbox"
-              @change="updateRenderMarkers"
-            />
-            Render sync markers
-          </label>
-          <p class="quiet">
-            Video is generated from the input timeline, so size and format can
-            be tuned after recording.
-          </p>
-        </article>
+        <ExportPanel
+          :render-markers="config.export.renderMarkers"
+          @update-render-markers="updateRenderMarkers"
+        />
       </section>
     </section>
   </main>
@@ -651,91 +532,10 @@ function updateRenderMarkers(event: Event) {
   color: #eef2f6;
 }
 
-.sidebar {
-  height: 100vh;
-  overflow-y: auto;
-  border-right: 1px solid rgba(255, 255, 255, 0.08);
-  background: #171a1f;
-  padding: 22px 18px;
-}
-
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 28px;
-}
-
-.brand span,
-.topbar p,
 .preview-copy p,
 .quiet,
 .field-row span {
   color: #9ca7b4;
-}
-
-.brand strong,
-.brand span {
-  display: block;
-}
-
-.brand span {
-  margin-top: 2px;
-  font-size: 12px;
-}
-
-.nav-list {
-  display: grid;
-  gap: 6px;
-}
-
-.nav-list button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  border: 0;
-  border-radius: 7px;
-  background: transparent;
-  color: #c9d1da;
-  cursor: pointer;
-  padding: 10px 11px;
-  text-align: left;
-  font-weight: 700;
-  transition:
-    background-color 140ms ease,
-    color 140ms ease,
-    transform 140ms ease;
-}
-
-.nav-list button:hover,
-.nav-list button.active {
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.nav-list button:hover {
-  transform: translateX(2px);
-}
-
-.nav-list button.active {
-  color: #eafff0;
-  transform: translateX(2px);
-}
-
-.subnav-list {
-  display: grid;
-  gap: 4px;
-  margin: -2px 0 4px 28px;
-}
-
-.subnav-list button {
-  min-height: 30px;
-  padding: 7px 10px;
-  color: #9ca7b4;
-  font-size: 13px;
-}
-
-.subnav-list button.active {
-  color: #eafff0;
 }
 
 .workspace {
@@ -745,22 +545,6 @@ function updateRenderMarkers(event: Event) {
   padding: 24px;
 }
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.topbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.topbar p,
 .preview-copy p {
   margin: 0 0 4px;
   font-size: 12px;
@@ -769,51 +553,14 @@ function updateRenderMarkers(event: Event) {
   text-transform: uppercase;
 }
 
-h1,
 h2 {
   margin: 0;
   letter-spacing: 0;
 }
 
-h1 {
-  font-size: 28px;
-  line-height: 34px;
-}
-
 h2 {
   font-size: 18px;
   line-height: 24px;
-}
-
-.load-config-button,
-.save-apply-button {
-  display: inline-flex;
-  align-items: center;
-  box-sizing: border-box;
-  gap: 7px;
-  height: 34px;
-  margin: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  appearance: none;
-  background: #1d2229;
-  color: #eef2f6;
-  cursor: pointer;
-  padding: 0 10px;
-  font-size: 14px;
-  font-weight: 750;
-  line-height: 1;
-  white-space: nowrap;
-}
-
-.load-config-button input {
-  display: none;
-}
-
-.save-apply-button {
-  border-color: rgba(37, 211, 102, 0.24);
-  background: rgba(37, 211, 102, 0.1);
-  color: #eafff0;
 }
 
 .preview-band {
@@ -1011,72 +758,6 @@ label {
   font-weight: 500;
 }
 
-.position-control {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.adjust-control {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(220px, 1.4fr);
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.adjust-control > span {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.adjust-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.adjust-actions button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.adjust-actions button:hover {
-  background: #29313d;
-}
-
-.position-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.position-grid button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.position-grid button:hover {
-  background: #29313d;
-}
-
 input[type="range"] {
   accent-color: #25d366;
 }
@@ -1158,13 +839,7 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .preview-band,
-  .topbar {
+  .preview-band {
     align-items: flex-start;
     flex-direction: column;
   }
