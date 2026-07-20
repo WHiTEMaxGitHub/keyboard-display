@@ -102,6 +102,14 @@ function updateScale(event: Event) {
   emit("update-overlay-style", { ...props.config.style, scale });
 }
 
+function formatScale(scale: number) {
+  return `${scale.toFixed(2)}x`;
+}
+
+function effectiveUnitPx() {
+  return Math.round(props.config.layout.unitPx * props.config.style.scale);
+}
+
 function updateOpacity(event: Event) {
   const opacity = Number((event.target as HTMLInputElement).value);
   emit("update-overlay-style", { ...props.config.style, opacity });
@@ -359,8 +367,11 @@ function updateRenderMarkers(event: Event) {
               Refresh POV
             </button>
           </div>
-          <label>
-            Scale
+          <label class="range-control">
+            <span class="range-label">
+              <span>Scale</span>
+              <strong>{{ formatScale(config.style.scale) }} · {{ effectiveUnitPx() }}px unit</strong>
+            </span>
             <input
               :value="config.style.scale"
               min="0.75"
@@ -727,6 +738,19 @@ label {
   margin-bottom: 16px;
   color: #c9d1da;
   font-weight: 700;
+}
+
+.range-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.range-label strong {
+  color: #9ca7b4;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .settings-row {
