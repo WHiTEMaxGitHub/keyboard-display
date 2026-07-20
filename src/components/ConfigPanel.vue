@@ -45,6 +45,7 @@ const activePage = ref<ConfigPage>("overview");
 const layoutSubPage = ref<LayoutSubPage>("summary");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
+const sidebarCollapsed = ref(false);
 
 const props = defineProps<{
   config: AppConfig;
@@ -240,10 +241,12 @@ function updateRenderMarkers(event: Event) {
 </script>
 
 <template>
-  <main class="config-shell">
+  <main :class="['config-shell', { 'sidebar-collapsed': sidebarCollapsed }]">
     <ConfigSidebar
       :active-page="activePage"
       :recording-sub-page="recordingSubPage"
+      :collapsed="sidebarCollapsed"
+      @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
       @update-active-page="activePage = $event"
       @update-recording-sub-page="recordingSubPage = $event"
     />
@@ -566,6 +569,10 @@ function updateRenderMarkers(event: Event) {
   overflow: hidden;
   background: #111316;
   color: #eef2f6;
+}
+
+.config-shell.sidebar-collapsed {
+  grid-template-columns: 72px minmax(0, 1fr);
 }
 
 .preview-copy p,
@@ -912,7 +919,7 @@ select:focus {
 
 @media (max-width: 920px) {
   .config-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: 72px minmax(0, 1fr);
   }
 
   .preview-band {

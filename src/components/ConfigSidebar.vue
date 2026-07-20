@@ -33,22 +33,32 @@ const recordingNavItems: Array<{ id: RecordingSubPage; label: string }> = [
 defineProps<{
   activePage: ConfigPage;
   recordingSubPage: RecordingSubPage;
+  collapsed: boolean;
 }>();
 
 const emit = defineEmits<{
+  "toggle-collapse": [];
   "update-active-page": [page: ConfigPage];
   "update-recording-sub-page": [page: RecordingSubPage];
 }>();
 </script>
 
 <template>
-  <aside class="sidebar" aria-label="Workspace navigation">
+  <aside :class="['sidebar', { collapsed }]" aria-label="Workspace navigation">
     <div class="brand">
       <Keyboard :size="22" aria-hidden="true" />
-      <div>
+      <div v-if="!collapsed">
         <strong>Keyboard Display</strong>
         <span>Desktop POV overlay</span>
       </div>
+      <button
+        class="collapse-button"
+        type="button"
+        :aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+        @click="emit('toggle-collapse')"
+      >
+        {{ collapsed ? "›" : "‹" }}
+      </button>
     </div>
 
     <nav class="nav-list" aria-label="Configuration pages">
@@ -59,9 +69,12 @@ const emit = defineEmits<{
           @click="emit('update-active-page', item.id)"
         >
           <component :is="item.icon" :size="18" aria-hidden="true" />
-          {{ item.label }}
+          <span v-if="!collapsed">{{ item.label }}</span>
         </button>
-        <div v-if="item.id === 'recording' && activePage === 'recording'" class="subnav-list">
+        <div
+          v-if="!collapsed && item.id === 'recording' && activePage === 'recording'"
+          class="subnav-list"
+        >
           <button
             v-for="child in recordingNavItems"
             :key="child.id"
@@ -86,11 +99,36 @@ const emit = defineEmits<{
   padding: 22px 18px;
 }
 
+.sidebar.collapsed {
+  padding: 22px 14px;
+}
+
 .brand {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 28px;
+}
+
+.sidebar.collapsed .brand {
+  justify-content: center;
+}
+
+.collapse-button {
+  margin-left: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  background: #202630;
+  color: #c9d1da;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 8px;
+}
+
+.sidebar.collapsed .collapse-button {
+  margin-left: 0;
 }
 
 .brand span {
@@ -128,6 +166,11 @@ const emit = defineEmits<{
     background-color 140ms ease,
     color 140ms ease,
     transform 140ms ease;
+}
+
+.sidebar.collapsed .nav-list button {
+  justify-content: center;
+  padding: 10px;
 }
 
 .nav-list button:hover,

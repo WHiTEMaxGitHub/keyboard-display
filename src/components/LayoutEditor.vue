@@ -76,11 +76,20 @@ function removeItem(rowIndex: number, itemIndex: number) {
   emit("update-rows", removeRowItem(props.rows, rowIndex, itemIndex));
 }
 
-function beginDrag(rowIndex: number, itemIndex: number) {
+function beginDrag(rowIndex: number, itemIndex: number, event: DragEvent) {
   draggingItem.value = { rowIndex, itemIndex };
+  event.dataTransfer?.setData("text/plain", `${rowIndex}:${itemIndex}`);
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+  }
 }
 
-function dropItem(rowIndex: number, itemIndex: number) {
+function endDrag() {
+  draggingItem.value = null;
+}
+
+function dropItem(rowIndex: number, itemIndex: number, event: DragEvent) {
+  event.preventDefault();
   if (!draggingItem.value || draggingItem.value.rowIndex !== rowIndex) {
     draggingItem.value = null;
     return;
@@ -173,7 +182,7 @@ function updateGapWidth(
           :key="`${rowIndex}-${itemIndex}`"
           class="row-item-editor"
           @dragover.prevent
-          @drop="dropItem(rowIndex, itemIndex)"
+          @drop="dropItem(rowIndex, itemIndex, $event)"
         >
           <template v-if="isKeyBinding(item)">
             <label>
@@ -224,7 +233,8 @@ function updateGapWidth(
           <span
             class="drag-hint"
             draggable="true"
-            @dragstart="beginDrag(rowIndex, itemIndex)"
+            @dragend="endDrag"
+            @dragstart="beginDrag(rowIndex, itemIndex, $event)"
           >
             Drag
           </span>
