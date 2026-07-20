@@ -7,7 +7,7 @@ export type OverlaySize = {
 };
 
 const BACKPLATE_PADDING = 10 * 2;
-const OVERLAY_BLEED = 12;
+const OVERLAY_BLEED = 12 * 2;
 const FLOAT_EPSILON = 0.000001;
 
 export function estimateOverlaySize(

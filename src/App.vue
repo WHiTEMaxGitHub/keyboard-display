@@ -304,8 +304,8 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
     position: monitor.workArea.position.toLogical(monitor.scaleFactor),
     size: monitor.workArea.size.toLogical(monitor.scaleFactor),
   };
-  const xMin = workArea.position.x + horizontalMargin;
-  const yMin = workArea.position.y + topMargin;
+  const xMin = workArea.position.x + horizontalMargin - overlayBleed;
+  const yMin = workArea.position.y + topMargin - overlayBleed;
   const xMax = workArea.position.x + workArea.size.width - overlaySize.width - horizontalMargin + overlayBleed;
   const yMax = workArea.position.y + workArea.size.height - overlaySize.height - bottomMargin + overlayBleed;
 
