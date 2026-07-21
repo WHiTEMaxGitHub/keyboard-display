@@ -37,7 +37,7 @@
         { "type": "key", "id": "minus", "label": "-", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "equal", "label": "=", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "backspace", "label": "Backspace", "group": "action", "widthUnit": 2 },
-        { "type": "key", "id": "home", "label": "Home", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "insert", "label": "Ins", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "delete", "label": "Del", "group": "action", "widthUnit": 1 }
       ],
       [
@@ -55,8 +55,8 @@
         { "type": "key", "id": "bracket-left", "label": "[", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "bracket-right", "label": "]", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "backslash", "label": "\\", "group": "action", "widthUnit": 1.5 },
-        { "type": "key", "id": "page-up", "label": "PgUp", "group": "action", "widthUnit": 1 },
-        { "type": "key", "id": "end", "label": "End", "group": "action", "widthUnit": 1 }
+        { "type": "key", "id": "home", "label": "Home", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "page-up", "label": "PgUp", "group": "action", "widthUnit": 1 }
       ],
       [
         { "type": "key", "id": "caps-lock", "label": "Caps", "group": "modifier", "widthUnit": 1.75 },
@@ -92,10 +92,10 @@
       [
         { "type": "key", "id": "ctrl-left", "label": "Ctrl", "group": "modifier", "widthUnit": 1.25 },
         { "type": "key", "id": "meta-left", "label": "Cmd", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Cmd", "windows": "Win" } },
-        { "type": "key", "id": "alt-left", "label": "Opt", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Opt", "windows": "Alt" } },
+        { "type": "key", "id": "alt-left", "label": "Alt", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Opt", "windows": "Alt" } },
         { "type": "key", "id": "space", "label": "Space", "group": "modifier", "widthUnit": 6.25 },
-        { "type": "key", "id": "alt-right", "label": "Opt", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Opt", "windows": "Alt" } },
-        { "type": "key", "id": "meta-right", "label": "Cmd", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Cmd", "windows": "Win" } },
+        { "type": "key", "id": "alt-right", "label": "Alt", "group": "modifier", "widthUnit": 1.75, "platformLabels": { "macos": "Alt", "windows": "Alt" } },
+        { "type": "key", "id": "ctrl-right", "label": "Ctrl", "group": "modifier", "widthUnit": 1.75 },
         { "type": "key", "id": "arrow-left", "label": "Left", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "arrow-down", "label": "Down", "group": "action", "widthUnit": 1 },
         { "type": "key", "id": "arrow-right", "label": "Right", "group": "action", "widthUnit": 1 }
