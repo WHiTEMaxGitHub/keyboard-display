@@ -214,6 +214,9 @@ function updateGapWidth(
               ID
               <input
                 :value="textDraft(rowIndex, itemIndex, 'id', item.id)"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
                 @blur="commitKeyText(rowIndex, itemIndex, item, 'id')"
                 @change="commitKeyText(rowIndex, itemIndex, item, 'id')"
                 @input="updateTextDraft(rowIndex, itemIndex, 'id', $event)"
@@ -226,6 +229,9 @@ function updateGapWidth(
               Label
               <input
                 :value="textDraft(rowIndex, itemIndex, 'label', item.label)"
+                autocapitalize="off"
+                autocorrect="off"
+                spellcheck="false"
                 @blur="commitKeyText(rowIndex, itemIndex, item, 'label')"
                 @change="commitKeyText(rowIndex, itemIndex, item, 'label')"
                 @input="updateTextDraft(rowIndex, itemIndex, 'label', $event)"

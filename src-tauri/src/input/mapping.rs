@@ -8,15 +8,39 @@ pub fn key_id_from_macos_keycode(keycode: u16) -> Option<&'static str> {
         21 => Some("digit-4"),
         23 => Some("digit-5"),
         22 => Some("digit-6"),
+        26 => Some("digit-7"),
+        28 => Some("digit-8"),
+        25 => Some("digit-9"),
+        29 => Some("digit-0"),
+        27 => Some("minus"),
+        24 => Some("equal"),
         48 => Some("tab"),
+        12 => Some("q"),
         13 => Some("w"),
+        14 => Some("e"),
+        15 => Some("r"),
+        17 => Some("t"),
+        16 => Some("y"),
+        32 => Some("u"),
+        34 => Some("i"),
+        31 => Some("o"),
+        35 => Some("p"),
+        33 => Some("bracket-left"),
+        30 => Some("bracket-right"),
+        42 => Some("backslash"),
         0 => Some("a"),
         1 => Some("s"),
         2 => Some("d"),
-        17 => Some("t"),
-        57 => Some("caps-lock"),
         3 => Some("f"),
         5 => Some("g"),
+        4 => Some("h"),
+        38 => Some("j"),
+        40 => Some("k"),
+        37 => Some("l"),
+        41 => Some("semicolon"),
+        39 => Some("quote"),
+        36 => Some("enter"),
+        57 => Some("caps-lock"),
         56 => Some("shift-left"),
         60 => Some("shift-right"),
         6 => Some("z"),
@@ -24,14 +48,28 @@ pub fn key_id_from_macos_keycode(keycode: u16) -> Option<&'static str> {
         8 => Some("c"),
         9 => Some("v"),
         11 => Some("b"),
+        45 => Some("n"),
+        46 => Some("m"),
+        43 => Some("comma"),
+        47 => Some("period"),
+        44 => Some("slash"),
         59 => Some("ctrl-left"),
         62 => Some("ctrl-right"),
         55 => Some("meta-left"),
+        54 => Some("meta-right"),
         58 => Some("alt-left"),
+        61 => Some("alt-right"),
         49 => Some("space"),
-        15 => Some("r"),
-        12 => Some("q"),
-        14 => Some("e"),
+        51 => Some("backspace"),
+        117 => Some("delete"),
+        115 => Some("home"),
+        119 => Some("end"),
+        116 => Some("page-up"),
+        121 => Some("page-down"),
+        126 => Some("arrow-up"),
+        125 => Some("arrow-down"),
+        123 => Some("arrow-left"),
+        124 => Some("arrow-right"),
         122 => Some("f1"),
         120 => Some("f2"),
         99 => Some("f3"),
@@ -59,30 +97,69 @@ pub fn key_id_from_windows_vk(vk_code: u32) -> Option<&'static str> {
         0x34 => Some("digit-4"),
         0x35 => Some("digit-5"),
         0x36 => Some("digit-6"),
+        0x37 => Some("digit-7"),
+        0x38 => Some("digit-8"),
+        0x39 => Some("digit-9"),
+        0x30 => Some("digit-0"),
+        0xBD => Some("minus"),
+        0xBB => Some("equal"),
         0x09 => Some("tab"),
-        0x57 => Some("w"),
         0x41 => Some("a"),
-        0x53 => Some("s"),
+        0x42 => Some("b"),
+        0x43 => Some("c"),
         0x44 => Some("d"),
-        0x54 => Some("t"),
-        0x14 => Some("caps-lock"),
+        0x45 => Some("e"),
         0x46 => Some("f"),
         0x47 => Some("g"),
+        0x48 => Some("h"),
+        0x49 => Some("i"),
+        0x4A => Some("j"),
+        0x4B => Some("k"),
+        0x4C => Some("l"),
+        0x4D => Some("m"),
+        0x4E => Some("n"),
+        0x4F => Some("o"),
+        0x50 => Some("p"),
+        0x51 => Some("q"),
+        0x52 => Some("r"),
+        0x53 => Some("s"),
+        0x54 => Some("t"),
+        0x55 => Some("u"),
+        0x56 => Some("v"),
+        0x57 => Some("w"),
+        0x58 => Some("x"),
+        0x59 => Some("y"),
+        0x5A => Some("z"),
+        0xDB => Some("bracket-left"),
+        0xDD => Some("bracket-right"),
+        0xDC => Some("backslash"),
+        0x14 => Some("caps-lock"),
+        0xBA => Some("semicolon"),
+        0xDE => Some("quote"),
+        0x0D => Some("enter"),
         0xA0 => Some("shift-left"),
         0xA1 => Some("shift-right"),
-        0x5A => Some("z"),
-        0x58 => Some("x"),
-        0x43 => Some("c"),
-        0x56 => Some("v"),
-        0x42 => Some("b"),
+        0xBC => Some("comma"),
+        0xBE => Some("period"),
+        0xBF => Some("slash"),
         0xA2 => Some("ctrl-left"),
         0xA3 => Some("ctrl-right"),
         0x5B => Some("meta-left"),
+        0x5C => Some("meta-right"),
         0xA4 => Some("alt-left"),
+        0xA5 => Some("alt-right"),
         0x20 => Some("space"),
-        0x52 => Some("r"),
-        0x51 => Some("q"),
-        0x45 => Some("e"),
+        0x08 => Some("backspace"),
+        0x2E => Some("delete"),
+        0x2D => Some("insert"),
+        0x24 => Some("home"),
+        0x23 => Some("end"),
+        0x21 => Some("page-up"),
+        0x22 => Some("page-down"),
+        0x26 => Some("arrow-up"),
+        0x28 => Some("arrow-down"),
+        0x25 => Some("arrow-left"),
+        0x27 => Some("arrow-right"),
         0x70 => Some("f1"),
         0x71 => Some("f2"),
         0x72 => Some("f3"),
@@ -110,27 +187,54 @@ pub fn key_id_from_windows_scancode(scan_code: u32) -> Option<&'static str> {
         0x05 => Some("digit-4"),
         0x06 => Some("digit-5"),
         0x07 => Some("digit-6"),
+        0x08 => Some("digit-7"),
+        0x09 => Some("digit-8"),
+        0x0A => Some("digit-9"),
+        0x0B => Some("digit-0"),
+        0x0C => Some("minus"),
+        0x0D => Some("equal"),
         0x0F => Some("tab"),
         0x10 => Some("q"),
         0x11 => Some("w"),
         0x12 => Some("e"),
         0x13 => Some("r"),
         0x14 => Some("t"),
-        0x3A => Some("caps-lock"),
+        0x15 => Some("y"),
+        0x16 => Some("u"),
+        0x17 => Some("i"),
+        0x18 => Some("o"),
+        0x19 => Some("p"),
+        0x1A => Some("bracket-left"),
+        0x1B => Some("bracket-right"),
+        0x2B => Some("backslash"),
         0x1E => Some("a"),
         0x1F => Some("s"),
         0x20 => Some("d"),
         0x21 => Some("f"),
         0x22 => Some("g"),
+        0x23 => Some("h"),
+        0x24 => Some("j"),
+        0x25 => Some("k"),
+        0x26 => Some("l"),
+        0x27 => Some("semicolon"),
+        0x28 => Some("quote"),
+        0x1C => Some("enter"),
+        0x3A => Some("caps-lock"),
         0x2A => Some("shift-left"),
         0x2C => Some("z"),
         0x2D => Some("x"),
         0x2E => Some("c"),
         0x2F => Some("v"),
         0x30 => Some("b"),
+        0x31 => Some("n"),
+        0x32 => Some("m"),
+        0x33 => Some("comma"),
+        0x34 => Some("period"),
+        0x35 => Some("slash"),
         0x1D => Some("ctrl-left"),
         0x38 => Some("alt-left"),
         0x39 => Some("space"),
+        0x0E => Some("backspace"),
         0x3B => Some("f1"),
         0x3C => Some("f2"),
         0x3D => Some("f3"),
@@ -172,6 +276,10 @@ mod tests {
         assert_eq!(key_id_from_macos_keycode(21), Some("digit-4"));
         assert_eq!(key_id_from_macos_keycode(23), Some("digit-5"));
         assert_eq!(key_id_from_macos_keycode(22), Some("digit-6"));
+        assert_eq!(key_id_from_macos_keycode(26), Some("digit-7"));
+        assert_eq!(key_id_from_macos_keycode(28), Some("digit-8"));
+        assert_eq!(key_id_from_macos_keycode(25), Some("digit-9"));
+        assert_eq!(key_id_from_macos_keycode(29), Some("digit-0"));
         assert_eq!(key_id_from_macos_keycode(48), Some("tab"));
         assert_eq!(key_id_from_macos_keycode(13), Some("w"));
         assert_eq!(key_id_from_macos_keycode(0), Some("a"));
@@ -181,6 +289,9 @@ mod tests {
         assert_eq!(key_id_from_macos_keycode(57), Some("caps-lock"));
         assert_eq!(key_id_from_macos_keycode(3), Some("f"));
         assert_eq!(key_id_from_macos_keycode(5), Some("g"));
+        assert_eq!(key_id_from_macos_keycode(37), Some("l"));
+        assert_eq!(key_id_from_macos_keycode(36), Some("enter"));
+        assert_eq!(key_id_from_macos_keycode(51), Some("backspace"));
         assert_eq!(key_id_from_macos_keycode(56), Some("shift-left"));
         assert_eq!(key_id_from_macos_keycode(6), Some("z"));
         assert_eq!(key_id_from_macos_keycode(7), Some("x"));
@@ -205,6 +316,8 @@ mod tests {
         assert_eq!(key_id_from_windows_vk(0x34), Some("digit-4"));
         assert_eq!(key_id_from_windows_vk(0x35), Some("digit-5"));
         assert_eq!(key_id_from_windows_vk(0x36), Some("digit-6"));
+        assert_eq!(key_id_from_windows_vk(0x37), Some("digit-7"));
+        assert_eq!(key_id_from_windows_vk(0x30), Some("digit-0"));
         assert_eq!(key_id_from_windows_vk(0x09), Some("tab"));
         assert_eq!(key_id_from_windows_vk(0x57), Some("w"));
         assert_eq!(key_id_from_windows_vk(0x41), Some("a"));
@@ -214,6 +327,9 @@ mod tests {
         assert_eq!(key_id_from_windows_vk(0x14), Some("caps-lock"));
         assert_eq!(key_id_from_windows_vk(0x46), Some("f"));
         assert_eq!(key_id_from_windows_vk(0x47), Some("g"));
+        assert_eq!(key_id_from_windows_vk(0x4C), Some("l"));
+        assert_eq!(key_id_from_windows_vk(0x0D), Some("enter"));
+        assert_eq!(key_id_from_windows_vk(0x08), Some("backspace"));
         assert_eq!(key_id_from_windows_vk(0xA0), Some("shift-left"));
         assert_eq!(key_id_from_windows_vk(0x5A), Some("z"));
         assert_eq!(key_id_from_windows_vk(0x58), Some("x"));
@@ -231,7 +347,10 @@ mod tests {
     #[test]
     fn maps_windows_scan_codes_to_overlay_ids() {
         assert_eq!(key_id_from_windows_scancode(0x29), Some("backquote"));
+        assert_eq!(key_id_from_windows_scancode(0x08), Some("digit-7"));
         assert_eq!(key_id_from_windows_scancode(0x11), Some("w"));
+        assert_eq!(key_id_from_windows_scancode(0x26), Some("l"));
+        assert_eq!(key_id_from_windows_scancode(0x1C), Some("enter"));
         assert_eq!(key_id_from_windows_scancode(0x2A), Some("shift-left"));
         assert_eq!(key_id_from_windows_scancode(0x39), Some("space"));
         assert_eq!(key_id_from_windows_scancode(0x3B), Some("f1"));
