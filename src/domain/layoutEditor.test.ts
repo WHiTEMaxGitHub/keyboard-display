@@ -8,7 +8,6 @@ import {
   moveRowItem,
   removeRow,
   removeRowItem,
-  swapRowItems,
   updateRowItem,
 } from "./layoutEditor";
 import type { OverlayRow } from "./defaultConfig";
@@ -72,18 +71,6 @@ describe("layout editor helpers", () => {
     expect(moveRowItem(rows, 1, 0, 1)[1]).toEqual([
       { type: "gap", widthUnit: 1 },
       { type: "key", id: "b", label: "B", group: "movement", widthUnit: 1 },
-    ]);
-  });
-
-  it("swaps row items", () => {
-    const rows: OverlayRow[] = [[
-      { type: "key", id: "a", label: "A", group: "movement", widthUnit: 1 },
-      { type: "gap", widthUnit: 1 },
-    ]];
-
-    expect(swapRowItems(rows, 0, 0, 1)[0]).toEqual([
-      { type: "gap", widthUnit: 1 },
-      { type: "key", id: "a", label: "A", group: "movement", widthUnit: 1 },
     ]);
   });
 

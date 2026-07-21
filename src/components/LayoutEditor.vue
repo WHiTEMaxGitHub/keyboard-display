@@ -1,13 +1,13 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from "vue";
+import { reactive, watch } from "vue";
 import {
   addRow,
   addGapToRow,
   addKeyToRow,
   moveRow,
+  moveRowItem,
   removeRow,
   removeRowItem,
-  swapRowItems,
   updateRowItem,
   validateKeyId,
 } from "../domain/layoutEditor";
@@ -28,8 +28,6 @@ const emit = defineEmits<{
 }>();
 
 const collapsedRows = reactive(new Set<number>());
-const draggingItem = ref<{ rowIndex: number; itemIndex: number } | null>(null);
-const dragTarget = ref<{ rowIndex: number; itemIndex: number } | null>(null);
 const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
@@ -87,48 +85,8 @@ function removeItem(rowIndex: number, itemIndex: number) {
   emit("update-rows", removeRowItem(props.rows, rowIndex, itemIndex));
 }
 
-function beginDrag(rowIndex: number, itemIndex: number, event: DragEvent) {
-  draggingItem.value = { rowIndex, itemIndex };
-  event.dataTransfer?.setData("text/plain", `${rowIndex}:${itemIndex}`);
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = "move";
-    const card = (event.currentTarget as HTMLElement).closest(".row-item-editor") as HTMLElement | null;
-    if (card) {
-      const rect = card.getBoundingClientRect();
-      event.dataTransfer.setDragImage(card, rect.width / 2, 18);
-    }
-  }
-}
-
-function isDragging(rowIndex: number, itemIndex: number) {
-  return draggingItem.value?.rowIndex === rowIndex && draggingItem.value.itemIndex === itemIndex;
-}
-
-function endDrag() {
-  draggingItem.value = null;
-  dragTarget.value = null;
-}
-
-function dropItem(rowIndex: number, itemIndex: number, event: DragEvent) {
-  event.preventDefault();
-  if (!draggingItem.value || draggingItem.value.rowIndex !== rowIndex) {
-    draggingItem.value = null;
-    return;
-  }
-
-  emit("update-rows", swapRowItems(props.rows, rowIndex, draggingItem.value.itemIndex, itemIndex));
-  draggingItem.value = null;
-  dragTarget.value = null;
-}
-
-function markDropTarget(rowIndex: number, itemIndex: number) {
-  if (draggingItem.value?.rowIndex === rowIndex && draggingItem.value.itemIndex !== itemIndex) {
-    dragTarget.value = { rowIndex, itemIndex };
-  }
-}
-
-function isDropTarget(rowIndex: number, itemIndex: number) {
-  return dragTarget.value?.rowIndex === rowIndex && dragTarget.value.itemIndex === itemIndex;
+function shiftItem(rowIndex: number, itemIndex: number, offset: -1 | 1) {
+  emit("update-rows", moveRowItem(props.rows, rowIndex, itemIndex, itemIndex + offset));
 }
 
 function textDraftKey(
@@ -249,20 +207,7 @@ function updateGapWidth(
           v-for="(item, itemIndex) in row"
           :key="`${rowIndex}-${itemIndex}`"
           class="row-item-editor"
-          :class="{ dragging: isDragging(rowIndex, itemIndex), 'drop-target': isDropTarget(rowIndex, itemIndex) }"
-          @dragenter="markDropTarget(rowIndex, itemIndex)"
-          @dragover.prevent
-          @drop="dropItem(rowIndex, itemIndex, $event)"
         >
-          <button
-            class="item-grip"
-            type="button"
-            draggable="true"
-            @dragend="endDrag"
-            @dragstart="beginDrag(rowIndex, itemIndex, $event)"
-          >
-            ⋮⋮
-          </button>
           <div class="item-summary">{{ itemSummary(item) }}</div>
           <template v-if="isKeyBinding(item)">
             <label>
@@ -317,6 +262,14 @@ function updateGapWidth(
           <button class="remove-button" type="button" @click="removeItem(rowIndex, itemIndex)">
             Delete
           </button>
+          <div class="item-move-actions">
+            <button type="button" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
+              Left
+            </button>
+            <button type="button" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
+              Right
+            </button>
+          </div>
         </div>
       </div>
     </article>
@@ -394,7 +347,8 @@ function updateGapWidth(
 }
 
 .row-actions button,
-.remove-button {
+.remove-button,
+.item-move-actions button {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
@@ -406,12 +360,14 @@ function updateGapWidth(
 }
 
 .row-actions button:hover,
-.remove-button:hover {
+.remove-button:hover,
+.item-move-actions button:hover {
   background: #29313d;
 }
 
 .row-actions button:disabled,
-.remove-button:disabled {
+.remove-button:disabled,
+.item-move-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.42;
 }
@@ -423,35 +379,13 @@ function updateGapWidth(
 
 .row-item-editor {
   display: grid;
-  grid-template-columns: 32px minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto;
+  grid-template-columns: minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto auto;
   align-items: end;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 7px;
   background: #10141a;
   padding: 10px;
-}
-
-.row-item-editor.dragging {
-  border-color: rgba(37, 211, 102, 0.42);
-  opacity: 0.68;
-}
-
-.row-item-editor.drop-target {
-  border-color: rgba(37, 211, 102, 0.68);
-  box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.12);
-}
-
-.item-grip {
-  display: grid;
-  place-items: center;
-  height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #9ca7b4;
-  cursor: grab;
-  font-weight: 900;
 }
 
 .item-summary {
@@ -500,6 +434,11 @@ function updateGapWidth(
 
 .remove-button {
   color: #ffb3b3;
+}
+
+.item-move-actions {
+  display: flex;
+  gap: 6px;
 }
 
 .field-error {

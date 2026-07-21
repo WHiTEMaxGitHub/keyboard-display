@@ -21,29 +21,6 @@ export function moveRowItem(
   return updateRows(rows, rowIndex, (row) => moveArrayItem(row, fromIndex, toIndex));
 }
 
-export function swapRowItems(
-  rows: OverlayRow[],
-  rowIndex: number,
-  leftIndex: number,
-  rightIndex: number,
-): OverlayRow[] {
-  return updateRows(rows, rowIndex, (row) => {
-    const nextRow = [...row];
-    if (
-      leftIndex < 0 ||
-      leftIndex >= nextRow.length ||
-      rightIndex < 0 ||
-      rightIndex >= nextRow.length ||
-      leftIndex === rightIndex
-    ) {
-      return nextRow;
-    }
-
-    [nextRow[leftIndex], nextRow[rightIndex]] = [nextRow[rightIndex], nextRow[leftIndex]];
-    return nextRow;
-  });
-}
-
 export function addKeyToRow(rows: OverlayRow[], rowIndex: number): OverlayRow[] {
   return updateRows(rows, rowIndex, (row) => [
     ...row,
