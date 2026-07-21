@@ -87,6 +87,14 @@ pub fn key_id_from_macos_keycode(keycode: u16) -> Option<&'static str> {
 }
 
 #[cfg_attr(not(any(test, target_os = "windows")), allow(dead_code))]
+pub fn key_id_from_windows_event(vk_code: u32, scan_code: u32) -> Option<&'static str> {
+    match vk_code {
+        0xA3 | 0xA5 | 0x5B | 0x5C => key_id_from_windows_vk(vk_code),
+        _ => key_id_from_windows_scancode(scan_code).or_else(|| key_id_from_windows_vk(vk_code)),
+    }
+}
+
+#[cfg_attr(not(any(test, target_os = "windows")), allow(dead_code))]
 pub fn key_id_from_windows_vk(vk_code: u32) -> Option<&'static str> {
     match vk_code {
         0x1B => Some("escape"),
@@ -262,8 +270,8 @@ pub fn key_id_from_mouse_button(button: u16) -> Option<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::{
-        key_id_from_macos_keycode, key_id_from_mouse_button, key_id_from_windows_scancode,
-        key_id_from_windows_vk,
+        key_id_from_macos_keycode, key_id_from_mouse_button, key_id_from_windows_event,
+        key_id_from_windows_scancode, key_id_from_windows_vk,
     };
 
     #[test]
@@ -300,7 +308,9 @@ mod tests {
         assert_eq!(key_id_from_macos_keycode(11), Some("b"));
         assert_eq!(key_id_from_macos_keycode(59), Some("ctrl-left"));
         assert_eq!(key_id_from_macos_keycode(55), Some("meta-left"));
+        assert_eq!(key_id_from_macos_keycode(54), Some("meta-right"));
         assert_eq!(key_id_from_macos_keycode(58), Some("alt-left"));
+        assert_eq!(key_id_from_macos_keycode(61), Some("alt-right"));
         assert_eq!(key_id_from_macos_keycode(49), Some("space"));
         assert_eq!(key_id_from_macos_keycode(122), Some("f1"));
         assert_eq!(key_id_from_macos_keycode(111), Some("f12"));
@@ -338,10 +348,19 @@ mod tests {
         assert_eq!(key_id_from_windows_vk(0x42), Some("b"));
         assert_eq!(key_id_from_windows_vk(0xA2), Some("ctrl-left"));
         assert_eq!(key_id_from_windows_vk(0x5B), Some("meta-left"));
+        assert_eq!(key_id_from_windows_vk(0x5C), Some("meta-right"));
         assert_eq!(key_id_from_windows_vk(0xA4), Some("alt-left"));
+        assert_eq!(key_id_from_windows_vk(0xA5), Some("alt-right"));
         assert_eq!(key_id_from_windows_vk(0x20), Some("space"));
         assert_eq!(key_id_from_windows_vk(0x70), Some("f1"));
         assert_eq!(key_id_from_windows_vk(0x7B), Some("f12"));
+    }
+
+    #[test]
+    fn prefers_windows_virtual_keys_for_right_side_modifiers() {
+        assert_eq!(key_id_from_windows_event(0xA5, 0x38), Some("alt-right"));
+        assert_eq!(key_id_from_windows_event(0xA4, 0x38), Some("alt-left"));
+        assert_eq!(key_id_from_windows_event(0x5C, 0x5C), Some("meta-right"));
     }
 
     #[test]

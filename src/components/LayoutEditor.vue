@@ -18,6 +18,7 @@ import {
   type OverlayRow,
   type OverlayRowItem,
 } from "../domain/defaultConfig";
+import { detectPlatformKey } from "../domain/keyLabels";
 
 const props = defineProps<{
   rows: OverlayRow[];
@@ -31,6 +32,7 @@ const collapsedRows = reactive(new Set<number>());
 const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
+const platformKey = detectPlatformKey();
 
 watch(
   () => props.rows,
@@ -134,10 +136,18 @@ function commitKeyText(
   }
 
   textDrafts.delete(key);
-  emit("update-rows", updateRowItem(props.rows, rowIndex, itemIndex, {
+  const nextItem = {
     ...item,
     [field]: value,
-  }));
+  };
+  if (field === "label" && platformKey !== "default") {
+    nextItem.platformLabels = {
+      ...(item.platformLabels ?? {}),
+      [platformKey]: value,
+    };
+  }
+
+  emit("update-rows", updateRowItem(props.rows, rowIndex, itemIndex, nextItem));
 }
 
 function widthDraftKey(rowIndex: number, itemIndex: number) {

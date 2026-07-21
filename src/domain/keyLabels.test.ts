@@ -27,4 +27,25 @@ describe("displayLabelForKey", () => {
     expect(displayLabelForKey(key, "windows")).toBe("Win");
     expect(displayLabelForKey(key, "default")).toBe("Meta");
   });
+
+  it("uses built-in platform labels for common modifiers", () => {
+    expect(displayLabelForKey({
+      id: "alt-right",
+      label: "Alt",
+      group: "modifier",
+      widthUnit: 1,
+    }, "macos")).toBe("OptionRight");
+    expect(displayLabelForKey({
+      id: "alt-right",
+      label: "Alt",
+      group: "modifier",
+      widthUnit: 1,
+    }, "windows")).toBe("AltRight");
+    expect(displayLabelForKey({
+      id: "meta-left",
+      label: "Meta",
+      group: "modifier",
+      widthUnit: 1,
+    }, "windows")).toBe("Win");
+  });
 });

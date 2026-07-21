@@ -2,6 +2,25 @@ import type { KeyBinding } from "./defaultConfig";
 
 export type PlatformKey = "macos" | "windows" | "default";
 
+const builtInPlatformLabels: Record<string, Partial<Record<PlatformKey, string>>> = {
+  "alt-left": {
+    macos: "OptionLeft",
+    windows: "AltLeft",
+  },
+  "alt-right": {
+    macos: "OptionRight",
+    windows: "AltRight",
+  },
+  "meta-left": {
+    macos: "Cmd",
+    windows: "Win",
+  },
+  "meta-right": {
+    macos: "Cmd",
+    windows: "Win",
+  },
+};
+
 export function detectPlatformKey(platform: string = navigator.platform): PlatformKey {
   const normalizedPlatform = platform.toLowerCase();
 
@@ -21,5 +40,5 @@ export function displayLabelForKey(key: KeyBinding, platform: PlatformKey): stri
     return key.label;
   }
 
-  return key.platformLabels?.[platform] ?? key.label;
+  return key.platformLabels?.[platform] ?? builtInPlatformLabels[key.id]?.[platform] ?? key.label;
 }
