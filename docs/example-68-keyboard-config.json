@@ -11,16 +11,16 @@
     },
     "style": {
       "scale": 1,
-      "opacity": 0.92,
+      "opacity": 1,
       "backgroundColor": "#0a0c0e00",
       "backgroundOpacity": 0.72,
       "backgroundRadius": 8,
       "idleKeyVisibility": "visible",
       "alwaysOnTop": true,
-      "idleColor": "#121417",
-      "activeColor": "#25d366",
+      "idleColor": "#121417a8",
+      "activeColor": "#4dabf7c8",
       "idleTextColor": "#f5f7fa",
-      "activeTextColor": "#ffffff"
+      "activeTextColor": "#dfe5ec"
     },
     "rows": [
       [
@@ -124,10 +124,13 @@
         },
         {
           "type": "key",
-          "id": "insert",
-          "label": "Ins",
+          "id": "backquote",
+          "label": "`",
           "group": "action",
-          "widthUnit": 1
+          "widthUnit": 1,
+          "platformLabels": {
+            "macos": "`"
+          }
         }
       ],
       [
@@ -452,8 +455,8 @@
           "group": "modifier",
           "widthUnit": 1.3,
           "platformLabels": {
-            "macos": "OptionLeft",
-            "windows": "AltLeft"
+            "macos": "Opt",
+            "windows": "Alt"
           }
         },
         {
@@ -476,21 +479,24 @@
         },
         {
           "type": "key",
-          "id": "alt-right",
-          "label": "Alt",
+          "id": "meta-right",
+          "label": "Cmd",
           "group": "modifier",
           "widthUnit": 1.5,
           "platformLabels": {
-            "macos": "OptionRight",
-            "windows": "AltRight"
+            "macos": "Cmd",
+            "windows": "Alt"
           }
         },
         {
           "type": "key",
-          "id": "ctrl-right",
-          "label": "Ctrl",
+          "id": "alt-right",
+          "label": "Opt",
           "group": "modifier",
-          "widthUnit": 1.5
+          "widthUnit": 1.5,
+          "platformLabels": {
+            "macos": "Opt"
+          }
         },
         {
           "type": "key",
