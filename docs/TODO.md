@@ -35,6 +35,9 @@
   - Current first pass adds a Layout Editor subtab for editing existing rows.
   - Current second pass supports adding, deleting, and reordering rows/items.
   - Current third pass supports capturing a browser key into a key id.
+  - TODO: Add native unknown-key fallback ids such as `macos-key-<keycode>`
+    and `windows-scan-<scanCode>`, then consider a user-editable key id
+    registry for naming unusual input devices.
   - Users should be able to edit `overlay.rows` without hand-writing JSON.
   - Support adding, deleting, and reordering rows.
   - Support adding, deleting, and reordering key and gap items within a row.

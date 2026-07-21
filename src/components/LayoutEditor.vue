@@ -33,6 +33,7 @@ const collapsedRows = reactive(new Set<number>());
 const captureTarget = ref<{ rowIndex: number; itemIndex: number; currentId: string } | null>(null);
 const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
+const platformLabelDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
 const platformKey = detectPlatformKey();
 
@@ -41,6 +42,7 @@ watch(
   () => {
     widthDrafts.clear();
     textDrafts.clear();
+    platformLabelDrafts.clear();
     idErrors.clear();
   },
 );
@@ -161,6 +163,52 @@ function updateTextDraft(
   event: Event,
 ) {
   textDrafts.set(textDraftKey(rowIndex, itemIndex, field), (event.target as HTMLInputElement).value);
+}
+
+function platformLabelDraftKey(rowIndex: number, itemIndex: number, platform: "macos" | "windows") {
+  return `${rowIndex}-${itemIndex}-platform-${platform}`;
+}
+
+function platformLabelDraft(
+  rowIndex: number,
+  itemIndex: number,
+  item: KeyBinding,
+  platform: "macos" | "windows",
+) {
+  return platformLabelDrafts.get(platformLabelDraftKey(rowIndex, itemIndex, platform)) ??
+    item.platformLabels?.[platform] ??
+    "";
+}
+
+function updatePlatformLabelDraft(
+  rowIndex: number,
+  itemIndex: number,
+  platform: "macos" | "windows",
+  event: Event,
+) {
+  platformLabelDrafts.set(
+    platformLabelDraftKey(rowIndex, itemIndex, platform),
+    (event.target as HTMLInputElement).value,
+  );
+}
+
+function commitPlatformLabel(
+  rowIndex: number,
+  itemIndex: number,
+  item: KeyBinding,
+  platform: "macos" | "windows",
+) {
+  const key = platformLabelDraftKey(rowIndex, itemIndex, platform);
+  const value = (platformLabelDrafts.get(key) ?? item.platformLabels?.[platform] ?? "").trim();
+  platformLabelDrafts.delete(key);
+
+  emit("update-rows", updateRowItem(props.rows, rowIndex, itemIndex, {
+    ...item,
+    platformLabels: {
+      ...(item.platformLabels ?? {}),
+      [platform]: value || undefined,
+    },
+  }));
 }
 
 function commitKeyText(
@@ -312,6 +360,32 @@ function updateGapWidth(
             >
               {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
             </button>
+            <div class="platform-label-fields">
+              <label>
+                macOS label
+                <input
+                  :value="platformLabelDraft(rowIndex, itemIndex, item, 'macos')"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
+                  @change="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
+                  @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'macos', $event)"
+                />
+              </label>
+              <label>
+                Windows label
+                <input
+                  :value="platformLabelDraft(rowIndex, itemIndex, item, 'windows')"
+                  autocapitalize="off"
+                  autocorrect="off"
+                  spellcheck="false"
+                  @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
+                  @change="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
+                  @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
+                />
+              </label>
+            </div>
           </template>
           <template v-else>
             <div class="gap-label">{{ item.type }}</div>
@@ -478,6 +552,13 @@ function updateGapWidth(
   color: #9ca7b4;
   font-size: 12px;
   font-weight: 800;
+}
+
+.platform-label-fields {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .row-item-editor input,
