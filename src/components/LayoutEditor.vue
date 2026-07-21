@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, watch } from "vue";
+import { onUnmounted, reactive, ref, watch } from "vue";
 import {
   addRow,
   addGapToRow,
@@ -18,6 +18,7 @@ import {
   type OverlayRow,
   type OverlayRowItem,
 } from "../domain/defaultConfig";
+import { keyIdFromKeyboardCode } from "../domain/inputEvents";
 import { detectPlatformKey } from "../domain/keyLabels";
 
 const props = defineProps<{
@@ -29,6 +30,7 @@ const emit = defineEmits<{
 }>();
 
 const collapsedRows = reactive(new Set<number>());
+const captureTarget = ref<{ rowIndex: number; itemIndex: number; currentId: string } | null>(null);
 const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
@@ -90,6 +92,50 @@ function removeItem(rowIndex: number, itemIndex: number) {
 function shiftItem(rowIndex: number, itemIndex: number, offset: -1 | 1) {
   emit("update-rows", moveRowItem(props.rows, rowIndex, itemIndex, itemIndex + offset));
 }
+
+function beginCapture(rowIndex: number, itemIndex: number, currentId: string) {
+  captureTarget.value = { rowIndex, itemIndex, currentId };
+  window.addEventListener("keydown", captureKey, { once: true, capture: true });
+}
+
+function cancelCapture() {
+  captureTarget.value = null;
+  window.removeEventListener("keydown", captureKey, { capture: true });
+}
+
+function captureKey(event: KeyboardEvent) {
+  event.preventDefault();
+  event.stopPropagation();
+  const target = captureTarget.value;
+  if (!target) {
+    return;
+  }
+
+  const capturedId = keyIdFromKeyboardCode(event.code) ?? `browser-code-${event.code.toLowerCase()}`;
+  const item = props.rows[target.rowIndex]?.[target.itemIndex];
+  if (!item || !isKeyBinding(item)) {
+    captureTarget.value = null;
+    return;
+  }
+
+  const error = validateKeyId(capturedId, props.rows, target.currentId);
+  if (error) {
+    idErrors.set(widthDraftKey(target.rowIndex, target.itemIndex), error);
+    captureTarget.value = null;
+    return;
+  }
+
+  idErrors.delete(widthDraftKey(target.rowIndex, target.itemIndex));
+  emit("update-rows", updateRowItem(props.rows, target.rowIndex, target.itemIndex, {
+    ...item,
+    id: capturedId,
+  }));
+  captureTarget.value = null;
+}
+
+onUnmounted(() => {
+  window.removeEventListener("keydown", captureKey, { capture: true });
+});
 
 function textDraftKey(
   rowIndex: number,
@@ -259,6 +305,13 @@ function updateGapWidth(
                 @input="updateWidthDraft(rowIndex, itemIndex, $event)"
               />
             </label>
+            <button
+              class="capture-button"
+              type="button"
+              @click="captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? cancelCapture() : beginCapture(rowIndex, itemIndex, item.id)"
+            >
+              {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
+            </button>
           </template>
           <template v-else>
             <div class="gap-label">{{ item.type }}</div>
@@ -364,6 +417,7 @@ function updateGapWidth(
 
 .row-actions button,
 .remove-button,
+.capture-button,
 .item-move-actions button {
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -377,12 +431,14 @@ function updateGapWidth(
 
 .row-actions button:hover,
 .remove-button:hover,
+.capture-button:hover,
 .item-move-actions button:hover {
   background: #29313d;
 }
 
 .row-actions button:disabled,
 .remove-button:disabled,
+.capture-button:disabled,
 .item-move-actions button:disabled {
   cursor: not-allowed;
   opacity: 0.42;
@@ -395,7 +451,7 @@ function updateGapWidth(
 
 .row-item-editor {
   display: grid;
-  grid-template-columns: minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto auto;
+  grid-template-columns: minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto auto auto;
   align-items: end;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, 0.06);
@@ -450,6 +506,10 @@ function updateGapWidth(
 
 .remove-button {
   color: #ffb3b3;
+}
+
+.capture-button {
+  color: #eafff0;
 }
 
 .item-move-actions {

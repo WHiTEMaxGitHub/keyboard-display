@@ -34,6 +34,7 @@
 - [ ] Add a visual profile/config editor window.
   - Current first pass adds a Layout Editor subtab for editing existing rows.
   - Current second pass supports adding, deleting, and reordering rows/items.
+  - Current third pass supports capturing a browser key into a key id.
   - Users should be able to edit `overlay.rows` without hand-writing JSON.
   - Support adding, deleting, and reordering rows.
   - Support adding, deleting, and reordering key and gap items within a row.
