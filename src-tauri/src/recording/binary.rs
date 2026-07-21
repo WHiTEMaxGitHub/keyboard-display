@@ -1,4 +1,7 @@
-use super::{sample_frames, RecordingEvent, RecordingFrame, RecordingSnapshot};
+use super::{
+    session::{event_frame, sample_frames},
+    types::{RecordingEvent, RecordingFrame, RecordingSnapshot},
+};
 
 const MAGIC: &[u8; 4] = b"KBDR";
 const VERSION: u8 = 1;
@@ -249,14 +252,6 @@ fn estimated_buffer_size(
         + key_count * (AVERAGE_KEY_ID_BYTES + MAX_VARINT_BYTES)
         + run_count * (MAX_VARINT_BYTES + bitset_len)
         + marker_count * AVERAGE_MARKER_BYTES
-}
-
-fn event_frame(event: &RecordingEvent) -> u64 {
-    match event {
-        RecordingEvent::KeyDown { frame, .. }
-        | RecordingEvent::KeyUp { frame, .. }
-        | RecordingEvent::Marker { frame, .. } => *frame,
-    }
 }
 
 fn write_string(value: &str, bytes: &mut Vec<u8>) {

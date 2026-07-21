@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { invoke } from "@tauri-apps/api/core";
 import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
-import {
-  LogicalPosition,
-  LogicalSize,
-  Window,
-  currentMonitor,
-  primaryMonitor,
-} from "@tauri-apps/api/window";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, onUnmounted, reactive, ref, watch, type WatchStopHandle } from "vue";
+import { tauriApi } from "./api/tauri";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
+import {
+  normalizeOverlayPosition,
+  useOverlayWindow,
+  type OverlayPosition,
+  type OverlayRuntimeConfig,
+} from "./composables/useOverlayWindow";
+import {
+  useRecordingController,
+} from "./composables/useRecordingController";
 import {
   buildAppConfigFile,
   parseAppConfigFile,
@@ -25,11 +26,8 @@ import {
   type ExportConfig,
   type OverlayStyle,
 } from "./domain/defaultConfig";
-import { estimateOverlaySize } from "./domain/overlaySize";
-import { effectiveRecordingFps } from "./domain/recordingConfig";
 import {
   INPUT_STATE_EVENT,
-  OVERLAY_ADJUST_MODE_EVENT,
   OVERLAY_CONFIG_EVENT,
   OVERLAY_READY_EVENT,
   OVERLAY_STYLE_EVENT,
@@ -39,16 +37,8 @@ import {
   keyIdFromMouseButton,
   type InputStatePayload,
 } from "./domain/inputEvents";
-import {
-  isHotkeyMatch,
-  normalizeHotkey,
-  normalizeRecordingHotkeyConfig,
-  type RecordingHotkeyConfig,
-  type RecordingHotkeyMode,
-} from "./domain/recordingHotkeys";
+import type { RecordingHotkeyMode } from "./domain/recordingHotkeys";
 import type { RecordingConfig } from "./domain/defaultConfig";
-
-type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom";
 
 const config = reactive(createDefaultConfig());
 const activeKeyIds = ref(new Set<string>());
@@ -59,39 +49,11 @@ const profileChanged = ref(false);
 const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const customOverlayPosition = ref<{ x: number; y: number } | null>(null);
-const overlayAdjusting = ref(false);
-const recordingDirectory = ref("");
-const defaultRecordingDirectory = ref("");
-const silentRecording = ref(false);
-const restoreOverlayAfterRecording = ref(false);
-const isRecording = ref(false);
-const recordingCountdown = ref(0);
-const recordingCountdownTimer = ref<number | null>(null);
-const lastRecordingPath = ref("");
-const recordingStatusMessage = ref("");
-const inspectedRecordingPath = ref("");
-const recordingInspection = ref<RecordingInspection | null>(null);
-const recordingInspectionError = ref("");
 const syncFeedbackActive = ref(false);
-const recordingHotkeys = ref<RecordingHotkeyConfig>(normalizeRecordingHotkeyConfig(undefined));
-const activeRecordingHotkeys = ref<RecordingHotkeyConfig | null>(null);
-const hotkeyCaptureTarget = ref<"start" | "stop" | "sync" | null>(null);
-const capturedHotkeyKeys = ref(new Set<string>());
-const activeRecordingHotkeySignature = ref("");
 
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
 });
-
-function normalizeOverlayPosition(position: string | null | undefined): OverlayPosition {
-  return position === "top-left" ||
-    position === "top-right" ||
-    position === "bottom-left" ||
-    position === "bottom-right" ||
-    position === "custom"
-    ? position
-    : "bottom-right";
-}
 
 let unlistenInputState: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
@@ -100,34 +62,66 @@ let syncFeedbackTimer: number | undefined;
 let appConfigSaveTimer: number | undefined;
 let stopAppConfigWatch: WatchStopHandle | undefined;
 
-type OverlayRuntimeConfig = {
-  layout: typeof config.layout;
-  rows: typeof config.rows;
-  keys: typeof config.keys;
-  style: OverlayStyle;
-};
+const {
+  overlayAdjusting,
+  updateOverlayStyle: syncOverlayStyle,
+  updateOverlayRows: syncOverlayRows,
+  resizeOverlayWindow,
+  destroyOverlayWindow,
+  setOverlayVisible,
+  moveOverlay,
+  startOverlayAdjust,
+  handleOverlayReady,
+  saveOverlayAdjust,
+  cancelOverlayAdjust,
+} = useOverlayWindow({
+  config,
+  isOverlayVisible,
+  overlayPosition,
+  customOverlayPosition,
+  markProfileChanged,
+  scheduleAppConfigSave,
+});
 
-type OverlayAdjustModePayload = {
-  enabled: boolean;
-};
-
-type RecordingInspectionEvent =
-  | { frame: number; down: string }
-  | { frame: number; up: string }
-  | { frame: number; marker: string };
-
-type RecordingInspectionFrame = {
-  frame: number;
-  keys: string[];
-};
-
-type RecordingInspection = {
-  version: number;
-  fps: number;
-  keyIds: string[];
-  events: RecordingInspectionEvent[];
-  frames: RecordingInspectionFrame[];
-};
+const {
+  recordingDirectory,
+  defaultRecordingDirectory,
+  silentRecording,
+  isRecording,
+  recordingCountdown,
+  lastRecordingPath,
+  recordingStatusMessage,
+  inspectedRecordingPath,
+  recordingInspection,
+  recordingInspectionError,
+  recordingHotkeys,
+  hotkeyCaptureTarget,
+  initializeDefaultRecordingDirectory,
+  recordInputIfNeeded,
+  chooseRecordingDirectory,
+  startRecordingWithCountdown,
+  stopRecording,
+  inspectRecordingFile,
+  inspectRecordingPath,
+  updateSilentRecording,
+  updateRecordingHotkeyMode: setRecordingHotkeyMode,
+  addSyncMarker,
+  beginHotkeyCapture,
+  captureHotkeyKey,
+  finishHotkeyCapture,
+  handleRecordingHotkeys,
+} = useRecordingController({
+  config,
+  profileName,
+  isOverlayWindow,
+  activeKeyIds,
+  isOverlayVisible,
+  overlayPosition,
+  destroyOverlayWindow,
+  setOverlayVisible,
+  moveOverlay,
+  scheduleAppConfigSave,
+});
 
 function updateActiveKey(keyId: string, pressed: boolean) {
   const nextKeys = new Set(activeKeyIds.value);
@@ -139,18 +133,6 @@ function updateActiveKey(keyId: string, pressed: boolean) {
   }
 
   activeKeyIds.value = nextKeys;
-}
-
-async function recordInputIfNeeded(keyId: string, pressed: boolean) {
-  if (isOverlayWindow.value || !isRecording.value) {
-    return;
-  }
-
-  await invoke("record_input_event", { keyId, pressed });
-}
-
-function effectiveRecordingHotkeys(): RecordingHotkeyConfig {
-  return activeRecordingHotkeys.value ?? recordingHotkeys.value;
 }
 
 function applyOverlayStyle(style: OverlayStyle) {
@@ -177,259 +159,17 @@ function applyExportConfig(exportConfig: ExportConfig) {
 async function updateOverlayStyle(style: OverlayStyle) {
   applyOverlayStyle(style);
   markProfileChanged();
-  const overlayWindow = await Window.getByLabel("pov");
-  await resizeOverlayWindow(overlayWindow);
-  await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
-  await emitTo<OverlayStyle>("pov", OVERLAY_STYLE_EVENT, style);
-  if (isOverlayVisible.value && overlayPosition.value !== "custom") {
-    await moveOverlay(overlayPosition.value, false, false);
-  }
+  await syncOverlayStyle(style);
 }
 
 async function updateOverlayRows(rows: typeof config.rows) {
   applyOverlayRows(rows);
   markProfileChanged();
-  const overlayWindow = await Window.getByLabel("pov");
-  await resizeOverlayWindow(overlayWindow);
-  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
-    layout: config.layout,
-    rows: config.rows,
-    keys: config.keys,
-    style: config.style,
-  });
-  if (isOverlayVisible.value && overlayPosition.value !== "custom") {
-    await moveOverlay(overlayPosition.value, false, false);
-  }
-}
-
-async function resizeOverlayWindow(overlayWindow?: Window | null) {
-  const targetWindow = overlayWindow ?? (await Window.getByLabel("pov"));
-
-  if (!targetWindow) {
-    return;
-  }
-
-  const size = estimateOverlaySize(config.layout, config.rows, config.style);
-  await targetWindow.setSize(new LogicalSize(size.width, size.height));
-}
-
-async function ensureOverlayWindow(adjust = false): Promise<Window | null> {
-  const existingWindow = await WebviewWindow.getByLabel("pov");
-  if (existingWindow) {
-    return existingWindow;
-  }
-
-  const size = estimateOverlaySize(config.layout, config.rows, config.style);
-  const createdWindow = new WebviewWindow("pov", {
-    url: adjust ? "/?surface=pov&adjust=1" : "/?surface=pov",
-    title: "POV Overlay",
-    width: size.width,
-    height: size.height,
-    decorations: false,
-    transparent: true,
-    backgroundColor: [0, 0, 0, 0],
-    shadow: false,
-    alwaysOnTop: config.style.alwaysOnTop,
-    visible: false,
-    resizable: false,
-    skipTaskbar: true,
-    visibleOnAllWorkspaces: true,
-  });
-
-  await new Promise<void>((resolve, reject) => {
-    createdWindow.once("tauri://created", () => resolve());
-    createdWindow.once("tauri://error", (event) => reject(event.payload));
-  });
-
-  return createdWindow;
-}
-
-async function syncOverlayWindow(overlayWindow?: Window | null) {
-  const targetWindow = overlayWindow ?? (await ensureOverlayWindow());
-  if (!targetWindow) {
-    return;
-  }
-
-  await resizeOverlayWindow(targetWindow);
-  await targetWindow.setAlwaysOnTop(config.style.alwaysOnTop);
-  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
-    layout: config.layout,
-    rows: config.rows,
-    keys: config.keys,
-    style: config.style,
-  });
-}
-
-async function destroyOverlayWindow() {
-  const overlayWindow = await Window.getByLabel("pov");
-  await overlayWindow?.destroy();
+  await syncOverlayRows();
 }
 
 function markProfileChanged() {
   profileChanged.value = true;
-}
-
-async function setOverlayVisible(visible: boolean, markChanged = true) {
-  const overlayWindow = visible ? await ensureOverlayWindow() : await Window.getByLabel("pov");
-
-  if (!overlayWindow) {
-    isOverlayVisible.value = false;
-    return;
-  }
-
-  if (visible) {
-    await syncOverlayWindow(overlayWindow);
-    await overlayWindow.show();
-  } else {
-    await overlayWindow.hide();
-  }
-
-  isOverlayVisible.value = visible;
-  if (markChanged) {
-    markProfileChanged();
-  }
-  await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, visible);
-}
-
-async function moveOverlay(position: OverlayPosition, markChanged = true, show = true) {
-  overlayPosition.value = position;
-  if (markChanged) {
-    markProfileChanged();
-  }
-  const overlayWindow = await ensureOverlayWindow();
-  const monitor = (await currentMonitor()) ?? (await primaryMonitor());
-
-  if (!overlayWindow || !monitor) {
-    return;
-  }
-
-  await resizeOverlayWindow(overlayWindow);
-
-  if (position === "custom" && customOverlayPosition.value) {
-    if (show) {
-      await overlayWindow.show();
-    }
-    await overlayWindow.setPosition(
-      new LogicalPosition(customOverlayPosition.value.x, customOverlayPosition.value.y),
-    );
-    if (show) {
-      isOverlayVisible.value = true;
-      await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
-    }
-    return;
-  }
-  const presetPosition = position === "custom" ? "bottom-right" : position;
-
-  const horizontalMargin = 6;
-  const topMargin = 3;
-  const bottomMargin = 5;
-  const overlayBleed = 12;
-  const overlaySize = estimateOverlaySize(config.layout, config.rows, config.style);
-  const workArea = {
-    position: monitor.workArea.position.toLogical(monitor.scaleFactor),
-    size: monitor.workArea.size.toLogical(monitor.scaleFactor),
-  };
-  const xMin = workArea.position.x + horizontalMargin - overlayBleed;
-  const yMin = workArea.position.y + topMargin - overlayBleed;
-  const xMax = workArea.position.x + workArea.size.width - overlaySize.width - horizontalMargin + overlayBleed;
-  const yMax = workArea.position.y + workArea.size.height - overlaySize.height - bottomMargin + overlayBleed;
-
-  const positions: Record<Exclude<OverlayPosition, "custom">, LogicalPosition> = {
-    "top-left": new LogicalPosition(xMin, yMin),
-    "top-right": new LogicalPosition(xMax, yMin),
-    "bottom-left": new LogicalPosition(xMin, yMax),
-    "bottom-right": new LogicalPosition(xMax, yMax),
-  };
-
-  if (show) {
-    await overlayWindow.show();
-  }
-  await overlayWindow.setPosition(positions[presetPosition]);
-  if (show) {
-    isOverlayVisible.value = true;
-    await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
-  }
-}
-
-async function startOverlayAdjust() {
-  overlayAdjusting.value = true;
-  const existingWindow = await Window.getByLabel("pov");
-  const monitor = (await currentMonitor()) ?? (await primaryMonitor());
-  const previousPosition =
-    existingWindow && monitor
-      ? (await existingWindow.outerPosition()).toLogical(monitor.scaleFactor)
-      : null;
-  await existingWindow?.destroy();
-  const overlayWindow = await ensureOverlayWindow(true);
-  if (!overlayWindow) {
-    return;
-  }
-
-  await syncOverlayWindow(overlayWindow);
-  if (previousPosition) {
-    await overlayWindow.setPosition(new LogicalPosition(previousPosition.x, previousPosition.y));
-  }
-  await overlayWindow.show();
-  isOverlayVisible.value = true;
-  await setOverlayClickThrough(false);
-  await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: true });
-}
-
-async function handleOverlayReady() {
-  const overlayWindow = await Window.getByLabel("pov");
-  if (!overlayWindow) {
-    return;
-  }
-
-  await syncOverlayWindow(overlayWindow);
-  if (overlayAdjusting.value) {
-    await setOverlayClickThrough(false);
-    await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: true });
-  }
-}
-
-async function saveOverlayAdjust() {
-  const overlayWindow = await Window.getByLabel("pov");
-  const monitor = (await currentMonitor()) ?? (await primaryMonitor());
-  if (!overlayWindow || !monitor) {
-    return;
-  }
-
-  const physicalPosition = await overlayWindow.outerPosition();
-  const logicalPosition = physicalPosition.toLogical(monitor.scaleFactor);
-  customOverlayPosition.value = {
-    x: logicalPosition.x,
-    y: logicalPosition.y,
-  };
-  overlayPosition.value = "custom";
-  overlayAdjusting.value = false;
-  markProfileChanged();
-  scheduleAppConfigSave();
-  await setOverlayClickThrough(true);
-  await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
-}
-
-async function cancelOverlayAdjust() {
-  overlayAdjusting.value = false;
-  await setOverlayClickThrough(true);
-  await emitTo<OverlayAdjustModePayload>("pov", OVERLAY_ADJUST_MODE_EVENT, { enabled: false });
-  await moveOverlay(overlayPosition.value, false);
-}
-
-async function setOverlayClickThrough(enabled: boolean) {
-  const overlayWindow = await Window.getByLabel("pov");
-  await overlayWindow?.setIgnoreCursorEvents(enabled);
-  if (!enabled) {
-    window.setTimeout(() => {
-      void Window.getByLabel("pov").then((window) => window?.setIgnoreCursorEvents(false));
-    }, 100);
-    window.setTimeout(() => {
-      void Window.getByLabel("pov").then((window) => window?.setIgnoreCursorEvents(false));
-    }, 250);
-    window.setTimeout(() => {
-      void Window.getByLabel("pov").then((window) => window?.setIgnoreCursorEvents(false));
-    }, 500);
-  }
 }
 
 async function applyLoadedConfig(text: string, fileName: string, sourcePath: string | null) {
@@ -472,18 +212,18 @@ async function loadConfig() {
     return;
   }
 
-  const text = await invoke<string>("read_config_file", { path: selectedPath });
+  const text = await tauriApi.readConfigFile(selectedPath);
   await applyLoadedConfig(text, selectedPath.split(/[\\/]/).pop() ?? selectedPath, selectedPath);
 }
 
 async function loadRecentProfile(path: string) {
-  const text = await invoke<string>("read_config_file", { path });
+  const text = await tauriApi.readConfigFile(path);
   await applyLoadedConfig(text, path.split(/[\\/]/).pop() ?? path, path);
 }
 
 async function restoreAppConfig() {
-  defaultRecordingDirectory.value = await invoke<string>("default_recording_dir");
-  const savedConfig = await invoke<string | null>("load_app_config");
+  await initializeDefaultRecordingDirectory();
+  const savedConfig = await tauriApi.loadAppConfig();
   if (!savedConfig) {
     return;
   }
@@ -560,9 +300,7 @@ async function saveAppConfig() {
   });
   recentProfiles.value = appConfig.profiles.recentProfiles;
 
-  await invoke("save_app_config", {
-    contents: `${JSON.stringify(appConfig, null, 2)}\n`,
-  });
+  await tauriApi.saveAppConfig(`${JSON.stringify(appConfig, null, 2)}\n`);
 }
 
 async function applyConfigToOverlay() {
@@ -596,7 +334,7 @@ async function exportAndApplyConfig() {
     return;
   }
 
-  await invoke("save_config_file", { path, contents: json });
+  await tauriApi.saveConfigFile(path, json);
   profileSourcePath.value = path;
   profileChanged.value = false;
   scheduleAppConfigSave();
@@ -617,148 +355,13 @@ async function overwriteAndApplyConfig() {
     position: overlayPosition.value,
     customPosition: customOverlayPosition.value,
   });
-  await invoke("save_config_file", { path: profileSourcePath.value, contents: json });
+  await tauriApi.saveConfigFile(profileSourcePath.value, json);
   profileChanged.value = false;
   scheduleAppConfigSave();
 }
 
-async function chooseRecordingDirectory() {
-  const selectedPath = await open({
-    title: "Choose recording folder",
-    directory: true,
-    multiple: false,
-  });
-
-  if (typeof selectedPath === "string") {
-    recordingDirectory.value = selectedPath;
-    recordingStatusMessage.value = "";
-    scheduleAppConfigSave();
-  }
-}
-
-async function resolveRecordingDirectory(): Promise<string> {
-  if (recordingDirectory.value) {
-    return recordingDirectory.value;
-  }
-
-  const defaultDirectory =
-    defaultRecordingDirectory.value || (await invoke<string>("default_recording_dir"));
-  defaultRecordingDirectory.value = defaultDirectory;
-  recordingDirectory.value = defaultDirectory;
-  recordingStatusMessage.value = `Using default save folder: ${defaultDirectory}`;
-  scheduleAppConfigSave();
-
-  return defaultDirectory;
-}
-
-async function startRecordingWithCountdown(trigger: "manual" | "hotkey" = "manual") {
-  await resolveRecordingDirectory();
-
-  if (isRecording.value || recordingCountdown.value > 0) {
-    return;
-  }
-
-  const recordingFps = effectiveRecordingFps(config.recording);
-  recordingStatusMessage.value = `Recording will start at ${recordingFps}fps.`;
-  recordingCountdown.value = 3;
-
-  recordingCountdownTimer.value = window.setInterval(async () => {
-    recordingCountdown.value -= 1;
-
-    if (recordingCountdown.value <= 0) {
-      cancelRecordingCountdown();
-      activeRecordingHotkeys.value = { ...recordingHotkeys.value };
-      await invoke("start_recording", { fps: recordingFps });
-      restoreOverlayAfterRecording.value = isOverlayVisible.value;
-      if (silentRecording.value) {
-        await destroyOverlayWindow();
-      }
-      if (trigger === "hotkey") {
-        await invoke("add_recording_marker", { name: "hotkey-start" });
-      }
-      isRecording.value = true;
-      lastRecordingPath.value = "";
-      recordingStatusMessage.value = `Recording started at ${recordingFps}fps.`;
-    }
-  }, 1000);
-}
-
-function cancelRecordingCountdown() {
-  if (recordingCountdownTimer.value !== null) {
-    window.clearInterval(recordingCountdownTimer.value);
-    recordingCountdownTimer.value = null;
-  }
-  recordingCountdown.value = 0;
-}
-
-async function stopRecording(trigger: "manual" | "hotkey" = "manual") {
-  if (!isRecording.value) {
-    return;
-  }
-
-  if (trigger === "hotkey") {
-    await invoke("add_recording_marker", { name: "hotkey-stop" });
-  }
-
-  const result = await invoke<{ path: string }>("stop_recording", {
-    outputDir: await resolveRecordingDirectory(),
-    filenameTemplate: config.recording.filenameTemplate,
-    profileName: profileName.value,
-    fps: effectiveRecordingFps(config.recording),
-  });
-  isRecording.value = false;
-  activeRecordingHotkeys.value = null;
-  lastRecordingPath.value = result.path;
-  recordingStatusMessage.value = `Recording saved: ${result.path}`;
-
-  if (silentRecording.value && restoreOverlayAfterRecording.value) {
-    await setOverlayVisible(true);
-    await moveOverlay(overlayPosition.value);
-  }
-  restoreOverlayAfterRecording.value = false;
-}
-
-async function inspectRecordingFile() {
-  const selectedPath = await open({
-    title: "Inspect keyboard recording",
-    filters: [{ name: "Keyboard recording", extensions: ["kbdrec"] }],
-    multiple: false,
-  });
-
-  if (typeof selectedPath !== "string") {
-    return;
-  }
-
-  await inspectRecordingPath(selectedPath);
-}
-
-async function inspectRecordingPath(selectedPath: string) {
-  inspectedRecordingPath.value = selectedPath;
-  recordingInspection.value = null;
-  recordingInspectionError.value = "";
-
-  try {
-    recordingInspection.value = await invoke<RecordingInspection>("inspect_recording_file", {
-      path: selectedPath,
-    });
-  } catch (error) {
-    recordingInspectionError.value = String(error);
-  }
-}
-
-function updateSilentRecording(value: boolean) {
-  silentRecording.value = value;
-  scheduleAppConfigSave();
-}
-
 function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
-  recordingHotkeys.value = normalizeRecordingHotkeyConfig({
-    mode,
-    start: recordingHotkeys.value.start,
-    stop: mode === "separate" ? undefined : recordingHotkeys.value.start,
-    sync: recordingHotkeys.value.sync,
-  });
-  scheduleAppConfigSave();
+  setRecordingHotkeyMode(mode);
 }
 
 function updateRecordingConfig(recording: RecordingConfig) {
@@ -773,115 +376,6 @@ function updateExportConfig(exportConfig: ExportConfig) {
   scheduleAppConfigSave();
 }
 
-async function addSyncMarker() {
-  if (!isRecording.value) {
-    recordingStatusMessage.value = "Start recording before adding a sync marker.";
-    return;
-  }
-
-  await invoke("add_recording_marker", { name: "sync" });
-  if (config.recording.syncFeedbackEnabled) {
-    await emitTo("pov", OVERLAY_SYNC_FEEDBACK_EVENT, {
-      durationMs: config.recording.syncFeedbackDurationMs,
-    });
-  }
-  recordingStatusMessage.value = "Sync marker added.";
-}
-
-async function suppressRecordingHotkeyInput(keys: string[]) {
-  if (!isRecording.value || keys.length === 0) {
-    return;
-  }
-
-  await invoke("suppress_recording_keys", { keyIds: normalizeHotkey(keys) });
-}
-
-function beginHotkeyCapture(target: "start" | "stop" | "sync") {
-  capturedHotkeyKeys.value = new Set();
-  hotkeyCaptureTarget.value = target;
-}
-
-function finishHotkeyCapture() {
-  const target = hotkeyCaptureTarget.value;
-
-  if (!target || capturedHotkeyKeys.value.size === 0) {
-    hotkeyCaptureTarget.value = null;
-    capturedHotkeyKeys.value = new Set();
-    return;
-  }
-
-  recordingHotkeys.value = {
-    ...recordingHotkeys.value,
-    [target]: normalizeHotkey(capturedHotkeyKeys.value),
-  };
-  scheduleAppConfigSave();
-  hotkeyCaptureTarget.value = null;
-  capturedHotkeyKeys.value = new Set();
-}
-
-async function handleRecordingHotkeys(): Promise<boolean> {
-  if (hotkeyCaptureTarget.value) {
-    return false;
-  }
-
-  const activeSignature = normalizeHotkey(activeKeyIds.value).join("+");
-  if (activeSignature === activeRecordingHotkeySignature.value) {
-    return false;
-  }
-
-  const hotkeys = effectiveRecordingHotkeys();
-  const matchesStart = isHotkeyMatch(activeKeyIds.value, hotkeys.start);
-  const matchesStop = isHotkeyMatch(activeKeyIds.value, hotkeys.stop);
-  const matchesSync = isHotkeyMatch(activeKeyIds.value, hotkeys.sync);
-
-  if (!matchesStart && !matchesStop && !matchesSync) {
-    if (activeSignature === "") {
-      activeRecordingHotkeySignature.value = "";
-    }
-    return false;
-  }
-
-  activeRecordingHotkeySignature.value = activeSignature;
-
-  if (matchesSync && isRecording.value) {
-    await suppressRecordingHotkeyInput(hotkeys.sync);
-    await addSyncMarker();
-    return true;
-  }
-
-  if (hotkeys.mode === "disabled") {
-    return false;
-  }
-
-  if (hotkeys.mode === "toggle") {
-    if (recordingCountdown.value > 0) {
-      cancelRecordingCountdown();
-      return true;
-    }
-
-    if (isRecording.value) {
-      await suppressRecordingHotkeyInput(hotkeys.stop);
-      await stopRecording("hotkey");
-    } else {
-      await startRecordingWithCountdown("hotkey");
-    }
-    return true;
-  }
-
-  if (hotkeys.mode === "separate") {
-    if (!isRecording.value && matchesStart) {
-      await startRecordingWithCountdown("hotkey");
-      return true;
-    } else if (isRecording.value && matchesStop) {
-      await suppressRecordingHotkeyInput(hotkeys.stop);
-      await stopRecording("hotkey");
-      return true;
-    }
-  }
-
-  return false;
-}
-
 function profileNameFromFileName(fileName: string): string {
   return fileName.replace(/\.json$/i, "");
 }
@@ -891,9 +385,7 @@ function handleKeydown(event: KeyboardEvent) {
 
   if (keyId) {
     updateActiveKey(keyId, true);
-    if (hotkeyCaptureTarget.value) {
-      capturedHotkeyKeys.value = new Set([...capturedHotkeyKeys.value, keyId]);
-    }
+    captureHotkeyKey(keyId);
   }
 }
 
@@ -941,10 +433,7 @@ onMounted(async () => {
       updateActiveKey(event.payload.keyId, event.payload.pressed);
       if (hotkeyCaptureTarget.value) {
         if (event.payload.pressed) {
-          capturedHotkeyKeys.value = new Set([
-            ...capturedHotkeyKeys.value,
-            event.payload.keyId,
-          ]);
+          captureHotkeyKey(event.payload.keyId);
         } else {
           finishHotkeyCapture();
         }
@@ -1103,61 +592,3 @@ onUnmounted(() => {
     />
   </div>
 </template>
-
-<style>
-:root {
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 400;
-  color: #eef2f6;
-  background-color: transparent;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body,
-#app {
-  margin: 0;
-  width: 100%;
-  min-height: 100%;
-  overflow: hidden;
-}
-
-body {
-  overflow: hidden;
-}
-
-button,
-input {
-  font: inherit;
-}
-
-.app-surface {
-  min-height: 100vh;
-}
-
-.overlay-surface {
-  width: max-content;
-  height: max-content;
-  overflow: hidden;
-}
-
-.overlay-window {
-  display: block;
-  width: max-content;
-  min-height: 0;
-  background: transparent;
-  padding: 0;
-}
-</style>

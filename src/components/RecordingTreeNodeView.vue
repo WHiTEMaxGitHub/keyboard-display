@@ -1,40 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-
-type RecordingMetadata = {
-  displayName: string;
-  description: string;
-  tags: string[];
-  markerNotes: Array<{
-    frame: number;
-    name: string;
-    note: string;
-  }>;
-};
-
-type RecordingFileSummary = {
-  fileName: string;
-  sizeBytes: number;
-  startUnixMs: number | null;
-  endUnixMs: number | null;
-  fps: number;
-  frameCount: number;
-  markerCount: number;
-  markers: Array<{
-    frame: number;
-    name: string;
-  }>;
-  metadata: RecordingMetadata;
-};
-
-type RecordingTreeNode = {
-  name: string;
-  path: string;
-  exists: boolean;
-  type: "directory" | "file";
-  children: RecordingTreeNode[];
-  summary: RecordingFileSummary | null;
-};
+import type { RecordingFileSummary, RecordingTreeNode } from "../types/recording";
 
 defineProps<{
   node: RecordingTreeNode;

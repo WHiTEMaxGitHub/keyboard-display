@@ -9,9 +9,10 @@ import {
 } from "../domain/defaultConfig";
 import type { RecentProfile } from "../domain/appConfig";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
+import type { RecordingInspection } from "../types/recording";
 import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
-import ColorPicker from "./ColorPicker.vue";
+import AppearancePanel from "./AppearancePanel.vue";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import ExportPanel from "./ExportPanel.vue";
@@ -22,24 +23,6 @@ import WindowPanel from "./WindowPanel.vue";
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
 type LayoutSubPage = "summary" | "editor";
 type RecordingSubPage = "control" | "files";
-
-type RecordingInspectionFrame = {
-  frame: number;
-  keys: string[];
-};
-
-type RecordingInspectionEvent =
-  | { frame: number; down: string }
-  | { frame: number; up: string }
-  | { frame: number; marker: string };
-
-type RecordingInspection = {
-  version: number;
-  fps: number;
-  keyIds: string[];
-  events: RecordingInspectionEvent[];
-  frames: RecordingInspectionFrame[];
-};
 
 const activePage = ref<ConfigPage>("overview");
 const layoutSubPage = ref<LayoutSubPage>("summary");
@@ -102,81 +85,12 @@ const emit = defineEmits<{
   ];
 }>();
 
-function updateScale(event: Event) {
-  const scale = Number((event.target as HTMLInputElement).value);
-  emit("update-overlay-style", { ...props.config.style, scale });
-}
-
-function formatScale(scale: number) {
-  return `${scale.toFixed(2)}x`;
-}
-
-function effectiveUnitPx() {
-  return Math.round(props.config.layout.unitPx * props.config.style.scale);
-}
-
-function updateOpacity(event: Event) {
-  const opacity = Number((event.target as HTMLInputElement).value);
-  emit("update-overlay-style", { ...props.config.style, opacity });
-}
-
-function updateBackgroundRadius(event: Event) {
-  const backgroundRadius = Number((event.target as HTMLInputElement).value);
-  emit("update-overlay-style", {
-    ...props.config.style,
-    backgroundRadius,
-  });
-}
-
-function updateIdleKeyVisibility(event: Event) {
-  const idleKeyVisibility = (event.target as HTMLSelectElement)
-    .value as OverlayStyle["idleKeyVisibility"];
-  emit("update-overlay-style", { ...props.config.style, idleKeyVisibility });
-}
-
-function updateBackplateTransparent(event: Event) {
-  const transparent = (event.target as HTMLInputElement).checked;
-  emit("update-overlay-style", {
-    ...props.config.style,
-    backgroundColor: setHexAlpha(props.config.style.backgroundColor, transparent ? 0 : 255),
-  });
-}
-
-function updateStyleColor(
-  field:
-    | "idleColor"
-    | "activeColor"
-    | "idleTextColor"
-    | "activeTextColor"
-    | "backgroundColor",
-  color: string,
-) {
-  const nextColor = normalizeHexColor(color, props.config.style[field]);
-  emit("update-overlay-style", {
-    ...props.config.style,
-    [field]: nextColor,
-  });
-}
-
 function rememberColor(color: string) {
   const normalizedColor = normalizeHexColor(color);
   recentColors.value = [
     normalizedColor,
     ...recentColors.value.filter((recentColor) => recentColor !== normalizedColor),
   ].slice(0, 8);
-}
-
-function isBackplateTransparent() {
-  const normalizedColor = normalizeHexColor(props.config.style.backgroundColor);
-  return normalizedColor.length === 9 && normalizedColor.endsWith("00");
-}
-
-function setHexAlpha(color: string, alpha: number) {
-  const normalizedColor = normalizeHexColor(color);
-  const rgb = normalizedColor.slice(0, 7);
-  return `${rgb}${Math.min(255, Math.max(0, Math.round(alpha)))
-    .toString(16)
-    .padStart(2, "0")}`;
 }
 
 function updateAlwaysOnTop(event: Event) {
@@ -388,114 +302,13 @@ function updateRenderMarkers(event: Event) {
       </section>
 
       <section v-else-if="activePage === 'appearance'" class="page-stack">
-        <article class="panel wide-panel">
-          <div class="section-header">
-            <h2>Appearance</h2>
-            <button class="panel-action-button" type="button" @click="refreshPov">
-              Refresh POV
-            </button>
-          </div>
-          <label class="range-control">
-            <span class="range-label">
-              <span>Scale</span>
-              <strong>{{ formatScale(config.style.scale) }} · {{ effectiveUnitPx() }}px unit</strong>
-            </span>
-            <input
-              :value="config.style.scale"
-              min="0.75"
-              max="1.5"
-              step="0.05"
-              type="range"
-              @input="updateScale"
-            />
-          </label>
-          <label>
-            Overlay transparency
-            <input
-              :value="config.style.opacity"
-              min="0.35"
-              max="1"
-              step="0.01"
-              type="range"
-              @input="updateOpacity"
-            />
-            <span class="hint">Controls the whole POV overlay opacity.</span>
-          </label>
-          <div class="appearance-control-grid">
-            <label>
-              Backplate radius
-              <input
-                :value="config.style.backgroundRadius"
-                min="0"
-                max="24"
-                step="1"
-                type="range"
-                @input="updateBackgroundRadius"
-              />
-            </label>
-          </div>
-          <label class="settings-row">
-            <span>Idle keys</span>
-            <select
-              class="select-control compact-select"
-              :value="config.style.idleKeyVisibility"
-              @change="updateIdleKeyVisibility"
-            >
-              <option value="visible">Visible</option>
-              <option value="hidden">Hidden until pressed</option>
-            </select>
-          </label>
-          <div class="color-grid" aria-label="Overlay colors">
-            <ColorPicker
-              label="Idle key"
-              :value="config.style.idleColor"
-              :recent-colors="recentColors"
-              alpha-enabled
-              @update:value="updateStyleColor('idleColor', $event)"
-              @remember-color="rememberColor"
-            />
-            <ColorPicker
-              label="Pressed key"
-              :value="config.style.activeColor"
-              :recent-colors="recentColors"
-              alpha-enabled
-              @update:value="updateStyleColor('activeColor', $event)"
-              @remember-color="rememberColor"
-            />
-            <ColorPicker
-              label="Idle text"
-              :value="config.style.idleTextColor"
-              :recent-colors="recentColors"
-              alpha-enabled
-              @update:value="updateStyleColor('idleTextColor', $event)"
-              @remember-color="rememberColor"
-            />
-            <ColorPicker
-              label="Pressed text"
-              :value="config.style.activeTextColor"
-              :recent-colors="recentColors"
-              alpha-enabled
-              @update:value="updateStyleColor('activeTextColor', $event)"
-              @remember-color="rememberColor"
-            />
-            <ColorPicker
-              label="Backplate"
-              :value="config.style.backgroundColor"
-              :recent-colors="recentColors"
-              alpha-enabled
-              @update:value="updateStyleColor('backgroundColor', $event)"
-              @remember-color="rememberColor"
-            />
-            <label class="backplate-transparent-toggle">
-              <input
-                :checked="isBackplateTransparent()"
-                type="checkbox"
-                @change="updateBackplateTransparent"
-              />
-              Transparent backplate
-            </label>
-          </div>
-        </article>
+        <AppearancePanel
+          :config="config"
+          :recent-colors="recentColors"
+          @update-overlay-style="emit('update-overlay-style', $event)"
+          @remember-color="rememberColor"
+          @refresh-pov="refreshPov"
+        />
       </section>
 
       <section v-else-if="activePage === 'window'" class="page-stack">
@@ -659,10 +472,6 @@ h2 {
   padding: 18px;
 }
 
-.wide-panel {
-  width: 100%;
-}
-
 .panel h2 {
   margin-bottom: 16px;
 }
@@ -677,21 +486,6 @@ h2 {
 
 .section-header h2 {
   margin-bottom: 0;
-}
-
-.panel-action-button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.panel-action-button:hover {
-  background: #29313d;
 }
 
 .field-row {
@@ -799,30 +593,6 @@ label {
   font-weight: 700;
 }
 
-.range-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.range-label strong {
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.settings-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 12px;
-}
-
-.settings-row span {
-  min-width: 0;
-}
-
 .toggle-row {
   display: flex;
   align-items: center;
@@ -830,39 +600,6 @@ label {
 }
 
 .toggle-row input {
-  width: 18px;
-  height: 18px;
-  accent-color: #25d366;
-}
-
-.hint {
-  color: #7f8b99;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-input[type="range"] {
-  accent-color: #25d366;
-}
-
-.appearance-control-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.backplate-transparent-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 38px;
-  margin: 0;
-  color: #c9d1da;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.backplate-transparent-toggle input {
   width: 18px;
   height: 18px;
   accent-color: #25d366;
@@ -897,20 +634,10 @@ select {
   width: min(240px, 100%);
 }
 
-.compact-select {
-  min-height: 34px;
-}
-
 select:focus {
   border-color: rgba(37, 211, 102, 0.55);
   outline: 2px solid rgba(37, 211, 102, 0.14);
   outline-offset: 0;
-}
-
-.color-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
 }
 
 .quiet {
