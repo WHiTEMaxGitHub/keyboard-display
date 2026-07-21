@@ -442,7 +442,6 @@ function updateRenderMarkers(event: Event) {
               @change="updateIdleKeyVisibility"
             >
               <option value="visible">Visible</option>
-              <option value="faint">Faint</option>
               <option value="hidden">Hidden until pressed</option>
             </select>
           </label>

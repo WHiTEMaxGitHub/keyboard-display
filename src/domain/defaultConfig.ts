@@ -32,7 +32,7 @@ export type OverlayLayout = {
   gapUnit: number;
 };
 
-export type IdleKeyVisibility = "visible" | "faint" | "hidden";
+export type IdleKeyVisibility = "visible" | "hidden";
 
 export type OverlayStyle = {
   scale: number;

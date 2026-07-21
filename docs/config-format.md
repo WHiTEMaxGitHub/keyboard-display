@@ -164,7 +164,7 @@ profile files should prefer `gap` for clarity.
 | `backgroundColor` | string | Backplate color as `#rrggbb` or `#rrggbbaa`. Alpha in this color is used directly. |
 | `backgroundOpacity` | number | Legacy backplate opacity used when `backgroundColor` has no alpha channel. |
 | `backgroundRadius` | number | Backplate corner radius in pixels. |
-| `idleKeyVisibility` | string | `visible`, `faint`, or `hidden`. |
+| `idleKeyVisibility` | string | `visible` or `hidden`. |
 | `alwaysOnTop` | boolean | Whether the POV window should stay above normal windows. |
 | `idleColor` | string | Key background color when not pressed. |
 | `activeColor` | string | Key background color when pressed. |

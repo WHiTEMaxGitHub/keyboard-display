@@ -226,10 +226,6 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
   transform: translateY(2px);
 }
 
-.pov-shell.idle-faint .key:not(.active) {
-  opacity: 0.32;
-}
-
 .pov-shell.idle-hidden .key {
   transition: none;
 }
