@@ -5,9 +5,9 @@ import {
   addGapToRow,
   addKeyToRow,
   moveRow,
-  moveRowItem,
   removeRow,
   removeRowItem,
+  swapRowItems,
   updateRowItem,
   validateKeyId,
 } from "../domain/layoutEditor";
@@ -29,6 +29,7 @@ const emit = defineEmits<{
 
 const collapsedRows = reactive(new Set<number>());
 const draggingItem = ref<{ rowIndex: number; itemIndex: number } | null>(null);
+const dragTarget = ref<{ rowIndex: number; itemIndex: number } | null>(null);
 const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
@@ -91,11 +92,21 @@ function beginDrag(rowIndex: number, itemIndex: number, event: DragEvent) {
   event.dataTransfer?.setData("text/plain", `${rowIndex}:${itemIndex}`);
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = "move";
+    const card = (event.currentTarget as HTMLElement).closest(".row-item-editor") as HTMLElement | null;
+    if (card) {
+      const rect = card.getBoundingClientRect();
+      event.dataTransfer.setDragImage(card, rect.width / 2, 18);
+    }
   }
+}
+
+function isDragging(rowIndex: number, itemIndex: number) {
+  return draggingItem.value?.rowIndex === rowIndex && draggingItem.value.itemIndex === itemIndex;
 }
 
 function endDrag() {
   draggingItem.value = null;
+  dragTarget.value = null;
 }
 
 function dropItem(rowIndex: number, itemIndex: number, event: DragEvent) {
@@ -105,8 +116,19 @@ function dropItem(rowIndex: number, itemIndex: number, event: DragEvent) {
     return;
   }
 
-  emit("update-rows", moveRowItem(props.rows, rowIndex, draggingItem.value.itemIndex, itemIndex));
+  emit("update-rows", swapRowItems(props.rows, rowIndex, draggingItem.value.itemIndex, itemIndex));
   draggingItem.value = null;
+  dragTarget.value = null;
+}
+
+function markDropTarget(rowIndex: number, itemIndex: number) {
+  if (draggingItem.value?.rowIndex === rowIndex && draggingItem.value.itemIndex !== itemIndex) {
+    dragTarget.value = { rowIndex, itemIndex };
+  }
+}
+
+function isDropTarget(rowIndex: number, itemIndex: number) {
+  return dragTarget.value?.rowIndex === rowIndex && dragTarget.value.itemIndex === itemIndex;
 }
 
 function textDraftKey(
@@ -227,6 +249,8 @@ function updateGapWidth(
           v-for="(item, itemIndex) in row"
           :key="`${rowIndex}-${itemIndex}`"
           class="row-item-editor"
+          :class="{ dragging: isDragging(rowIndex, itemIndex), 'drop-target': isDropTarget(rowIndex, itemIndex) }"
+          @dragenter="markDropTarget(rowIndex, itemIndex)"
           @dragover.prevent
           @drop="dropItem(rowIndex, itemIndex, $event)"
         >
@@ -406,6 +430,16 @@ function updateGapWidth(
   border-radius: 7px;
   background: #10141a;
   padding: 10px;
+}
+
+.row-item-editor.dragging {
+  border-color: rgba(37, 211, 102, 0.42);
+  opacity: 0.68;
+}
+
+.row-item-editor.drop-target {
+  border-color: rgba(37, 211, 102, 0.68);
+  box-shadow: 0 0 0 2px rgba(37, 211, 102, 0.12);
 }
 
 .item-grip {
