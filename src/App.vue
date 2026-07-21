@@ -182,7 +182,7 @@ async function updateOverlayStyle(style: OverlayStyle) {
   await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
   await emitTo<OverlayStyle>("pov", OVERLAY_STYLE_EVENT, style);
   if (isOverlayVisible.value && overlayPosition.value !== "custom") {
-    await moveOverlay(overlayPosition.value, false);
+    await moveOverlay(overlayPosition.value, false, false);
   }
 }
 
@@ -198,7 +198,7 @@ async function updateOverlayRows(rows: typeof config.rows) {
     style: config.style,
   });
   if (isOverlayVisible.value && overlayPosition.value !== "custom") {
-    await moveOverlay(overlayPosition.value, false);
+    await moveOverlay(overlayPosition.value, false, false);
   }
 }
 
@@ -291,7 +291,7 @@ async function setOverlayVisible(visible: boolean, markChanged = true) {
   await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, visible);
 }
 
-async function moveOverlay(position: OverlayPosition, markChanged = true) {
+async function moveOverlay(position: OverlayPosition, markChanged = true, show = true) {
   overlayPosition.value = position;
   if (markChanged) {
     markProfileChanged();
@@ -306,12 +306,16 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
   await resizeOverlayWindow(overlayWindow);
 
   if (position === "custom" && customOverlayPosition.value) {
-    await overlayWindow.show();
+    if (show) {
+      await overlayWindow.show();
+    }
     await overlayWindow.setPosition(
       new LogicalPosition(customOverlayPosition.value.x, customOverlayPosition.value.y),
     );
-    isOverlayVisible.value = true;
-    await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+    if (show) {
+      isOverlayVisible.value = true;
+      await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+    }
     return;
   }
   const presetPosition = position === "custom" ? "bottom-right" : position;
@@ -337,10 +341,14 @@ async function moveOverlay(position: OverlayPosition, markChanged = true) {
     "bottom-right": new LogicalPosition(xMax, yMax),
   };
 
-  await overlayWindow.show();
+  if (show) {
+    await overlayWindow.show();
+  }
   await overlayWindow.setPosition(positions[presetPosition]);
-  isOverlayVisible.value = true;
-  await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+  if (show) {
+    isOverlayVisible.value = true;
+    await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
+  }
 }
 
 async function startOverlayAdjust() {
