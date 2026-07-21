@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "name": "68 Keyboard",
+  "overlay": {
+    "visible": true,
+    "position": "bottom-right",
+    "layout": {
+      "unitPx": 46,
+      "gapUnit": 0.12
+    },
+    "style": {
+      "scale": 1,
+      "opacity": 0.92,
+      "backgroundColor": "#0a0c0e00",
+      "backgroundOpacity": 0.72,
+      "backgroundRadius": 8,
+      "idleKeyVisibility": "visible",
+      "alwaysOnTop": true,
+      "idleColor": "#121417",
+      "activeColor": "#25d366",
+      "idleTextColor": "#f5f7fa",
+      "activeTextColor": "#ffffff"
+    },
+    "rows": [
+      [
+        { "type": "key", "id": "escape", "label": "Esc", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-1", "label": "1", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-2", "label": "2", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-3", "label": "3", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-4", "label": "4", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-5", "label": "5", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-6", "label": "6", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-7", "label": "7", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-8", "label": "8", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-9", "label": "9", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "digit-0", "label": "0", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "minus", "label": "-", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "equal", "label": "=", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "backspace", "label": "Backspace", "group": "action", "widthUnit": 2 },
+        { "type": "key", "id": "home", "label": "Home", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "delete", "label": "Del", "group": "action", "widthUnit": 1 }
+      ],
+      [
+        { "type": "key", "id": "tab", "label": "Tab", "group": "modifier", "widthUnit": 1.5 },
+        { "type": "key", "id": "q", "label": "Q", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "w", "label": "W", "group": "movement", "widthUnit": 1 },
+        { "type": "key", "id": "e", "label": "E", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "r", "label": "R", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "t", "label": "T", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "y", "label": "Y", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "u", "label": "U", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "i", "label": "I", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "o", "label": "O", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "p", "label": "P", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "bracket-left", "label": "[", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "bracket-right", "label": "]", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "backslash", "label": "\\", "group": "action", "widthUnit": 1.5 },
+        { "type": "key", "id": "page-up", "label": "PgUp", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "end", "label": "End", "group": "action", "widthUnit": 1 }
+      ],
+      [
+        { "type": "key", "id": "caps-lock", "label": "Caps", "group": "modifier", "widthUnit": 1.75 },
+        { "type": "key", "id": "a", "label": "A", "group": "movement", "widthUnit": 1 },
+        { "type": "key", "id": "s", "label": "S", "group": "movement", "widthUnit": 1 },
+        { "type": "key", "id": "d", "label": "D", "group": "movement", "widthUnit": 1 },
+        { "type": "key", "id": "f", "label": "F", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "g", "label": "G", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "h", "label": "H", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "j", "label": "J", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "k", "label": "K", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "l", "label": "L", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "semicolon", "label": ";", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "quote", "label": "'", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "enter", "label": "Enter", "group": "action", "widthUnit": 2.25 },
+        { "type": "key", "id": "page-down", "label": "PgDn", "group": "action", "widthUnit": 1 }
+      ],
+      [
+        { "type": "key", "id": "shift-left", "label": "Shift", "group": "modifier", "widthUnit": 2.25 },
+        { "type": "key", "id": "z", "label": "Z", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "x", "label": "X", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "c", "label": "C", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "v", "label": "V", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "b", "label": "B", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "n", "label": "N", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "m", "label": "M", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "comma", "label": ",", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "period", "label": ".", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "slash", "label": "/", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "shift-right", "label": "Shift", "group": "modifier", "widthUnit": 2.75 },
+        { "type": "key", "id": "arrow-up", "label": "Up", "group": "action", "widthUnit": 1 }
+      ],
+      [
+        { "type": "key", "id": "ctrl-left", "label": "Ctrl", "group": "modifier", "widthUnit": 1.25 },
+        { "type": "key", "id": "meta-left", "label": "Cmd", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Cmd", "windows": "Win" } },
+        { "type": "key", "id": "alt-left", "label": "Opt", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Opt", "windows": "Alt" } },
+        { "type": "key", "id": "space", "label": "Space", "group": "modifier", "widthUnit": 6.25 },
+        { "type": "key", "id": "alt-right", "label": "Opt", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Opt", "windows": "Alt" } },
+        { "type": "key", "id": "meta-right", "label": "Cmd", "group": "modifier", "widthUnit": 1.25, "platformLabels": { "macos": "Cmd", "windows": "Win" } },
+        { "type": "key", "id": "arrow-left", "label": "Left", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "arrow-down", "label": "Down", "group": "action", "widthUnit": 1 },
+        { "type": "key", "id": "arrow-right", "label": "Right", "group": "action", "widthUnit": 1 }
+      ]
+    ]
+  },
+  "recording": {
+    "defaultFps": 60,
+    "fpsOptions": [30, 60, 120],
+    "customFpsEnabled": false,
+    "customFps": 600,
+    "maxFps": 1000,
+    "syncFeedbackEnabled": true,
+    "syncFeedbackDurationMs": 420,
+    "filenameTemplate": "${start}-${end}",
+    "formatExtension": ".kbdrec",
+    "primaryArtifact": "input-binary"
+  },
+  "export": {
+    "defaultFormat": "webm",
+    "transparentFormat": "webm",
+    "compatibleFormat": "mp4",
+    "renderMarkers": true
+  }
+}
