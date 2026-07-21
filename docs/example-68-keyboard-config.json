@@ -3,14 +3,17 @@
   "name": "68 Keyboard",
   "overlay": {
     "visible": true,
-    "position": "bottom-left",
-    "customPosition": null,
+    "position": "custom",
+    "customPosition": {
+      "x": -2560,
+      "y": 1030
+    },
     "layout": {
       "unitPx": 46,
       "gapUnit": 0.12
     },
     "style": {
-      "scale": 1,
+      "scale": 0.95,
       "opacity": 1,
       "backgroundColor": "#0a0c0e00",
       "backgroundOpacity": 0.72,
