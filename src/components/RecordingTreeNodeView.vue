@@ -110,13 +110,15 @@ function padFrame(frame: number, fps: number) {
       </div>
     </div>
     <div v-else class="file-branch">
-      <button
-        class="file-node"
-        type="button"
-        :aria-expanded="fileDetailsVisible"
-        @click="toggleFileDetails"
-      >
-        <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
+      <div class="file-node">
+        <button
+          class="file-toggle-button"
+          type="button"
+          :aria-expanded="fileDetailsVisible"
+          @click="toggleFileDetails"
+        >
+          <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
+        </button>
         <span class="file-main">
           <strong>{{ displayTitle(node) }}</strong>
           <small v-if="node.summary?.metadata.displayName">{{ node.name }}</small>
@@ -129,7 +131,10 @@ function padFrame(frame: number, fps: number) {
           </small>
           <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
         </span>
-      </button>
+        <button class="inspect-file-button" type="button" @click="inspect(node.path)">
+          Inspect / edit
+        </button>
+      </div>
       <div
         v-if="fileDetailsVisible && hasFileDetails(node.summary)"
         class="tree-children-shell"
@@ -148,9 +153,6 @@ function padFrame(frame: number, fps: number) {
               <strong>Markers</strong>
               <span>{{ node.summary.markerCount }} total</span>
             </div>
-            <button class="inspect-file-button" type="button" @click="inspect(node.path)">
-              Inspect / edit metadata
-            </button>
             <div v-if="node.summary.markers.length" class="marker-table">
               <div class="marker-table-head" aria-hidden="true">
                 <span>Name</span>
@@ -194,8 +196,7 @@ function padFrame(frame: number, fps: number) {
   min-width: 0;
 }
 
-.directory-node,
-.file-node {
+.directory-node {
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -222,12 +223,15 @@ function padFrame(frame: number, fps: number) {
 }
 
 .file-node {
-  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  min-width: 0;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 7px;
   background: #151a20;
   color: #dfe5ec;
-  cursor: pointer;
   padding: 8px 10px;
   text-align: left;
   transition:
@@ -239,7 +243,22 @@ function padFrame(frame: number, fps: number) {
 .file-node:hover {
   border-color: rgba(255, 255, 255, 0.14);
   background: #1e252e;
-  transform: translateX(2px);
+}
+
+.file-toggle-button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.file-toggle-button:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .tree-prefix {
@@ -331,7 +350,7 @@ function padFrame(frame: number, fps: number) {
 }
 
 .inspect-file-button {
-  justify-self: start;
+  justify-self: end;
   min-height: 30px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
