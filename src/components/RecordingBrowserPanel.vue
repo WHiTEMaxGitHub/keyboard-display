@@ -25,6 +25,7 @@ const folderNameDraft = ref("");
 const folderCreating = ref(false);
 const folderEditorVisible = ref(false);
 const selectedRecordingPath = ref("");
+const metadataEditorPath = ref("");
 
 const recordingRoot = computed(() => props.recordingDirectory || props.defaultRecordingDirectory);
 
@@ -109,11 +110,12 @@ async function createRecordingFolder() {
 
 function inspectRecordingPath(path: string) {
   selectedRecordingPath.value = path;
+  metadataEditorPath.value = path;
   emit("inspect-recording-path", path);
 }
 
-function clearRecordingInspection() {
-  emit("clear-recording-inspection");
+function closeMetadataEditor() {
+  metadataEditorPath.value = "";
 }
 
 function selectRecordingPath(path: string) {
@@ -204,9 +206,9 @@ function inspectSelectedRecording() {
       />
     </div>
     <RecordingMetadataEditor
-      v-if="inspectedRecordingPath"
-      :path="inspectedRecordingPath"
-      @close="clearRecordingInspection"
+      v-if="metadataEditorPath"
+      :path="metadataEditorPath"
+      @close="closeMetadataEditor"
       @saved="refreshRecordingTree"
     />
   </BasePanel>
