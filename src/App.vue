@@ -98,7 +98,7 @@ const {
   recordingCountdown,
   lastRecordingPath,
   recordingStatusMessage,
-  inspectedRecordingPath,
+  currentRecordingPath,
   recordingInspection,
   recordingInspectionError,
   recordingHotkeys,
@@ -576,7 +576,7 @@ onUnmounted(() => {
       :recording-countdown="recordingCountdown"
       :last-recording-path="lastRecordingPath"
       :recording-status-message="recordingStatusMessage"
-      :inspected-recording-path="inspectedRecordingPath"
+      :current-recording-path="currentRecordingPath"
       :recording-inspection="recordingInspection"
       :recording-inspection-error="recordingInspectionError"
       :overlay-position="overlayPosition"

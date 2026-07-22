@@ -50,7 +50,7 @@ const props = defineProps<{
   recordingCountdown: number;
   lastRecordingPath: string;
   recordingStatusMessage: string;
-  inspectedRecordingPath: string;
+  currentRecordingPath: string;
   recordingInspection: RecordingInspection | null;
   recordingInspectionError: string;
   overlayPosition: string;
@@ -420,7 +420,7 @@ async function uninstallAppManagedVideoExporter() {
         <RecordingBrowserPanel
           :recording-directory="recordingDirectory"
           :default-recording-directory="defaultRecordingDirectory"
-          :inspected-recording-path="inspectedRecordingPath"
+          :current-recording-path="currentRecordingPath"
           :recording-inspection="recordingInspection"
           :recording-inspection-error="recordingInspectionError"
           @inspect-recording-file="emit('inspect-recording-file')"

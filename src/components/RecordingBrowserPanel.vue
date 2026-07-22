@@ -13,7 +13,7 @@ import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
 const props = defineProps<{
   recordingDirectory: string;
   defaultRecordingDirectory: string;
-  inspectedRecordingPath: string;
+  currentRecordingPath: string;
   recordingInspection: RecordingInspection | null;
   recordingInspectionError: string;
 }>();
@@ -24,7 +24,6 @@ const recordingTreeLoading = ref(false);
 const folderNameDraft = ref("");
 const folderCreating = ref(false);
 const folderEditorVisible = ref(false);
-const selectedRecordingPath = ref("");
 
 const recordingRoot = computed(() => props.recordingDirectory || props.defaultRecordingDirectory);
 
@@ -69,15 +68,6 @@ watch(recordingRoot, (root, previousRoot) => {
   }
 });
 
-watch(
-  () => props.inspectedRecordingPath,
-  (path) => {
-    if (path) {
-      selectedRecordingPath.value = path;
-    }
-  },
-);
-
 function showFolderEditor() {
   folderEditorVisible.value = true;
   recordingTreeError.value = "";
@@ -117,7 +107,6 @@ async function createRecordingFolder() {
 }
 
 function inspectRecordingPath(path: string) {
-  selectedRecordingPath.value = path;
   emit("inspect-recording-path", path);
 }
 
@@ -126,12 +115,12 @@ function closeMetadataEditor() {
 }
 
 function selectRecordingPath(path: string) {
-  selectedRecordingPath.value = path;
+  emit("inspect-recording-path", path);
 }
 
 function inspectSelectedRecording() {
-  if (selectedRecordingPath.value) {
-    inspectRecordingPath(selectedRecordingPath.value);
+  if (props.currentRecordingPath) {
+    inspectRecordingPath(props.currentRecordingPath);
   }
 }
 </script>
@@ -195,10 +184,10 @@ function inspectSelectedRecording() {
         </button>
       </div>
       <div class="selected-recording-actions">
-        <span>{{ selectedRecordingPath || "No recording selected" }}</span>
+        <span>{{ currentRecordingPath || "No recording selected" }}</span>
         <button
           type="button"
-          :disabled="!selectedRecordingPath"
+          :disabled="!currentRecordingPath"
           @click="inspectSelectedRecording"
         >
           Inspect / edit selected
@@ -213,8 +202,8 @@ function inspectSelectedRecording() {
       />
     </div>
     <RecordingMetadataEditor
-      v-if="inspectedRecordingPath"
-      :path="inspectedRecordingPath"
+      v-if="currentRecordingPath"
+      :path="currentRecordingPath"
       @close="closeMetadataEditor"
       @saved="refreshRecordingTree"
     />

@@ -41,7 +41,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   const recordingCountdownTimer = ref<number | null>(null);
   const lastRecordingPath = ref("");
   const recordingStatusMessage = ref("");
-  const inspectedRecordingPath = ref("");
+  const currentRecordingPath = ref("");
   const recordingInspection = ref<RecordingInspection | null>(null);
   const recordingInspectionError = ref("");
   const recordingHotkeys = ref<RecordingHotkeyConfig>(normalizeRecordingHotkeyConfig(undefined));
@@ -178,7 +178,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function inspectRecordingPath(selectedPath: string) {
-    inspectedRecordingPath.value = selectedPath;
+    currentRecordingPath.value = selectedPath;
     recordingInspection.value = null;
     recordingInspectionError.value = "";
 
@@ -190,7 +190,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   function clearRecordingInspection() {
-    inspectedRecordingPath.value = "";
+    currentRecordingPath.value = "";
     recordingInspection.value = null;
     recordingInspectionError.value = "";
   }
@@ -333,7 +333,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     recordingCountdown,
     lastRecordingPath,
     recordingStatusMessage,
-    inspectedRecordingPath,
+    currentRecordingPath,
     recordingInspection,
     recordingInspectionError,
     recordingHotkeys,
