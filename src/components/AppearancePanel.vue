@@ -2,6 +2,7 @@
 import { normalizeHexColor } from "../domain/colorPicker";
 import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
 import BaseButton from "./BaseButton.vue";
+import BaseSelect from "./BaseSelect.vue";
 import ColorPicker from "./ColorPicker.vue";
 
 const props = defineProps<{
@@ -134,14 +135,15 @@ function setHexAlpha(color: string, alpha: number) {
     </div>
     <label class="settings-row">
       <span>Idle keys</span>
-      <select
-        class="select-control compact-select"
-        :value="config.style.idleKeyVisibility"
+      <BaseSelect
+        class="select-control"
+        compact
+        :model-value="config.style.idleKeyVisibility"
         @change="updateIdleKeyVisibility"
       >
         <option value="visible">Visible</option>
         <option value="hidden">Hidden until pressed</option>
-      </select>
+      </BaseSelect>
     </label>
     <div class="color-grid" aria-label="Overlay colors">
       <ColorPicker
@@ -290,43 +292,9 @@ input[type="range"] {
   accent-color: #25d366;
 }
 
-select {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  appearance: none;
-  background: #202630;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #9ca7b4 50%),
-    linear-gradient(135deg, #9ca7b4 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) 15px,
-    calc(100% - 11px) 15px;
-  background-repeat: no-repeat;
-  background-size:
-    6px 6px,
-    6px 6px;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0 34px 0 10px;
-}
-
 .select-control {
   justify-self: end;
   width: min(240px, 100%);
-}
-
-.compact-select {
-  min-height: 34px;
-}
-
-select:focus {
-  border-color: rgba(37, 211, 102, 0.55);
-  outline: 2px solid rgba(37, 211, 102, 0.14);
-  outline-offset: 0;
 }
 
 .color-grid {

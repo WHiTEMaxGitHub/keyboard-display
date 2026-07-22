@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import BaseButton from "./BaseButton.vue";
+import BaseSelect from "./BaseSelect.vue";
 
 defineProps<{
   recordingHotkeys: RecordingHotkeyConfig;
@@ -29,15 +30,15 @@ function formatHotkey(keys: string[]) {
   <div class="hotkey-panel">
     <label class="settings-row">
       <span>Hotkey mode</span>
-      <select
+      <BaseSelect
         class="select-control"
-        :value="recordingHotkeys.mode"
+        :model-value="recordingHotkeys.mode"
         @change="updateRecordingHotkeyMode"
       >
         <option value="disabled">Disabled</option>
         <option value="toggle">Toggle start/stop</option>
         <option value="separate">Separate start/stop</option>
-      </select>
+      </BaseSelect>
     </label>
     <div v-if="recordingHotkeys.mode !== 'disabled'" class="hotkey-row">
       <span>Start</span>
@@ -99,38 +100,8 @@ function formatHotkey(keys: string[]) {
   white-space: nowrap;
 }
 
-select {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  appearance: none;
-  background: #202630;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #9ca7b4 50%),
-    linear-gradient(135deg, #9ca7b4 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) 15px,
-    calc(100% - 11px) 15px;
-  background-repeat: no-repeat;
-  background-size:
-    6px 6px,
-    6px 6px;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0 34px 0 10px;
-}
-
 .select-control {
   justify-self: end;
   width: min(240px, 100%);
-}
-
-select:focus {
-  border-color: rgba(37, 211, 102, 0.55);
-  outline: 2px solid rgba(37, 211, 102, 0.14);
-  outline-offset: 0;
 }
 </style>

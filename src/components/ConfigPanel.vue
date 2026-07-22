@@ -17,6 +17,8 @@ import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
 import AppearancePanel from "./AppearancePanel.vue";
 import BaseFieldRow from "./BaseFieldRow.vue";
+import BaseSelect from "./BaseSelect.vue";
+import BaseSegmentedControl from "./BaseSegmentedControl.vue";
 import BaseToggleRow from "./BaseToggleRow.vue";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
@@ -37,6 +39,10 @@ const recentColors = ref<string[]>([]);
 const sidebarCollapsed = ref(false);
 const videoExporterInstalling = ref(false);
 const videoExporterUninstalling = ref(false);
+const layoutSubPageOptions: Array<{ value: LayoutSubPage; label: string }> = [
+  { value: "summary", label: "Summary" },
+  { value: "editor", label: "Editor" },
+];
 
 const props = defineProps<{
   config: AppConfig;
@@ -268,10 +274,10 @@ async function uninstallAppManagedVideoExporter() {
             <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
             <label class="recent-profile-control">
               <span>Recent profiles</span>
-              <select
+              <BaseSelect
                 class="select-control"
                 :disabled="recentProfiles.length === 0"
-                value=""
+                model-value=""
                 @change="loadRecentProfile"
               >
                 <option value="">
@@ -284,7 +290,7 @@ async function uninstallAppManagedVideoExporter() {
                 >
                   {{ profile.name }}
                 </option>
-              </select>
+              </BaseSelect>
             </label>
           </article>
 
@@ -303,22 +309,11 @@ async function uninstallAppManagedVideoExporter() {
       <section v-else-if="activePage === 'layout'" class="page-stack">
         <article class="panel">
           <h2>Layout</h2>
-          <div class="page-tabs">
-            <button
-              :class="{ active: layoutSubPage === 'summary' }"
-              type="button"
-              @click="layoutSubPage = 'summary'"
-            >
-              Summary
-            </button>
-            <button
-              :class="{ active: layoutSubPage === 'editor' }"
-              type="button"
-              @click="layoutSubPage = 'editor'"
-            >
-              Editor
-            </button>
-          </div>
+          <BaseSegmentedControl
+            v-model="layoutSubPage"
+            :options="layoutSubPageOptions"
+            aria-label="Layout view"
+          />
           <BaseFieldRow label="Unit size">{{ config.layout.unitPx }}px</BaseFieldRow>
           <BaseFieldRow label="Gap">{{ config.layout.gapUnit }} unit</BaseFieldRow>
           <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
@@ -566,33 +561,6 @@ h2 {
   opacity: 0.55;
 }
 
-.page-tabs {
-  display: inline-flex;
-  gap: 6px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #151a20;
-  padding: 4px;
-}
-
-.page-tabs button {
-  min-height: 30px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: #9ca7b4;
-  cursor: pointer;
-  font-weight: 800;
-  padding: 0 10px;
-}
-
-.page-tabs button.active,
-.page-tabs button:hover {
-  background: rgba(37, 211, 102, 0.14);
-  color: #eafff0;
-}
-
 .layout-line-list {
   display: grid;
   gap: 10px;
@@ -636,39 +604,9 @@ label {
   font-weight: 700;
 }
 
-select {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  appearance: none;
-  background: #202630;
-  background-image:
-    linear-gradient(45deg, transparent 50%, #9ca7b4 50%),
-    linear-gradient(135deg, #9ca7b4 50%, transparent 50%);
-  background-position:
-    calc(100% - 17px) 15px,
-    calc(100% - 11px) 15px;
-  background-repeat: no-repeat;
-  background-size:
-    6px 6px,
-    6px 6px;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-  padding: 0 34px 0 10px;
-}
-
 .select-control {
   justify-self: end;
   width: min(240px, 100%);
-}
-
-select:focus {
-  border-color: rgba(37, 211, 102, 0.55);
-  outline: 2px solid rgba(37, 211, 102, 0.14);
-  outline-offset: 0;
 }
 
 .quiet {

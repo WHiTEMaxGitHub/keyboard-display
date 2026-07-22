@@ -6,7 +6,14 @@
     "position": "custom",
     "customPosition": {
       "x": -2560,
-      "y": 1030
+      "y": 1043,
+      "workArea": {
+        "x": -2560,
+        "y": 30,
+        "width": 2560,
+        "height": 1410
+      },
+      "scaleFactor": 2
     },
     "layout": {
       "unitPx": 46,
@@ -526,18 +533,18 @@
     ]
   },
   "recording": {
-    "defaultFps": 60,
+    "defaultFps": 120,
     "fpsOptions": [
       30,
       60,
       120
     ],
-    "customFpsEnabled": false,
-    "customFps": 600,
+    "customFpsEnabled": true,
+    "customFps": 240,
     "maxFps": 1000,
     "syncFeedbackEnabled": true,
-    "syncFeedbackDurationMs": 420,
-    "filenameTemplate": "${start}-${end}",
+    "syncFeedbackDurationMs": 200,
+    "filenameTemplate": "${start}-${end}-${fps}",
     "formatExtension": ".kbdrec",
     "primaryArtifact": "input-binary"
   },

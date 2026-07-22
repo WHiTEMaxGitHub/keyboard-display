@@ -13,6 +13,7 @@ import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recor
 import BaseButton from "./BaseButton.vue";
 import BaseFieldRow from "./BaseFieldRow.vue";
 import BasePanel from "./BasePanel.vue";
+import BaseSegmentedControl from "./BaseSegmentedControl.vue";
 import BaseToggleRow from "./BaseToggleRow.vue";
 import RecordingHotkeysPanel from "./RecordingHotkeysPanel.vue";
 
@@ -30,6 +31,15 @@ const props = defineProps<{
 }>();
 
 const activeRecordingFps = computed(() => effectiveRecordingFps(props.config.recording));
+const fpsOptions = computed(() =>
+  props.config.recording.fpsOptions.map((fps) => ({
+    value: fps,
+    label: `${fps}fps`,
+  })),
+);
+const selectedDefaultFps = computed(() =>
+  props.config.recording.customFpsEnabled ? -1 : props.config.recording.defaultFps,
+);
 const estimatedRecordingBytesPerSecond = computed(() =>
   estimateRawRecordingBytesPerSecond(props.config.keys.length, activeRecordingFps.value),
 );
@@ -207,17 +217,12 @@ function addSyncMarker() {
       @begin-hotkey-capture="emit('begin-hotkey-capture', $event)"
     />
     <div class="fps-picker-row" aria-label="Capture frame rate">
-      <div class="segmented">
-        <button
-          v-for="fps in config.recording.fpsOptions"
-          :key="fps"
-          :class="{ selected: !config.recording.customFpsEnabled && fps === config.recording.defaultFps }"
-          type="button"
-          @click="selectRecordingFps(fps)"
-        >
-          {{ fps }}fps
-        </button>
-      </div>
+      <BaseSegmentedControl
+        :model-value="selectedDefaultFps"
+        :options="fpsOptions"
+        aria-label="Capture frame rate"
+        @update:model-value="selectRecordingFps"
+      />
       <BaseToggleRow compact :checked="config.recording.customFpsEnabled" @change="updateCustomFpsEnabled">
         Custom FPS
       </BaseToggleRow>
@@ -337,26 +342,6 @@ function addSyncMarker() {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 16px;
-}
-
-.segmented {
-  display: flex;
-  gap: 8px;
-}
-
-.segmented button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #c9d1da;
-  padding: 8px 10px;
-  font-weight: 700;
-}
-
-.segmented button.selected {
-  border-color: rgba(37, 211, 102, 0.52);
-  background: rgba(37, 211, 102, 0.14);
-  color: #eafff0;
 }
 
 .quiet {
