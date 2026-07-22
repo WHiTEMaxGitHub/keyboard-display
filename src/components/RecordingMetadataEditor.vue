@@ -11,6 +11,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   saved: [];
   "saved-and-close": [];
+  "discard-and-close": [];
 }>();
 
 const metadataDraft = ref<RecordingMetadata>(createEmptyMetadata());
@@ -115,6 +116,9 @@ function createEmptyMetadata(): RecordingMetadata {
         <h3>Sidecar metadata</h3>
       </div>
       <div class="header-actions">
+        <BaseButton :disabled="metadataSaving" @click="emit('discard-and-close')">
+          Discard & Close
+        </BaseButton>
         <BaseButton :disabled="metadataSaving" @click="saveRecordingMetadata">
           {{ metadataSaving ? "Saving..." : "Save" }}
         </BaseButton>

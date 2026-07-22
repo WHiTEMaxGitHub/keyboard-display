@@ -184,6 +184,7 @@ function saveAndCloseRecordingMetadata() {
       <RecordingMetadataEditor
         v-if="currentRecordingPath"
         :path="currentRecordingPath"
+        @discard-and-close="emit('clear-recording-inspection')"
         @saved="refreshRecordingTree"
         @saved-and-close="saveAndCloseRecordingMetadata"
       />
