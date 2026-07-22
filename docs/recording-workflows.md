@@ -50,6 +50,10 @@ timecode-style value such as `00:00:19:48 @ 120fps`.
 Markers are frame-based. The `.kbdrec` file stores marker frame indexes rather
 than wall-clock timestamps.
 
+Recording start and stop are timeline boundaries, not markers. The app does not
+write `start`, `stop`, `hotkey-start`, or `hotkey-stop` marker events when
+recording begins or ends.
+
 The sync marker hotkey defaults to `F8`. It is treated as a control input and is
 not written into the key-state stream. Start and stop hotkeys are also filtered
 only when the complete hotkey is triggered; individual keys such as `Ctrl`,

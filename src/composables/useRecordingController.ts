@@ -15,7 +15,6 @@ import type { AppConfig } from "../domain/defaultConfig";
 import type { RecordingInspection } from "../types/recording";
 import type { OverlayPosition } from "./useOverlayWindow";
 
-export type RecordingTrigger = "manual" | "hotkey";
 export type RecordingHotkeyTarget = "start" | "stop" | "sync";
 
 type UseRecordingControllerOptions = {
@@ -96,7 +95,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   /// 启动录制前保留倒计时，避免用户按下控制热键本身被录入开头帧。
-  async function startRecordingWithCountdown(trigger: RecordingTrigger = "manual") {
+  async function startRecordingWithCountdown() {
     await resolveRecordingDirectory();
 
     if (isRecording.value || recordingCountdown.value > 0) {
@@ -118,9 +117,6 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
         if (silentRecording.value) {
           await options.destroyOverlayWindow();
         }
-        if (trigger === "hotkey") {
-          await tauriApi.addRecordingMarker("hotkey-start");
-        }
         isRecording.value = true;
         lastRecordingPath.value = "";
         recordingStatusMessage.value = `Recording started at ${recordingFps}fps.`;
@@ -136,13 +132,9 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     recordingCountdown.value = 0;
   }
 
-  async function stopRecording(trigger: RecordingTrigger = "manual") {
+  async function stopRecording() {
     if (!isRecording.value) {
       return;
-    }
-
-    if (trigger === "hotkey") {
-      await tauriApi.addRecordingMarker("hotkey-stop");
     }
 
     const result = await tauriApi.stopRecording(
@@ -304,20 +296,20 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
 
       if (isRecording.value) {
         await suppressRecordingHotkeyInput(hotkeys.stop);
-        await stopRecording("hotkey");
+        await stopRecording();
       } else {
-        await startRecordingWithCountdown("hotkey");
+        await startRecordingWithCountdown();
       }
       return true;
     }
 
     if (hotkeys.mode === "separate") {
       if (!isRecording.value && matchesStart) {
-        await startRecordingWithCountdown("hotkey");
+        await startRecordingWithCountdown();
         return true;
       } else if (isRecording.value && matchesStop) {
         await suppressRecordingHotkeyInput(hotkeys.stop);
-        await stopRecording("hotkey");
+        await stopRecording();
         return true;
       }
     }
