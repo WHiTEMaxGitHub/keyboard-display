@@ -299,11 +299,11 @@ function updateGapWidth(
           <small>{{ rowSummary(row) }}</small>
         </button>
         <div class="row-actions">
-          <BaseButton size="sm" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</BaseButton>
-          <BaseButton size="sm" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</BaseButton>
-          <BaseButton size="sm" @click="addKey(rowIndex)">Add key</BaseButton>
-          <BaseButton size="sm" @click="addGap(rowIndex)">Add gap</BaseButton>
-          <BaseButton size="sm" variant="danger" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">Delete row</BaseButton>
+          <BaseButton size="xs" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</BaseButton>
+          <BaseButton size="xs" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</BaseButton>
+          <BaseButton size="xs" @click="addKey(rowIndex)">Add key</BaseButton>
+          <BaseButton size="xs" @click="addGap(rowIndex)">Add gap</BaseButton>
+          <BaseButton size="xs" variant="danger" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">Delete row</BaseButton>
         </div>
       </div>
 
@@ -355,6 +355,7 @@ function updateGapWidth(
               />
             </label>
             <BaseButton
+              size="xs"
               @click="captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? cancelCapture() : beginCapture(rowIndex, itemIndex, item.id)"
             >
               {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
@@ -401,14 +402,14 @@ function updateGapWidth(
               />
             </label>
           </template>
-          <BaseButton variant="danger" @click="removeItem(rowIndex, itemIndex)">
+          <BaseButton size="xs" variant="danger" @click="removeItem(rowIndex, itemIndex)">
             Delete
           </BaseButton>
           <div class="item-move-actions">
-            <BaseButton size="sm" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
+            <BaseButton size="xs" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
               Left
             </BaseButton>
-            <BaseButton size="sm" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
+            <BaseButton size="xs" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
               Right
             </BaseButton>
           </div>

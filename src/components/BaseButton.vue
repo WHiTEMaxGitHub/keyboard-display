@@ -3,7 +3,7 @@ withDefaults(
   defineProps<{
     type?: "button" | "submit";
     variant?: "primary" | "secondary" | "danger";
-    size?: "sm" | "md";
+    size?: "xs" | "sm" | "md";
     block?: boolean;
     disabled?: boolean;
   }>(),
@@ -52,6 +52,12 @@ withDefaults(
 .base-button.sm {
   min-height: 30px;
   padding: 0 10px;
+  font-size: 12px;
+}
+
+.base-button.xs {
+  min-height: 26px;
+  padding: 0 8px;
   font-size: 12px;
 }
 
