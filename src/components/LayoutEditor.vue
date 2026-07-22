@@ -174,13 +174,8 @@ function platformLabelEditorKey(rowIndex: number, itemIndex: number) {
   return `${rowIndex}-${itemIndex}`;
 }
 
-function hasPlatformLabels(item: KeyBinding) {
-  return Boolean(item.platformLabels?.macos || item.platformLabels?.windows);
-}
-
-function isPlatformLabelEditorOpen(rowIndex: number, itemIndex: number, item: KeyBinding) {
-  return platformLabelEditors.has(platformLabelEditorKey(rowIndex, itemIndex)) ||
-    hasPlatformLabels(item);
+function isPlatformLabelEditorOpen(rowIndex: number, itemIndex: number) {
+  return platformLabelEditors.has(platformLabelEditorKey(rowIndex, itemIndex));
 }
 
 function togglePlatformLabelEditor(rowIndex: number, itemIndex: number) {
@@ -380,10 +375,10 @@ function updateGapWidth(
               size="xs"
               @click="togglePlatformLabelEditor(rowIndex, itemIndex)"
             >
-              {{ isPlatformLabelEditorOpen(rowIndex, itemIndex, item) ? "Hide platform labels" : "Platform labels" }}
+              {{ isPlatformLabelEditorOpen(rowIndex, itemIndex) ? "Hide platform labels" : "Platform labels" }}
             </BaseButton>
             <div
-              v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex, item)"
+              v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex)"
               class="platform-label-fields"
             >
               <label>

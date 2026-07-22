@@ -465,7 +465,7 @@
           "group": "modifier",
           "widthUnit": 1.3,
           "platformLabels": {
-            "macos": "Opt",
+            "macos": "Cmd",
             "windows": "Alt"
           }
         },
@@ -476,7 +476,7 @@
           "group": "modifier",
           "widthUnit": 1.3,
           "platformLabels": {
-            "macos": "Cmd",
+            "macos": "Opt",
             "windows": "Win"
           }
         },
@@ -494,8 +494,8 @@
           "group": "modifier",
           "widthUnit": 1.5,
           "platformLabels": {
-            "macos": "Cmd",
-            "windows": "Alt"
+            "macos": "Opt",
+            "windows": "Win"
           }
         },
         {
@@ -505,7 +505,8 @@
           "group": "modifier",
           "widthUnit": 1.5,
           "platformLabels": {
-            "macos": "Opt"
+            "macos": "Cmd",
+            "windows": "Alt"
           }
         },
         {

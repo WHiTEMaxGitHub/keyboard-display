@@ -4,19 +4,19 @@ export type PlatformKey = "macos" | "windows" | "default";
 
 const builtInPlatformLabels: Record<string, Partial<Record<PlatformKey, string>>> = {
   "alt-left": {
-    macos: "OptionLeft",
+    macos: "Cmd",
     windows: "AltLeft",
   },
   "alt-right": {
-    macos: "OptionRight",
+    macos: "Cmd",
     windows: "AltRight",
   },
   "meta-left": {
-    macos: "Cmd",
+    macos: "Opt",
     windows: "Win",
   },
   "meta-right": {
-    macos: "Cmd",
+    macos: "Opt",
     windows: "Win",
   },
 };

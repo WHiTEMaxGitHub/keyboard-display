@@ -34,7 +34,7 @@ describe("displayLabelForKey", () => {
       label: "Alt",
       group: "modifier",
       widthUnit: 1,
-    }, "macos")).toBe("OptionRight");
+    }, "macos")).toBe("Cmd");
     expect(displayLabelForKey({
       id: "alt-right",
       label: "Alt",
@@ -46,6 +46,6 @@ describe("displayLabelForKey", () => {
       label: "Meta",
       group: "modifier",
       widthUnit: 1,
-    }, "windows")).toBe("Win");
+    }, "macos")).toBe("Opt");
   });
 });
