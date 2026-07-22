@@ -132,6 +132,20 @@ function cancelOverlayAdjust() {
   emit("cancel-overlay-adjust");
 }
 
+function selectActivePage(page: ConfigPage) {
+  if (activePage.value !== page) {
+    emit("clear-recording-inspection");
+  }
+  activePage.value = page;
+}
+
+function selectRecordingSubPage(page: RecordingSubPage) {
+  if (recordingSubPage.value !== page) {
+    emit("clear-recording-inspection");
+  }
+  recordingSubPage.value = page;
+}
+
 function loadConfigFile() {
   emit("load-config");
 }
@@ -211,8 +225,8 @@ async function uninstallAppManagedVideoExporter() {
       :recording-sub-page="recordingSubPage"
       :collapsed="sidebarCollapsed"
       @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
-      @update-active-page="activePage = $event"
-      @update-recording-sub-page="recordingSubPage = $event"
+      @update-active-page="selectActivePage"
+      @update-recording-sub-page="selectRecordingSubPage"
     />
 
     <section class="workspace">
