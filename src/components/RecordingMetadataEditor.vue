@@ -152,9 +152,6 @@ function createEmptyMetadata(): RecordingMetadata {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  position: sticky;
-  top: 0;
-  z-index: 1;
   margin: -14px -14px 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: #151a20;
