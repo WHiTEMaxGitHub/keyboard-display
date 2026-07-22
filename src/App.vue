@@ -14,6 +14,7 @@ import {
 import {
   useRecordingController,
 } from "./composables/useRecordingController";
+import { useNotifications } from "./composables/useNotifications";
 import {
   buildAppConfigFile,
   parseAppConfigFile,
@@ -39,6 +40,10 @@ import {
 } from "./domain/inputEvents";
 import type { RecordingHotkeyMode } from "./domain/recordingHotkeys";
 import type { RecordingConfig } from "./domain/defaultConfig";
+import {
+  createDefaultVideoExporterConfig,
+  type VideoExporterConfig,
+} from "./domain/videoExporter";
 
 const config = reactive(createDefaultConfig());
 const activeKeyIds = ref(new Set<string>());
@@ -50,6 +55,8 @@ const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const customOverlayPosition = ref<{ x: number; y: number } | null>(null);
 const syncFeedbackActive = ref(false);
+const videoExporterConfig = ref<VideoExporterConfig>(createDefaultVideoExporterConfig());
+const { notifications, notify, dismissNotification } = useNotifications();
 
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
@@ -103,6 +110,7 @@ const {
   stopRecording,
   inspectRecordingFile,
   inspectRecordingPath,
+  clearRecordingInspection,
   updateSilentRecording,
   updateRecordingHotkeyMode: setRecordingHotkeyMode,
   addSyncMarker,
@@ -238,6 +246,7 @@ async function restoreAppConfig() {
   recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
   silentRecording.value = appConfig.recording.silent ?? false;
   recordingHotkeys.value = appConfig.recording.hotkeys;
+  videoExporterConfig.value = appConfig.exporter.video;
 
   applyOverlayLayout(appConfig.currentProfile.overlay.layout);
   applyOverlayRows(appConfig.currentProfile.overlay.rows);
@@ -296,6 +305,9 @@ async function saveAppConfig() {
       outputDirectory: recordingDirectory.value || null,
       silent: silentRecording.value,
       hotkeys: recordingHotkeys.value,
+    },
+    exporter: {
+      video: videoExporterConfig.value,
     },
   });
   recentProfiles.value = appConfig.profiles.recentProfiles;
@@ -373,6 +385,11 @@ function updateRecordingConfig(recording: RecordingConfig) {
 function updateExportConfig(exportConfig: ExportConfig) {
   applyExportConfig(exportConfig);
   markProfileChanged();
+  scheduleAppConfigSave();
+}
+
+function updateVideoExporterConfig(exporterConfig: VideoExporterConfig) {
+  videoExporterConfig.value = exporterConfig;
   scheduleAppConfigSave();
 }
 
@@ -566,6 +583,8 @@ onUnmounted(() => {
       :overlay-adjusting="overlayAdjusting"
       :recording-hotkeys="recordingHotkeys"
       :hotkey-capture-target="hotkeyCaptureTarget"
+      :video-exporter-config="videoExporterConfig"
+      :notifications="notifications"
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-rows="updateOverlayRows"
       @update-overlay-visible="setOverlayVisible"
@@ -578,11 +597,15 @@ onUnmounted(() => {
       @update-silent-recording="updateSilentRecording"
       @update-recording-config="updateRecordingConfig"
       @update-export-config="updateExportConfig"
+      @update-video-exporter-config="updateVideoExporterConfig"
+      @notify="notify"
+      @dismiss-notification="dismissNotification"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
       @add-sync-marker="addSyncMarker"
       @inspect-recording-file="inspectRecordingFile"
       @inspect-recording-path="inspectRecordingPath"
+      @clear-recording-inspection="clearRecordingInspection"
       @update-recording-hotkey-mode="updateRecordingHotkeyMode"
       @begin-hotkey-capture="beginHotkeyCapture"
       @start-overlay-adjust="startOverlayAdjust"

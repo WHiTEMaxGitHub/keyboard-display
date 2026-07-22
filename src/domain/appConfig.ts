@@ -1,6 +1,11 @@
 import { createDefaultConfig, flattenRowKeys, type AppConfig, type OverlayRow } from "./defaultConfig";
 import { normalizeRecordingConfig } from "./recordingConfig";
 import { normalizeRecordingHotkeyConfig, type RecordingHotkeyConfig } from "./recordingHotkeys";
+import {
+  createDefaultVideoExporterConfig,
+  normalizeVideoExporterConfig,
+  type VideoExporterConfig,
+} from "./videoExporter";
 
 export type RecentProfile = {
   name: string;
@@ -46,6 +51,9 @@ export type AppConfigFile = {
     silent?: boolean;
     hotkeys: RecordingHotkeyConfig;
   };
+  exporter: {
+    video: VideoExporterConfig;
+  };
   ui: {
     language: string;
   };
@@ -60,11 +68,13 @@ export function buildAppConfigFile({
   recentProfiles,
   currentProfile,
   recording,
+  exporter,
 }: {
   defaultProfilePath: string;
   recentProfiles: RecentProfile[];
   currentProfile: CurrentProfile;
   recording: AppConfigFile["recording"];
+  exporter: AppConfigFile["exporter"];
 }): PersistedAppConfigFile {
   const nextRecentProfiles = mergeRecentProfiles(recentProfiles, currentProfile);
 
@@ -88,6 +98,9 @@ export function buildAppConfigFile({
       },
     },
     recording,
+    exporter: {
+      video: normalizeVideoExporterConfig(exporter.video),
+    },
     ui: {
       language: "system",
     },
@@ -156,6 +169,11 @@ export function parseAppConfigFile(text: string): AppConfigFile {
     recording: {
       ...config.recording,
       hotkeys: normalizeRecordingHotkeyConfig(config.recording.hotkeys),
+    },
+    exporter: {
+      video: normalizeVideoExporterConfig(
+        config.exporter?.video ?? createDefaultVideoExporterConfig(),
+      ),
     },
   };
 }

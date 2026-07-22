@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { tauriApi } from "../api/tauri";
 import { normalizeHexColor } from "../domain/colorPicker";
 import {
   isKeyBinding,
@@ -8,7 +9,9 @@ import {
   type OverlayStyle,
 } from "../domain/defaultConfig";
 import type { RecentProfile } from "../domain/appConfig";
+import type { AppNotification, NotificationTone } from "../composables/useNotifications";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
+import type { VideoExporterConfig } from "../domain/videoExporter";
 import type { RecordingInspection } from "../types/recording";
 import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
@@ -17,6 +20,7 @@ import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import ExportPanel from "./ExportPanel.vue";
 import LayoutEditor from "./LayoutEditor.vue";
+import NotificationStack from "./NotificationStack.vue";
 import RecordingPanel from "./RecordingPanel.vue";
 import WindowPanel from "./WindowPanel.vue";
 
@@ -29,6 +33,8 @@ const layoutSubPage = ref<LayoutSubPage>("summary");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
 const sidebarCollapsed = ref(false);
+const videoExporterInstalling = ref(false);
+const videoExporterUninstalling = ref(false);
 
 const props = defineProps<{
   config: AppConfig;
@@ -51,6 +57,8 @@ const props = defineProps<{
   overlayAdjusting: boolean;
   recordingHotkeys: RecordingHotkeyConfig;
   hotkeyCaptureTarget: "start" | "stop" | "sync" | null;
+  videoExporterConfig: VideoExporterConfig;
+  notifications: AppNotification[];
 }>();
 
 const layoutRows = computed(() => {
@@ -70,11 +78,15 @@ const emit = defineEmits<{
   "update-silent-recording": [value: boolean];
   "update-recording-config": [recording: AppConfig["recording"]];
   "update-export-config": [exportConfig: ExportConfig];
+  "update-video-exporter-config": [exporterConfig: VideoExporterConfig];
+  notify: [tone: NotificationTone, message: string];
+  "dismiss-notification": [id: number];
   "start-recording": [];
   "stop-recording": [];
   "add-sync-marker": [];
   "inspect-recording-file": [];
   "inspect-recording-path": [path: string];
+  "clear-recording-inspection": [];
   "update-recording-hotkey-mode": [mode: RecordingHotkeyMode];
   "begin-hotkey-capture": [target: "start" | "stop" | "sync"];
   "start-overlay-adjust": [];
@@ -152,10 +164,48 @@ function updateRenderMarkers(event: Event) {
   });
 }
 
+async function installAppManagedVideoExporter() {
+  if (videoExporterInstalling.value) {
+    return;
+  }
+
+  videoExporterInstalling.value = true;
+
+  try {
+    const result = await tauriApi.installAppManagedVideoExporter();
+    emit("notify", "success", `Video exporter installed: ${result.path}`);
+  } catch (error) {
+    emit("notify", "error", `Video exporter install failed: ${String(error)}`);
+  } finally {
+    videoExporterInstalling.value = false;
+  }
+}
+
+async function uninstallAppManagedVideoExporter() {
+  if (videoExporterUninstalling.value) {
+    return;
+  }
+
+  videoExporterUninstalling.value = true;
+
+  try {
+    await tauriApi.uninstallAppManagedVideoExporter();
+    emit("notify", "success", "App-managed video exporter uninstalled.");
+  } catch (error) {
+    emit("notify", "error", `Video exporter uninstall failed: ${String(error)}`);
+  } finally {
+    videoExporterUninstalling.value = false;
+  }
+}
+
 </script>
 
 <template>
   <main :class="['config-shell', { 'sidebar-collapsed': sidebarCollapsed }]">
+    <NotificationStack
+      :notifications="notifications"
+      @dismiss="emit('dismiss-notification', $event)"
+    />
     <ConfigSidebar
       :active-page="activePage"
       :recording-sub-page="recordingSubPage"
@@ -172,6 +222,7 @@ function updateRenderMarkers(event: Event) {
         @overwrite-and-apply-config="overwriteAndApplyConfig"
       />
 
+      <div :key="`${activePage}-${recordingSubPage}`" class="page-container">
       <section v-if="activePage === 'overview'" class="page-stack">
         <section class="preview-band" aria-label="Live preview">
           <div class="preview-copy">
@@ -360,15 +411,25 @@ function updateRenderMarkers(event: Event) {
           :recording-inspection-error="recordingInspectionError"
           @inspect-recording-file="emit('inspect-recording-file')"
           @inspect-recording-path="emit('inspect-recording-path', $event)"
+          @clear-recording-inspection="emit('clear-recording-inspection')"
         />
       </section>
 
       <section v-else-if="activePage === 'export'" class="page-stack">
         <ExportPanel
           :render-markers="config.export.renderMarkers"
+          :video-exporter-config="videoExporterConfig"
+          :installing-app-managed-exporter="videoExporterInstalling"
+          :uninstalling-app-managed-exporter="videoExporterUninstalling"
           @update-render-markers="updateRenderMarkers"
+          @update-video-exporter-config="emit('update-video-exporter-config', $event)"
+          @notify="emit('notify', $event.tone, $event.message)"
+          @update-installing-app-managed-exporter="videoExporterInstalling = $event"
+          @install-app-managed-exporter="installAppManagedVideoExporter"
+          @uninstall-app-managed-exporter="uninstallAppManagedVideoExporter"
         />
       </section>
+      </div>
     </section>
   </main>
 </template>
@@ -453,6 +514,11 @@ h2 {
 }
 
 .page-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.page-container {
   display: grid;
   gap: 16px;
 }

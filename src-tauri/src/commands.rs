@@ -1,6 +1,9 @@
 use tauri::Manager;
 
-use crate::recording::{self, RecordingManager};
+use crate::{
+    exporter::{self, InstallVideoExporterResult, VideoExporterStatus},
+    recording::{self, RecordingManager},
+};
 
 #[tauri::command]
 pub fn save_config_file(path: std::path::PathBuf, contents: String) -> Result<(), String> {
@@ -140,4 +143,48 @@ pub fn save_recording_metadata(
     metadata: recording::RecordingMetadata,
 ) -> Result<recording::RecordingMetadata, String> {
     recording::save_recording_metadata(path, metadata)
+}
+
+#[tauri::command]
+pub fn detect_video_exporter(
+    app: tauri::AppHandle,
+    user_selected_path: Option<std::path::PathBuf>,
+) -> Result<VideoExporterStatus, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+
+    Ok(exporter::detect_video_exporter(
+        app_data_dir,
+        user_selected_path,
+    ))
+}
+
+#[tauri::command]
+pub async fn install_app_managed_video_exporter(
+    app: tauri::AppHandle,
+) -> Result<InstallVideoExporterResult, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || exporter::install_app_managed_ffmpeg(app_data_dir))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn uninstall_app_managed_video_exporter(app: tauri::AppHandle) -> Result<(), String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
+
+    tauri::async_runtime::spawn_blocking(move || {
+        exporter::uninstall_app_managed_ffmpeg(app_data_dir)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }

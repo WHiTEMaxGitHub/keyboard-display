@@ -222,6 +222,23 @@
   - Store the option in profile export config.
   - Show it as a standalone export setting so marker rendering is not forced.
 
+- [ ] Add a user-managed video exporter setup flow.
+  - Use `ffmpeg` as the first video export engine, but do not assume target
+    users have it installed.
+  - Detect only `ffmpeg` available from `PATH` automatically.
+  - Let users choose an existing `ffmpeg` application/binary path when it is
+    installed outside `PATH`.
+  - Offer an optional app-managed exporter install for users who do not have
+    `ffmpeg` or prefer an isolated app copy.
+  - Store the app-managed exporter under the app data/config directory, not in
+    system paths.
+  - Never modify a user's existing `ffmpeg` installation, config, shell profile,
+    registry, or system `PATH`.
+  - Export invocation should use the resolved binary path directly: app-managed
+    path, user-selected path, or plain `ffmpeg` when `PATH` detection succeeds.
+  - If the user already has `ffmpeg` in `PATH`, show it as available while still
+    allowing installation of the isolated app-managed exporter.
+
 - [ ] Render markers during future overlay video export.
   - When exporting overlay video from `.kbdrec`, optionally render visible sync
     marker feedback into the exported overlay.

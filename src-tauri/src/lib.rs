@@ -1,4 +1,5 @@
 mod commands;
+mod exporter;
 mod input;
 mod recording;
 
@@ -24,7 +25,10 @@ pub fn run() {
             commands::list_recording_files,
             commands::create_recording_folder,
             commands::read_recording_metadata,
-            commands::save_recording_metadata
+            commands::save_recording_metadata,
+            commands::detect_video_exporter,
+            commands::install_app_managed_video_exporter,
+            commands::uninstall_app_managed_video_exporter
         ])
         .setup(|app| {
             input::start_native_input_backend(app.handle().clone());

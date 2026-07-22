@@ -4,8 +4,13 @@ import type {
   RecordingMetadata,
   RecordingTreeNode,
 } from "../types/recording";
+import type { VideoExporterStatus } from "../domain/videoExporter";
 
 export type StopRecordingResult = {
+  path: string;
+};
+
+export type InstallVideoExporterResult = {
   path: string;
 };
 
@@ -79,5 +84,17 @@ export const tauriApi = {
 
   saveRecordingMetadata(path: string, metadata: RecordingMetadata) {
     return invoke<RecordingMetadata>("save_recording_metadata", { path, metadata });
+  },
+
+  detectVideoExporter(userSelectedPath: string | null) {
+    return invoke<VideoExporterStatus>("detect_video_exporter", { userSelectedPath });
+  },
+
+  installAppManagedVideoExporter() {
+    return invoke<InstallVideoExporterResult>("install_app_managed_video_exporter");
+  },
+
+  uninstallAppManagedVideoExporter() {
+    return invoke<void>("uninstall_app_managed_video_exporter");
   },
 };

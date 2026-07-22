@@ -33,6 +33,11 @@ describe("app config", () => {
           sync: ["f8"],
         },
       },
+      exporter: {
+        video: {
+          userSelectedPath: "/opt/ffmpeg",
+        },
+      },
     });
 
     expect(appConfig.profiles.lastProfilePath).toBe("/tmp/cs-pov.json");
@@ -48,6 +53,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
     expect(appConfig.recording.silent).toBe(true);
+    expect(appConfig.exporter.video.userSelectedPath).toBe("/opt/ffmpeg");
   });
 
   it("keeps real recent profile paths deduped and newest first", () => {
@@ -82,6 +88,11 @@ describe("app config", () => {
           start: ["ctrl-left", "shift-left", "r"],
           stop: ["ctrl-left", "shift-left", "r"],
           sync: ["f8"],
+        },
+      },
+      exporter: {
+        video: {
+          userSelectedPath: null,
         },
       },
     });
@@ -124,6 +135,11 @@ describe("app config", () => {
           start: ["ctrl-left", "shift-left", "r"],
           stop: ["ctrl-left", "shift-left", "r"],
           sync: ["f8"],
+        },
+      },
+      exporter: {
+        video: {
+          userSelectedPath: null,
         },
       },
     });
@@ -171,6 +187,11 @@ describe("app config", () => {
             sync: ["f8"],
           },
         },
+        exporter: {
+          video: {
+            userSelectedPath: "  /Applications/ffmpeg  ",
+          },
+        },
         ui: {
           language: "system",
         },
@@ -183,6 +204,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.overlay.position).toBe("center");
     expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
+    expect(appConfig.exporter.video.userSelectedPath).toBe("/Applications/ffmpeg");
   });
 
   it("fills profile recording config when loading older app config", () => {
@@ -226,5 +248,6 @@ describe("app config", () => {
     expect(appConfig.currentProfile.recording.maxFps).toBe(1000);
     expect(appConfig.recording.hotkeys.sync).toEqual(["f8"]);
     expect(appConfig.recording.hotkeys.start).toEqual(["ctrl-left", "shift-left", "r"]);
+    expect(appConfig.exporter.video.userSelectedPath).toBeNull();
   });
 });
