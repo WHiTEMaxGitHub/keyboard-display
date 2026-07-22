@@ -24,6 +24,7 @@ const recordingTreeLoading = ref(false);
 const folderNameDraft = ref("");
 const folderCreating = ref(false);
 const folderEditorVisible = ref(false);
+const selectedRecordingPath = ref("");
 
 const recordingRoot = computed(() => props.recordingDirectory || props.defaultRecordingDirectory);
 
@@ -107,11 +108,22 @@ async function createRecordingFolder() {
 }
 
 function inspectRecordingPath(path: string) {
+  selectedRecordingPath.value = path;
   emit("inspect-recording-path", path);
 }
 
 function clearRecordingInspection() {
   emit("clear-recording-inspection");
+}
+
+function selectRecordingPath(path: string) {
+  selectedRecordingPath.value = path;
+}
+
+function inspectSelectedRecording() {
+  if (selectedRecordingPath.value) {
+    inspectRecordingPath(selectedRecordingPath.value);
+  }
 }
 </script>
 
@@ -161,6 +173,7 @@ function clearRecordingInspection() {
     <div v-if="recordingTree" class="recording-tree">
       <RecordingTreeNodeView
         :node="recordingTree"
+        @select="selectRecordingPath"
         @inspect="inspectRecordingPath"
       />
     </div>
@@ -170,6 +183,16 @@ function clearRecordingInspection() {
         <h3>Recording inspection</h3>
         <button type="button" @click="inspectRecordingFile">
           Inspect .kbdrec
+        </button>
+      </div>
+      <div class="selected-recording-actions">
+        <span>{{ selectedRecordingPath || "No recording selected" }}</span>
+        <button
+          type="button"
+          :disabled="!selectedRecordingPath"
+          @click="inspectSelectedRecording"
+        >
+          Inspect / edit selected
         </button>
       </div>
       <p v-if="inspectedRecordingPath" class="quiet">
@@ -275,6 +298,43 @@ function clearRecordingInspection() {
   margin-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 18px;
+}
+
+.selected-recording-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #151a20;
+  padding: 10px 12px;
+}
+
+.selected-recording-actions span {
+  min-width: 0;
+  overflow: hidden;
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.selected-recording-actions button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0 10px;
+}
+
+.selected-recording-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .error-text {
