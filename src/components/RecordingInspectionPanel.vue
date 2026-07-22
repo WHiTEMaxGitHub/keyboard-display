@@ -5,6 +5,7 @@ import {
   type RecordingTimelineMarker,
 } from "../domain/recordingTimeline";
 import type { RecordingInspection, RecordingInspectionEvent } from "../types/recording";
+import BaseFieldRow from "./BaseFieldRow.vue";
 
 const props = defineProps<{
   inspection: RecordingInspection;
@@ -76,32 +77,14 @@ function padFrame(frame: number, fps: number) {
 
 <template>
   <div class="inspection-grid">
-    <div class="field-row">
-      <span>Version</span>
-      <strong>{{ inspection.version }}</strong>
-    </div>
-    <div class="field-row">
-      <span>FPS</span>
-      <strong>{{ inspection.fps }}</strong>
-    </div>
-    <div class="field-row">
-      <span>Keys</span>
-      <strong>{{ keyIds.length }}</strong>
-    </div>
-    <div class="field-row">
-      <span>Events</span>
-      <strong>{{ events.length }}</strong>
-    </div>
-    <div class="field-row">
-      <span>Frames</span>
-      <strong>{{ frames.length }}</strong>
-    </div>
-    <div class="field-row">
-      <span>Markers</span>
-      <strong>
-        {{ events.filter((event) => "marker" in event).length }}
-      </strong>
-    </div>
+    <BaseFieldRow label="Version">{{ inspection.version }}</BaseFieldRow>
+    <BaseFieldRow label="FPS">{{ inspection.fps }}</BaseFieldRow>
+    <BaseFieldRow label="Keys">{{ keyIds.length }}</BaseFieldRow>
+    <BaseFieldRow label="Events">{{ events.length }}</BaseFieldRow>
+    <BaseFieldRow label="Frames">{{ frames.length }}</BaseFieldRow>
+    <BaseFieldRow label="Markers">
+      {{ events.filter((event) => "marker" in event).length }}
+    </BaseFieldRow>
   </div>
 
   <div class="marker-timeline-panel">
@@ -179,23 +162,8 @@ function padFrame(frame: number, fps: number) {
 </template>
 
 <style scoped>
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.field-row span,
 .quiet {
   color: #9ca7b4;
-}
-
-.field-row strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
 }
 
 .section-header {

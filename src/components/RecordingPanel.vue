@@ -11,7 +11,9 @@ import {
 } from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import BaseButton from "./BaseButton.vue";
+import BaseFieldRow from "./BaseFieldRow.vue";
 import BasePanel from "./BasePanel.vue";
+import BaseToggleRow from "./BaseToggleRow.vue";
 import RecordingHotkeysPanel from "./RecordingHotkeysPanel.vue";
 
 const props = defineProps<{
@@ -160,12 +162,9 @@ function addSyncMarker() {
 <template>
   <BasePanel wide>
     <h2>Recording</h2>
-    <div class="field-row">
-      <span>Save folder</span>
-      <strong>
-        {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
-      </strong>
-    </div>
+    <BaseFieldRow label="Save folder">
+      {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
+    </BaseFieldRow>
     <div class="recording-actions">
       <BaseButton @click="chooseRecordingDirectory">Choose folder</BaseButton>
       <BaseButton
@@ -182,23 +181,13 @@ function addSyncMarker() {
         Add sync marker
       </BaseButton>
     </div>
-    <label class="toggle-row">
-      <input
-        :checked="silentRecording"
-        type="checkbox"
-        @change="updateSilentRecording"
-      />
+    <BaseToggleRow :checked="silentRecording" @change="updateSilentRecording">
       Silent recording
-    </label>
+    </BaseToggleRow>
     <div class="fps-config-row">
-      <label class="toggle-row">
-        <input
-          :checked="config.recording.syncFeedbackEnabled"
-          type="checkbox"
-          @change="updateSyncFeedbackEnabled"
-        />
+      <BaseToggleRow compact :checked="config.recording.syncFeedbackEnabled" @change="updateSyncFeedbackEnabled">
         Sync border flash
-      </label>
+      </BaseToggleRow>
       <input
         :disabled="!config.recording.syncFeedbackEnabled"
         :min="100"
@@ -229,14 +218,9 @@ function addSyncMarker() {
           {{ fps }}fps
         </button>
       </div>
-      <label class="toggle-row">
-        <input
-          :checked="config.recording.customFpsEnabled"
-          type="checkbox"
-          @change="updateCustomFpsEnabled"
-        />
+      <BaseToggleRow compact :checked="config.recording.customFpsEnabled" @change="updateCustomFpsEnabled">
         Custom FPS
-      </label>
+      </BaseToggleRow>
       <input
         :disabled="!config.recording.customFpsEnabled"
         :max="config.recording.maxFps"
@@ -252,10 +236,7 @@ function addSyncMarker() {
         {{ activeRecordingFps }}fps · {{ formatBytesPerSecond(estimatedRecordingBytesPerSecond) }} raw
       </span>
     </div>
-    <div class="field-row">
-      <span>Primary artifact</span>
-      <strong>{{ config.recording.formatExtension }}</strong>
-    </div>
+    <BaseFieldRow label="Primary artifact">{{ config.recording.formatExtension }}</BaseFieldRow>
     <label class="filename-template-row">
       <span>Filename template</span>
       <input
@@ -285,23 +266,8 @@ function addSyncMarker() {
 </template>
 
 <style scoped>
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.field-row span,
 .quiet {
   color: #9ca7b4;
-}
-
-.field-row strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
 }
 
 .recording-actions {
@@ -311,31 +277,12 @@ function addSyncMarker() {
   margin: 16px 0;
 }
 
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.toggle-row input {
-  width: 18px;
-  height: 18px;
-  accent-color: #25d366;
-}
-
 .fps-config-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 16px;
-}
-
-.fps-config-row .toggle-row {
-  margin: 0;
 }
 
 .fps-input {

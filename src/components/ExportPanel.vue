@@ -10,6 +10,8 @@ import {
 } from "../domain/videoExporter";
 import BasePanel from "./BasePanel.vue";
 import BaseButton from "./BaseButton.vue";
+import BaseFieldRow from "./BaseFieldRow.vue";
+import BaseToggleRow from "./BaseToggleRow.vue";
 
 const props = defineProps<{
   renderMarkers: boolean;
@@ -126,22 +128,11 @@ async function uninstallAppManagedExporter() {
 <template>
   <BasePanel wide>
     <h2>Export</h2>
-    <div class="field-row">
-      <span>Transparent overlay</span>
-      <strong>WebM</strong>
-    </div>
-    <div class="field-row">
-      <span>Compatible video</span>
-      <strong>MP4</strong>
-    </div>
-    <label class="toggle-row">
-      <input
-        :checked="renderMarkers"
-        type="checkbox"
-        @change="emit('update-render-markers', $event)"
-      />
+    <BaseFieldRow label="Transparent overlay">WebM</BaseFieldRow>
+    <BaseFieldRow label="Compatible video">MP4</BaseFieldRow>
+    <BaseToggleRow :checked="renderMarkers" @change="emit('update-render-markers', $event)">
       Render sync markers
-    </label>
+    </BaseToggleRow>
     <div class="exporter-panel">
       <div class="section-header">
         <h3>Video exporter</h3>
@@ -149,14 +140,10 @@ async function uninstallAppManagedExporter() {
           {{ exporterChecking ? "Checking..." : "Check again" }}
         </BaseButton>
       </div>
-      <div class="field-row">
-        <span>Status</span>
-        <strong>{{ resolvedExporterLabel }}</strong>
-      </div>
-      <div v-if="exporterStatus?.resolved" class="field-row">
-        <span>Using</span>
-        <strong>{{ exporterStatus.resolved.path }}</strong>
-      </div>
+      <BaseFieldRow label="Status">{{ resolvedExporterLabel }}</BaseFieldRow>
+      <BaseFieldRow v-if="exporterStatus?.resolved" label="Using">
+        {{ exporterStatus.resolved.path }}
+      </BaseFieldRow>
       <p v-else class="notice-text">
         Video export requires ffmpeg. You can select an existing binary, use a
         PATH installation, or install an app-managed exporter later.
@@ -215,14 +202,6 @@ async function uninstallAppManagedExporter() {
 </template>
 
 <style scoped>
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
 .section-header {
   display: flex;
   align-items: center;
@@ -239,30 +218,8 @@ async function uninstallAppManagedExporter() {
   line-height: 22px;
 }
 
-.field-row span,
 .quiet {
   color: #9ca7b4;
-}
-
-.field-row strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.toggle-row input {
-  width: 18px;
-  height: 18px;
-  accent-color: #25d366;
 }
 
 .exporter-panel {

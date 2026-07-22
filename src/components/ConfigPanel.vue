@@ -16,6 +16,8 @@ import type { RecordingInspection } from "../types/recording";
 import PovOverlay from "./PovOverlay.vue";
 import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
 import AppearancePanel from "./AppearancePanel.vue";
+import BaseFieldRow from "./BaseFieldRow.vue";
+import BaseToggleRow from "./BaseToggleRow.vue";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import ExportPanel from "./ExportPanel.vue";
@@ -257,18 +259,11 @@ async function uninstallAppManagedVideoExporter() {
         <section class="panel-grid">
           <article class="panel">
             <h2>Profile</h2>
-            <div class="field-row">
-              <span>Name</span>
-              <strong>{{ profileName }}</strong>
-            </div>
-            <div class="field-row">
-              <span>Status</span>
-              <strong>{{ profileChanged ? "Unsaved changes" : "Saved" }}</strong>
-            </div>
-            <div class="field-row">
-              <span>Visible keys</span>
-              <strong>{{ config.keys.length }}</strong>
-            </div>
+            <BaseFieldRow label="Name">{{ profileName }}</BaseFieldRow>
+            <BaseFieldRow label="Status">
+              {{ profileChanged ? "Unsaved changes" : "Saved" }}
+            </BaseFieldRow>
+            <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
             <label class="recent-profile-control">
               <span>Recent profiles</span>
               <select
@@ -293,22 +288,12 @@ async function uninstallAppManagedVideoExporter() {
 
           <article class="panel">
             <h2>Quick controls</h2>
-            <label class="toggle-row">
-              <input
-                :checked="overlayVisible"
-                type="checkbox"
-                @change="updateOverlayVisible"
-              />
+            <BaseToggleRow :checked="overlayVisible" @change="updateOverlayVisible">
               Show POV overlay
-            </label>
-            <label class="toggle-row">
-              <input
-                :checked="config.style.alwaysOnTop"
-                type="checkbox"
-                @change="updateAlwaysOnTop"
-              />
+            </BaseToggleRow>
+            <BaseToggleRow :checked="config.style.alwaysOnTop" @change="updateAlwaysOnTop">
               Always on top
-            </label>
+            </BaseToggleRow>
           </article>
         </section>
       </section>
@@ -332,18 +317,9 @@ async function uninstallAppManagedVideoExporter() {
               Editor
             </button>
           </div>
-          <div class="field-row">
-            <span>Unit size</span>
-            <strong>{{ config.layout.unitPx }}px</strong>
-          </div>
-          <div class="field-row">
-            <span>Gap</span>
-            <strong>{{ config.layout.gapUnit }} unit</strong>
-          </div>
-          <div class="field-row">
-            <span>Visible keys</span>
-            <strong>{{ config.keys.length }}</strong>
-          </div>
+          <BaseFieldRow label="Unit size">{{ config.layout.unitPx }}px</BaseFieldRow>
+          <BaseFieldRow label="Gap">{{ config.layout.gapUnit }} unit</BaseFieldRow>
+          <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
           <div v-if="layoutSubPage === 'summary'" class="layout-line-list">
             <div v-for="line in layoutRows" :key="line.row" class="layout-line">
               <span class="line-label">Line {{ line.row }}:</span>
@@ -463,8 +439,7 @@ async function uninstallAppManagedVideoExporter() {
 }
 
 .preview-copy p,
-.quiet,
-.field-row span {
+.quiet {
   color: #9ca7b4;
 }
 
@@ -568,20 +543,6 @@ h2 {
   margin-bottom: 0;
 }
 
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.field-row strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-
 .recent-profile-control {
   display: grid;
   grid-template-columns: minmax(110px, 1fr) minmax(180px, 240px);
@@ -671,18 +632,6 @@ label {
   margin-bottom: 16px;
   color: #c9d1da;
   font-weight: 700;
-}
-
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.toggle-row input {
-  width: 18px;
-  height: 18px;
-  accent-color: #25d366;
 }
 
 select {
