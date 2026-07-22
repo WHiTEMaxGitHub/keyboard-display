@@ -2,6 +2,7 @@
 import { ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
 import type { RecordingMetadata } from "../types/recording";
+import BaseButton from "./BaseButton.vue";
 
 const props = defineProps<{
   path: string;
@@ -43,10 +44,10 @@ async function loadRecordingMetadata(path: string) {
   }
 }
 
-async function saveRecordingMetadata() {
+async function saveRecordingMetadata(closeAfterSave = false) {
   if (!props.path) {
     metadataError.value = "Choose a recording file first.";
-    return;
+    return false;
   }
 
   metadataSaving.value = true;
@@ -58,8 +59,13 @@ async function saveRecordingMetadata() {
     setMetadataDraft(metadata);
     metadataStatus.value = "Metadata saved.";
     emit("saved");
+    if (closeAfterSave) {
+      emit("close");
+    }
+    return true;
   } catch (error) {
     metadataError.value = String(error);
+    return false;
   } finally {
     metadataSaving.value = false;
   }
@@ -99,7 +105,7 @@ function createEmptyMetadata(): RecordingMetadata {
 </script>
 
 <template>
-  <div class="metadata-modal" role="dialog" aria-modal="true" @click.self="emit('close')">
+  <div class="metadata-modal" role="dialog" aria-modal="true">
     <section class="metadata-editor" @click.stop>
       <div class="section-header">
         <div>
@@ -107,12 +113,12 @@ function createEmptyMetadata(): RecordingMetadata {
           <h3>Sidecar metadata</h3>
         </div>
         <div class="header-actions">
-          <button type="button" :disabled="metadataSaving" @click="emit('close')">
-            Close
-          </button>
-          <button type="button" :disabled="metadataSaving" @click="saveRecordingMetadata">
-            {{ metadataSaving ? "Saving..." : "Save metadata" }}
-          </button>
+          <BaseButton :disabled="metadataSaving" @click="saveRecordingMetadata(false)">
+            {{ metadataSaving ? "Saving..." : "Save" }}
+          </BaseButton>
+          <BaseButton variant="primary" :disabled="metadataSaving" @click="saveRecordingMetadata(true)">
+            {{ metadataSaving ? "Saving..." : "Save & Close" }}
+          </BaseButton>
         </div>
       </div>
       <p class="file-path">{{ path }}</p>
@@ -140,8 +146,8 @@ function createEmptyMetadata(): RecordingMetadata {
   inset: 0;
   z-index: 18;
   display: grid;
-  align-items: start;
-  justify-items: end;
+  align-items: center;
+  justify-items: center;
   overflow: auto;
   background: rgba(0, 0, 0, 0.38);
   padding: 24px;
@@ -185,31 +191,36 @@ function createEmptyMetadata(): RecordingMetadata {
   line-height: 22px;
 }
 
-.section-header button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.section-header button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
 .metadata-editor {
   display: grid;
-  width: min(520px, calc(100vw - 48px));
+  width: min(680px, calc(100vw - 48px));
+  min-width: 420px;
+  min-height: 340px;
+  max-height: calc(100vh - 48px);
   gap: 12px;
+  overflow: auto;
+  resize: both;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
   padding: 14px;
+}
+
+@media (max-width: 520px) {
+  .metadata-editor {
+    min-width: 0;
+    resize: vertical;
+  }
+
+  .section-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .header-actions {
+    justify-content: stretch;
+  }
 }
 
 .file-path {
