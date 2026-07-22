@@ -59,6 +59,7 @@ pub fn key_id_from_macos_keycode(keycode: u16) -> Option<&'static str> {
         54 => Some("meta-right"),
         58 => Some("alt-left"),
         61 => Some("alt-right"),
+        63 => Some("fn"),
         49 => Some("space"),
         51 => Some("backspace"),
         117 => Some("delete"),
@@ -311,6 +312,7 @@ mod tests {
         assert_eq!(key_id_from_macos_keycode(54), Some("meta-right"));
         assert_eq!(key_id_from_macos_keycode(58), Some("alt-left"));
         assert_eq!(key_id_from_macos_keycode(61), Some("alt-right"));
+        assert_eq!(key_id_from_macos_keycode(63), Some("fn"));
         assert_eq!(key_id_from_macos_keycode(49), Some("space"));
         assert_eq!(key_id_from_macos_keycode(122), Some("f1"));
         assert_eq!(key_id_from_macos_keycode(111), Some("f12"));

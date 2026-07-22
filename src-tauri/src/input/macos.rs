@@ -113,7 +113,7 @@ fn handle_event(
 }
 
 fn is_macos_modifier_keycode(keycode: u16) -> bool {
-    matches!(keycode, 56 | 60 | 59 | 62 | 55 | 54 | 58 | 61 | 57)
+    matches!(keycode, 56 | 60 | 59 | 62 | 55 | 54 | 58 | 61 | 57 | 63)
 }
 
 fn emit_pulse(app_handle: &AppHandle, key_id: &'static str) {
