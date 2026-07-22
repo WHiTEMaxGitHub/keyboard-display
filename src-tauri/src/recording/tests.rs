@@ -335,6 +335,9 @@ fn inspects_binary_kbdrec_as_human_readable_events_and_frames() {
     assert_eq!(inspection.version, 1);
     assert_eq!(inspection.fps, 10);
     assert_eq!(inspection.key_ids, vec!["w"]);
+    let serialized = serde_json::to_value(&inspection).unwrap();
+    assert_eq!(serialized["keyIds"], serde_json::json!(["w"]));
+    assert!(serialized.get("key_ids").is_none());
     assert_eq!(
         inspection.events,
         vec![RecordingEvent::Marker {

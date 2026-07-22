@@ -35,6 +35,7 @@ pub struct RecordingFrame {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RecordingInspection {
     pub version: u8,
     pub fps: u16,

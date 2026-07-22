@@ -12,11 +12,15 @@ const props = defineProps<{
 
 const selectedTimelineMarker = ref<RecordingTimelineMarker | null>(null);
 
+const keyIds = computed(() => props.inspection.keyIds ?? []);
+const events = computed(() => props.inspection.events ?? []);
+const frames = computed(() => props.inspection.frames ?? []);
+
 const timelineMarkers = computed(() => {
   return buildRecordingTimelineMarkers({
-    events: props.inspection.events,
+    events: events.value,
     fps: props.inspection.fps,
-    frameCount: props.inspection.frames.length,
+    frameCount: frames.value.length,
   });
 });
 
@@ -82,20 +86,20 @@ function padFrame(frame: number, fps: number) {
     </div>
     <div class="field-row">
       <span>Keys</span>
-      <strong>{{ inspection.keyIds.length }}</strong>
+      <strong>{{ keyIds.length }}</strong>
     </div>
     <div class="field-row">
       <span>Events</span>
-      <strong>{{ inspection.events.length }}</strong>
+      <strong>{{ events.length }}</strong>
     </div>
     <div class="field-row">
       <span>Frames</span>
-      <strong>{{ inspection.frames.length }}</strong>
+      <strong>{{ frames.length }}</strong>
     </div>
     <div class="field-row">
       <span>Markers</span>
       <strong>
-        {{ inspection.events.filter((event) => "marker" in event).length }}
+        {{ events.filter((event) => "marker" in event).length }}
       </strong>
     </div>
   </div>
@@ -104,7 +108,7 @@ function padFrame(frame: number, fps: number) {
     <div class="section-header">
       <h3>Marker timeline</h3>
       <span class="quiet">
-        {{ inspection.frames.length }} frames
+        {{ frames.length }} frames
       </span>
     </div>
     <div v-if="timelineMarkers.length" class="marker-timeline" aria-label="Marker timeline">
@@ -135,7 +139,7 @@ function padFrame(frame: number, fps: number) {
       <h4>Markers</h4>
       <div class="marker-metadata-list">
         <div
-          v-for="(event, index) in markerEvents(inspection.events)"
+          v-for="(event, index) in markerEvents(events)"
           :key="`${event.frame}-${event.marker}-${index}`"
           class="marker-metadata"
         >
@@ -147,13 +151,13 @@ function padFrame(frame: number, fps: number) {
     </div>
     <div>
       <h4>Key table</h4>
-      <p class="quiet">{{ inspection.keyIds.join(", ") || "None" }}</p>
+      <p class="quiet">{{ keyIds.join(", ") || "None" }}</p>
     </div>
     <div>
       <h4>Events</h4>
       <ol>
         <li
-          v-for="(event, index) in inspection.events.slice(0, 8)"
+          v-for="(event, index) in events.slice(0, 8)"
           :key="index"
         >
           {{ formatInspectionEvent(event) }}
@@ -164,7 +168,7 @@ function padFrame(frame: number, fps: number) {
       <h4>Frames</h4>
       <ol>
         <li
-          v-for="frame in inspection.frames.slice(0, 8)"
+          v-for="frame in frames.slice(0, 8)"
           :key="frame.frame"
         >
           frame {{ frame.frame }}: {{ frame.keys.join(", ") || "none" }}
