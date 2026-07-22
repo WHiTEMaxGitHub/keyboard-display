@@ -111,6 +111,11 @@ function inspectRecordingPath(path: string) {
   emit("inspect-recording-path", path);
 }
 
+function saveAndCloseRecordingMetadata() {
+  void refreshRecordingTree();
+  emit("clear-recording-inspection");
+}
+
 </script>
 
 <template>
@@ -180,6 +185,7 @@ function inspectRecordingPath(path: string) {
         v-if="currentRecordingPath"
         :path="currentRecordingPath"
         @saved="refreshRecordingTree"
+        @saved-and-close="saveAndCloseRecordingMetadata"
       />
       <RecordingInspectionPanel
         v-if="recordingInspection"

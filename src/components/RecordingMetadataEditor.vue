@@ -10,6 +10,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   saved: [];
+  "saved-and-close": [];
 }>();
 
 const metadataDraft = ref<RecordingMetadata>(createEmptyMetadata());
@@ -67,6 +68,12 @@ async function saveRecordingMetadata() {
   }
 }
 
+async function saveRecordingMetadataAndClose() {
+  if (await saveRecordingMetadata()) {
+    emit("saved-and-close");
+  }
+}
+
 function setMetadataDraft(metadata: RecordingMetadata) {
   metadataDraft.value = {
     displayName: metadata.displayName,
@@ -107,9 +114,14 @@ function createEmptyMetadata(): RecordingMetadata {
         <p>Recording metadata</p>
         <h3>Sidecar metadata</h3>
       </div>
-      <BaseButton variant="primary" :disabled="metadataSaving" @click="saveRecordingMetadata">
-        {{ metadataSaving ? "Saving..." : "Save" }}
-      </BaseButton>
+      <div class="header-actions">
+        <BaseButton :disabled="metadataSaving" @click="saveRecordingMetadata">
+          {{ metadataSaving ? "Saving..." : "Save" }}
+        </BaseButton>
+        <BaseButton variant="primary" :disabled="metadataSaving" @click="saveRecordingMetadataAndClose">
+          {{ metadataSaving ? "Saving..." : "Save & Close" }}
+        </BaseButton>
+      </div>
     </div>
     <p class="file-path">{{ path }}</p>
     <label>
@@ -138,6 +150,13 @@ function createEmptyMetadata(): RecordingMetadata {
   margin: 0 0 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding-bottom: 12px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .section-header p,
