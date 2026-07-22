@@ -99,41 +99,66 @@ function createEmptyMetadata(): RecordingMetadata {
 </script>
 
 <template>
-  <div class="metadata-editor">
-    <div class="section-header">
-      <h3>Sidecar metadata</h3>
-      <div class="header-actions">
-        <button type="button" :disabled="metadataSaving" @click="emit('close')">
-          Close
-        </button>
-        <button type="button" :disabled="metadataSaving" @click="saveRecordingMetadata">
-          {{ metadataSaving ? "Saving..." : "Save metadata" }}
-        </button>
+  <div class="metadata-modal" role="dialog" aria-modal="true" @click.self="emit('close')">
+    <section class="metadata-editor" @click.stop>
+      <div class="section-header">
+        <div>
+          <p>Recording metadata</p>
+          <h3>Sidecar metadata</h3>
+        </div>
+        <div class="header-actions">
+          <button type="button" :disabled="metadataSaving" @click="emit('close')">
+            Close
+          </button>
+          <button type="button" :disabled="metadataSaving" @click="saveRecordingMetadata">
+            {{ metadataSaving ? "Saving..." : "Save metadata" }}
+          </button>
+        </div>
       </div>
-    </div>
-    <label>
-      <span>Display name</span>
-      <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" />
-    </label>
-    <label>
-      <span>Description</span>
-      <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" />
-    </label>
-    <label>
-      <span>Tags</span>
-      <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" />
-    </label>
-    <p v-if="metadataStatus" class="status-text">{{ metadataStatus }}</p>
-    <p v-if="metadataError" class="error-text">{{ metadataError }}</p>
+      <p class="file-path">{{ path }}</p>
+      <label>
+        <span>Display name</span>
+        <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" />
+      </label>
+      <label>
+        <span>Description</span>
+        <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" />
+      </label>
+      <label>
+        <span>Tags</span>
+        <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" />
+      </label>
+      <p v-if="metadataStatus" class="status-text">{{ metadataStatus }}</p>
+      <p v-if="metadataError" class="error-text">{{ metadataError }}</p>
+    </section>
   </div>
 </template>
 
 <style scoped>
+.metadata-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  display: grid;
+  align-items: start;
+  justify-items: end;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.38);
+  padding: 24px;
+}
+
 .section-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  margin: -14px -14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #151a20;
+  padding: 14px;
 }
 
 .header-actions {
@@ -143,8 +168,21 @@ function createEmptyMetadata(): RecordingMetadata {
   gap: 8px;
 }
 
+.section-header p,
 .section-header h3 {
   margin: 0;
+}
+
+.section-header p {
+  color: #9ca7b4;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-header h3 {
+  margin-top: 2px;
   font-size: 16px;
   letter-spacing: 0;
   line-height: 22px;
@@ -168,11 +206,21 @@ function createEmptyMetadata(): RecordingMetadata {
 
 .metadata-editor {
   display: grid;
+  width: min(520px, calc(100vw - 48px));
   gap: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
   padding: 14px;
+}
+
+.file-path {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #9ca7b4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
 }
 
 .metadata-editor label {

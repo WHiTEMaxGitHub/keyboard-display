@@ -195,15 +195,6 @@ function inspectSelectedRecording() {
           Inspect / edit selected
         </button>
       </div>
-      <p v-if="inspectedRecordingPath" class="quiet">
-        File: {{ inspectedRecordingPath }}
-      </p>
-      <RecordingMetadataEditor
-        v-if="inspectedRecordingPath"
-        :path="inspectedRecordingPath"
-        @close="clearRecordingInspection"
-        @saved="refreshRecordingTree"
-      />
       <p v-if="recordingInspectionError" class="error-text">
         {{ recordingInspectionError }}
       </p>
@@ -212,6 +203,12 @@ function inspectSelectedRecording() {
         :inspection="recordingInspection"
       />
     </div>
+    <RecordingMetadataEditor
+      v-if="inspectedRecordingPath"
+      :path="inspectedRecordingPath"
+      @close="clearRecordingInspection"
+      @saved="refreshRecordingTree"
+    />
   </BasePanel>
 </template>
 
