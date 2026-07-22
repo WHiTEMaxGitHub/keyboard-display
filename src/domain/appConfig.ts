@@ -1,4 +1,10 @@
-import { createDefaultConfig, flattenRowKeys, type AppConfig, type OverlayRow } from "./defaultConfig";
+import {
+  createDefaultConfig,
+  flattenRowKeys,
+  type AppConfig,
+  type OverlayCustomPosition,
+  type OverlayRow,
+} from "./defaultConfig";
 import { normalizeRecordingConfig } from "./recordingConfig";
 import { normalizeRecordingHotkeyConfig, type RecordingHotkeyConfig } from "./recordingHotkeys";
 import {
@@ -27,10 +33,7 @@ export type CurrentProfile = {
     style: AppConfig["style"];
     rows: AppConfig["rows"];
     keys: AppConfig["keys"];
-    customPosition?: {
-      x: number;
-      y: number;
-    } | null;
+    customPosition?: OverlayCustomPosition | null;
   };
 };
 

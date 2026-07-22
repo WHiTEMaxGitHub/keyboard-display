@@ -4,6 +4,7 @@ import {
   isKeyBinding,
   type AppConfig,
   type KeyBinding,
+  type OverlayCustomPosition,
   type OverlayLayout,
   type OverlayRow,
   type OverlayRowItem,
@@ -18,10 +19,7 @@ export type OverlayConfigFile = {
   overlay: {
     visible?: boolean;
     position?: string;
-    customPosition?: {
-      x: number;
-      y: number;
-    } | null;
+    customPosition?: OverlayCustomPosition | null;
     layout: OverlayLayout;
     style: OverlayStyle;
     rows: OverlayRow[];
@@ -65,7 +63,7 @@ export function buildConfigFileJson({
   config: AppConfig;
   visible: boolean;
   position: string;
-  customPosition?: { x: number; y: number } | null;
+  customPosition?: OverlayCustomPosition | null;
 }): string {
   return `${JSON.stringify(
     {

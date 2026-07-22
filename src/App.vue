@@ -25,6 +25,7 @@ import {
   createDefaultConfig,
   flattenRowKeys,
   type ExportConfig,
+  type OverlayCustomPosition,
   type OverlayStyle,
 } from "./domain/defaultConfig";
 import {
@@ -53,7 +54,7 @@ const profileSourcePath = ref<string | null>(null);
 const profileChanged = ref(false);
 const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
-const customOverlayPosition = ref<{ x: number; y: number } | null>(null);
+const customOverlayPosition = ref<OverlayCustomPosition | null>(null);
 const syncFeedbackActive = ref(false);
 const videoExporterConfig = ref<VideoExporterConfig>(createDefaultVideoExporterConfig());
 const recordingBrowserDirectory = ref("");

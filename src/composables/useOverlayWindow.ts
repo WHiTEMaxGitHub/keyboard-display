@@ -14,7 +14,11 @@ import {
   OVERLAY_VISIBLE_EVENT,
 } from "../domain/inputEvents";
 import { estimateOverlaySize } from "../domain/overlaySize";
-import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
+import type { AppConfig, OverlayCustomPosition, OverlayStyle } from "../domain/defaultConfig";
+import {
+  monitorWorkAreaToRect,
+  resolveCustomOverlayPosition,
+} from "../domain/overlayPosition";
 
 export type OverlayPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom";
 
@@ -33,7 +37,7 @@ type UseOverlayWindowOptions = {
   config: AppConfig;
   isOverlayVisible: Ref<boolean>;
   overlayPosition: Ref<OverlayPosition>;
-  customOverlayPosition: Ref<{ x: number; y: number } | null>;
+  customOverlayPosition: Ref<OverlayCustomPosition | null>;
   markProfileChanged: () => void;
   scheduleAppConfigSave: () => void;
 };
@@ -181,17 +185,26 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     }
 
     await resizeOverlayWindow(overlayWindow);
+    const overlaySize = estimateOverlaySize(
+      options.config.layout,
+      options.config.rows,
+      options.config.style,
+    );
+    const workArea = monitorWorkAreaToRect(
+      monitor.workArea.position.toLogical(monitor.scaleFactor),
+      monitor.workArea.size.toLogical(monitor.scaleFactor),
+    );
 
     if (position === "custom" && options.customOverlayPosition.value) {
+      const mappedPosition = resolveCustomOverlayPosition(
+        options.customOverlayPosition.value,
+        workArea,
+        overlaySize,
+      );
       if (show) {
         await overlayWindow.show();
       }
-      await overlayWindow.setPosition(
-        new LogicalPosition(
-          options.customOverlayPosition.value.x,
-          options.customOverlayPosition.value.y,
-        ),
-      );
+      await overlayWindow.setPosition(new LogicalPosition(mappedPosition.x, mappedPosition.y));
       if (show) {
         options.isOverlayVisible.value = true;
         await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
@@ -204,21 +217,12 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     const topMargin = 3;
     const bottomMargin = 5;
     const overlayBleed = 12;
-    const overlaySize = estimateOverlaySize(
-      options.config.layout,
-      options.config.rows,
-      options.config.style,
-    );
-    const workArea = {
-      position: monitor.workArea.position.toLogical(monitor.scaleFactor),
-      size: monitor.workArea.size.toLogical(monitor.scaleFactor),
-    };
-    const xMin = workArea.position.x + horizontalMargin - overlayBleed;
-    const yMin = workArea.position.y + topMargin - overlayBleed;
+    const xMin = workArea.x + horizontalMargin - overlayBleed;
+    const yMin = workArea.y + topMargin - overlayBleed;
     const xMax =
-      workArea.position.x + workArea.size.width - overlaySize.width - horizontalMargin + overlayBleed;
+      workArea.x + workArea.width - overlaySize.width - horizontalMargin + overlayBleed;
     const yMax =
-      workArea.position.y + workArea.size.height - overlaySize.height - bottomMargin + overlayBleed;
+      workArea.y + workArea.height - overlaySize.height - bottomMargin + overlayBleed;
 
     const positions: Record<Exclude<OverlayPosition, "custom">, LogicalPosition> = {
       "top-left": new LogicalPosition(xMin, yMin),
@@ -283,9 +287,15 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
 
     const physicalPosition = await overlayWindow.outerPosition();
     const logicalPosition = physicalPosition.toLogical(monitor.scaleFactor);
+    const workArea = monitorWorkAreaToRect(
+      monitor.workArea.position.toLogical(monitor.scaleFactor),
+      monitor.workArea.size.toLogical(monitor.scaleFactor),
+    );
     options.customOverlayPosition.value = {
-      x: logicalPosition.x,
-      y: logicalPosition.y,
+      x: Math.round(logicalPosition.x),
+      y: Math.round(logicalPosition.y),
+      workArea,
+      scaleFactor: monitor.scaleFactor,
     };
     options.overlayPosition.value = "custom";
     overlayAdjusting.value = false;

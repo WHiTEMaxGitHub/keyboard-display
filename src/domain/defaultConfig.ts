@@ -68,6 +68,18 @@ export type ExportConfig = {
   renderMarkers: boolean;
 };
 
+export type OverlayCustomPosition = {
+  x: number;
+  y: number;
+  workArea?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null;
+  scaleFactor?: number | null;
+};
+
 export type AppConfig = {
   surfaces: AppSurface[];
   layout: OverlayLayout;
