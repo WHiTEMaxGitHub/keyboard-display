@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { open } from "@tauri-apps/plugin-dialog";
+import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
 import {
@@ -30,6 +30,13 @@ const emit = defineEmits<{
 const exporterStatus = ref<VideoExporterStatus | null>(null);
 const exporterError = ref("");
 const exporterChecking = ref(false);
+const inputRecordingPath = ref("");
+const outputVideoPath = ref("");
+const exportStatus = ref("");
+
+const exportReady = computed(() =>
+  Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && outputVideoPath.value),
+);
 
 const resolvedExporterLabel = computed(() =>
   describeVideoExporter(exporterStatus.value?.resolved ?? null),
@@ -106,6 +113,41 @@ function clearFfmpegPath() {
   });
 }
 
+async function chooseInputRecording() {
+  const selectedPath = await open({
+    title: "Choose keyboard recording",
+    filters: [{ name: "Keyboard recording", extensions: ["kbdrec"] }],
+    multiple: false,
+  });
+
+  if (typeof selectedPath === "string") {
+    inputRecordingPath.value = selectedPath;
+    exportStatus.value = "";
+  }
+}
+
+async function chooseOutputVideo() {
+  const selectedPath = await save({
+    title: "Save overlay video",
+    defaultPath: "keyboard-overlay.webm",
+    filters: [{ name: "WebM", extensions: ["webm"] }],
+  });
+
+  if (typeof selectedPath === "string") {
+    outputVideoPath.value = selectedPath;
+    exportStatus.value = "";
+  }
+}
+
+function exportOverlayVideo() {
+  if (!exportReady.value) {
+    exportStatus.value = "Choose a recording, output path, and available video exporter first.";
+    return;
+  }
+
+  exportStatus.value = "Export backend is ready to connect in the next step.";
+}
+
 async function installAppManagedExporter() {
   if (props.installingAppManagedExporter) {
     return;
@@ -133,6 +175,33 @@ async function uninstallAppManagedExporter() {
     <BaseToggleRow :checked="renderMarkers" @change="emit('update-render-markers', $event)">
       Render sync markers
     </BaseToggleRow>
+    <section class="export-job-panel">
+      <div class="section-header">
+        <h3>Overlay video</h3>
+        <BaseButton
+          variant="primary"
+          :disabled="!exportReady"
+          @click="exportOverlayVideo"
+        >
+          Export overlay video
+        </BaseButton>
+      </div>
+      <BaseFieldRow label="Recording">
+        {{ inputRecordingPath || "No .kbdrec selected" }}
+      </BaseFieldRow>
+      <BaseFieldRow label="Output">
+        {{ outputVideoPath || "No .webm output selected" }}
+      </BaseFieldRow>
+      <div class="exporter-actions">
+        <BaseButton @click="chooseInputRecording">
+          Choose .kbdrec
+        </BaseButton>
+        <BaseButton @click="chooseOutputVideo">
+          Choose output .webm
+        </BaseButton>
+      </div>
+      <p v-if="exportStatus" class="notice-text">{{ exportStatus }}</p>
+    </section>
     <div class="exporter-panel">
       <div class="section-header">
         <h3>Video exporter</h3>
@@ -222,6 +291,7 @@ async function uninstallAppManagedExporter() {
   color: #9ca7b4;
 }
 
+.export-job-panel,
 .exporter-panel {
   display: grid;
   gap: 10px;
