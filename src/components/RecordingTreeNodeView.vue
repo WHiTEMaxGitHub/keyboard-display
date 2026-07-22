@@ -99,7 +99,7 @@ function padFrame(frame: number, fps: number) {
         <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
         <strong>{{ node.name }}</strong>
       </button>
-      <div v-if="expanded && node.children.length > 0" class="tree-children-shell">
+      <div v-if="expanded && node.children.length > 0" class="tree-children-shell expanded">
         <div class="tree-children">
           <RecordingTreeNodeView
             v-for="child in node.children"
@@ -111,15 +111,16 @@ function padFrame(frame: number, fps: number) {
       </div>
     </div>
     <div v-else class="file-branch">
-      <div class="file-node">
-        <button
-          class="file-toggle-button"
-          type="button"
-          :aria-expanded="fileDetailsVisible"
-          @click="toggleFileDetails"
-        >
-          <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
-        </button>
+      <div
+        class="file-node"
+        role="button"
+        tabindex="0"
+        :aria-expanded="fileDetailsVisible"
+        @click="toggleFileDetails"
+        @keydown.enter.prevent="toggleFileDetails"
+        @keydown.space.prevent="toggleFileDetails"
+      >
+        <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
         <span class="file-main">
           <strong>{{ displayTitle(node) }}</strong>
           <small v-if="node.summary?.metadata.displayName">{{ node.name }}</small>
@@ -137,10 +138,12 @@ function padFrame(frame: number, fps: number) {
         </BaseButton>
       </div>
       <div
-        v-if="fileDetailsVisible && hasFileDetails(node.summary)"
-        class="tree-children-shell"
+        :class="[
+          'tree-children-shell',
+          { expanded: fileDetailsVisible && hasFileDetails(node.summary) },
+        ]"
       >
-        <div v-if="node.summary" class="file-details">
+        <div v-if="node.summary && hasFileDetails(node.summary)" class="file-details">
           <div v-if="node.summary.metadata.description" class="file-detail-block">
             <strong>Description</strong>
             <span>{{ node.summary.metadata.description }}</span>
@@ -233,6 +236,7 @@ function padFrame(frame: number, fps: number) {
   border-radius: 7px;
   background: #151a20;
   color: #dfe5ec;
+  cursor: pointer;
   padding: 8px 10px;
   text-align: left;
   transition:
@@ -246,20 +250,10 @@ function padFrame(frame: number, fps: number) {
   background: #1e252e;
 }
 
-.file-toggle-button {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.file-toggle-button:hover {
-  background: rgba(255, 255, 255, 0.08);
+.file-node:focus-visible {
+  border-color: rgba(37, 211, 102, 0.55);
+  outline: 2px solid rgba(37, 211, 102, 0.14);
+  outline-offset: 0;
 }
 
 .tree-prefix {
@@ -286,7 +280,21 @@ function padFrame(frame: number, fps: number) {
 }
 
 .tree-children-shell {
+  display: grid;
+  grid-template-rows: 0fr;
   min-width: 0;
+  opacity: 0;
+  transition:
+    grid-template-rows 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+    opacity 160ms ease,
+    transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  transform: translateY(-3px);
+}
+
+.tree-children-shell.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .tree-children {
@@ -302,6 +310,8 @@ function padFrame(frame: number, fps: number) {
   display: grid;
   gap: 8px;
   margin-left: 18px;
+  min-height: 0;
+  overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 7px;
   background: #11161d;
