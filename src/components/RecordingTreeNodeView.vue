@@ -8,7 +8,6 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  select: [path: string];
   inspect: [path: string];
 }>();
 
@@ -19,8 +18,7 @@ function inspect(path: string) {
   emit("inspect", path);
 }
 
-function toggleFileDetails(path: string) {
-  emit("select", path);
+function toggleFileDetails() {
   fileDetailsVisible.value = !fileDetailsVisible.value;
 }
 
@@ -107,7 +105,6 @@ function padFrame(frame: number, fps: number) {
             v-for="child in node.children"
             :key="child.path"
             :node="child"
-            @select="emit('select', $event)"
             @inspect="inspect"
           />
         </div>
@@ -119,7 +116,7 @@ function padFrame(frame: number, fps: number) {
           class="file-toggle-button"
           type="button"
           :aria-expanded="fileDetailsVisible"
-          @click="toggleFileDetails(node.path)"
+          @click="toggleFileDetails"
         >
           <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
         </button>

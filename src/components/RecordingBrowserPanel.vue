@@ -115,15 +115,6 @@ function closeMetadataEditor() {
   emit("clear-recording-inspection");
 }
 
-function selectRecordingPath(path: string) {
-  emit("inspect-recording-path", path);
-}
-
-function inspectSelectedRecording() {
-  if (props.currentRecordingPath) {
-    inspectRecordingPath(props.currentRecordingPath);
-  }
-}
 </script>
 
 <template>
@@ -172,7 +163,6 @@ function inspectSelectedRecording() {
     <div v-if="recordingTree" class="recording-tree">
       <RecordingTreeNodeView
         :node="recordingTree"
-        @select="selectRecordingPath"
         @inspect="inspectRecordingPath"
       />
     </div>
@@ -182,15 +172,6 @@ function inspectSelectedRecording() {
         <h3>Recording inspection</h3>
         <BaseButton @click="inspectRecordingFile">
           Inspect .kbdrec
-        </BaseButton>
-      </div>
-      <div class="selected-recording-actions">
-        <span>{{ currentRecordingPath || "No recording selected" }}</span>
-        <BaseButton
-          :disabled="!currentRecordingPath"
-          @click="inspectSelectedRecording"
-        >
-          Inspect / edit selected
         </BaseButton>
       </div>
       <p v-if="recordingInspectionError" class="error-text">
@@ -277,27 +258,6 @@ function inspectSelectedRecording() {
   margin-top: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   padding-top: 18px;
-}
-
-.selected-recording-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #151a20;
-  padding: 10px 12px;
-}
-
-.selected-recording-actions span {
-  min-width: 0;
-  overflow: hidden;
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .error-text {
