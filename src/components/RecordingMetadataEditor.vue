@@ -10,7 +10,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   saved: [];
-  close: [];
 }>();
 
 const metadataDraft = ref<RecordingMetadata>(createEmptyMetadata());
@@ -44,7 +43,7 @@ async function loadRecordingMetadata(path: string) {
   }
 }
 
-async function saveRecordingMetadata(closeAfterSave = false) {
+async function saveRecordingMetadata() {
   if (!props.path) {
     metadataError.value = "Choose a recording file first.";
     return false;
@@ -59,9 +58,6 @@ async function saveRecordingMetadata(closeAfterSave = false) {
     setMetadataDraft(metadata);
     metadataStatus.value = "Metadata saved.";
     emit("saved");
-    if (closeAfterSave) {
-      emit("close");
-    }
     return true;
   } catch (error) {
     metadataError.value = String(error);
@@ -105,70 +101,43 @@ function createEmptyMetadata(): RecordingMetadata {
 </script>
 
 <template>
-  <div class="metadata-modal" role="dialog" aria-modal="true">
-    <section class="metadata-editor" @click.stop>
-      <div class="section-header">
-        <div>
-          <p>Recording metadata</p>
-          <h3>Sidecar metadata</h3>
-        </div>
-        <div class="header-actions">
-          <BaseButton :disabled="metadataSaving" @click="saveRecordingMetadata(false)">
-            {{ metadataSaving ? "Saving..." : "Save" }}
-          </BaseButton>
-          <BaseButton variant="primary" :disabled="metadataSaving" @click="saveRecordingMetadata(true)">
-            {{ metadataSaving ? "Saving..." : "Save & Close" }}
-          </BaseButton>
-        </div>
+  <section class="metadata-editor">
+    <div class="section-header">
+      <div>
+        <p>Recording metadata</p>
+        <h3>Sidecar metadata</h3>
       </div>
-      <p class="file-path">{{ path }}</p>
-      <label>
-        <span>Display name</span>
-        <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" />
-      </label>
-      <label>
-        <span>Description</span>
-        <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" />
-      </label>
-      <label>
-        <span>Tags</span>
-        <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" />
-      </label>
-      <p v-if="metadataStatus" class="status-text">{{ metadataStatus }}</p>
-      <p v-if="metadataError" class="error-text">{{ metadataError }}</p>
-    </section>
-  </div>
+      <BaseButton variant="primary" :disabled="metadataSaving" @click="saveRecordingMetadata">
+        {{ metadataSaving ? "Saving..." : "Save" }}
+      </BaseButton>
+    </div>
+    <p class="file-path">{{ path }}</p>
+    <label>
+      <span>Display name</span>
+      <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" />
+    </label>
+    <label>
+      <span>Description</span>
+      <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" />
+    </label>
+    <label>
+      <span>Tags</span>
+      <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" />
+    </label>
+    <p v-if="metadataStatus" class="status-text">{{ metadataStatus }}</p>
+    <p v-if="metadataError" class="error-text">{{ metadataError }}</p>
+  </section>
 </template>
 
 <style scoped>
-.metadata-modal {
-  position: fixed;
-  inset: 0;
-  z-index: 18;
-  display: grid;
-  align-items: center;
-  justify-items: center;
-  overflow: auto;
-  background: rgba(0, 0, 0, 0.38);
-  padding: 24px;
-}
-
 .section-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin: -14px -14px 0;
+  margin: 0 0 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: #151a20;
-  padding: 14px;
-}
-
-.header-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
+  padding-bottom: 12px;
 }
 
 .section-header p,
@@ -193,33 +162,17 @@ function createEmptyMetadata(): RecordingMetadata {
 
 .metadata-editor {
   display: grid;
-  width: min(680px, calc(100vw - 48px));
-  min-width: 420px;
-  min-height: 340px;
-  max-height: calc(100vh - 48px);
   gap: 12px;
-  overflow: auto;
-  resize: both;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
-  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.34);
   padding: 14px;
 }
 
 @media (max-width: 520px) {
-  .metadata-editor {
-    min-width: 0;
-    resize: vertical;
-  }
-
   .section-header {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .header-actions {
-    justify-content: stretch;
   }
 }
 

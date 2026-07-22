@@ -111,10 +111,6 @@ function inspectRecordingPath(path: string) {
   emit("inspect-recording-path", path);
 }
 
-function closeMetadataEditor() {
-  emit("clear-recording-inspection");
-}
-
 </script>
 
 <template>
@@ -177,17 +173,16 @@ function closeMetadataEditor() {
       <p v-if="recordingInspectionError" class="error-text">
         {{ recordingInspectionError }}
       </p>
+      <RecordingMetadataEditor
+        v-if="currentRecordingPath"
+        :path="currentRecordingPath"
+        @saved="refreshRecordingTree"
+      />
       <RecordingInspectionPanel
         v-if="recordingInspection"
         :inspection="recordingInspection"
       />
     </div>
-    <RecordingMetadataEditor
-      v-if="currentRecordingPath"
-      :path="currentRecordingPath"
-      @close="closeMetadataEditor"
-      @saved="refreshRecordingTree"
-    />
   </BasePanel>
 </template>
 
