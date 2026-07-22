@@ -104,7 +104,7 @@ rows, and each row is an array of items.
 | `label` | string | Default text shown on the key. |
 | `group` | string | Logical category. Current values are `mouse`, `movement`, `modifier`, and `action`. |
 | `widthUnit` | number | Key width measured in layout units. `1` is the normal key width. |
-| `platformLabels` | object | Optional per-platform display labels. Supported keys are `macos` and `windows`. |
+| `platformLabels` | object | Optional hand-written per-platform display labels. Supported keys are `macos` and `windows`; the visual editor uses the single `label` field by default. |
 
 `id` must match the normalized input id emitted by the app. Common examples:
 

@@ -41,8 +41,9 @@
   - Users should be able to edit `overlay.rows` without hand-writing JSON.
   - Support adding, deleting, and reordering rows.
   - Support adding, deleting, and reordering key and gap items within a row.
-  - Support editing key `id`, `label`, `group`, `widthUnit`, and
-    `platformLabels`.
+  - Support editing key `id`, `label`, `group`, and `widthUnit`.
+  - Keep `platformLabels` as hand-written JSON compatibility only unless a
+    later real need appears.
   - Support editing gap `widthUnit`.
   - Show a live preview using the same renderer as the POV overlay.
   - Export the result as the documented profile JSON format.
