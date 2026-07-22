@@ -56,6 +56,7 @@ const overlayPosition = ref<OverlayPosition>("bottom-right");
 const customOverlayPosition = ref<{ x: number; y: number } | null>(null);
 const syncFeedbackActive = ref(false);
 const videoExporterConfig = ref<VideoExporterConfig>(createDefaultVideoExporterConfig());
+const recordingBrowserDirectory = ref("");
 const { notifications, notify, dismissNotification } = useNotifications();
 
 const isOverlayWindow = computed(() => {
@@ -244,6 +245,7 @@ async function restoreAppConfig() {
   overlayPosition.value = normalizeOverlayPosition(appConfig.currentProfile.overlay.position);
   customOverlayPosition.value = appConfig.currentProfile.overlay.customPosition ?? null;
   recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
+  recordingBrowserDirectory.value = appConfig.recording.browserDirectory ?? "";
   silentRecording.value = appConfig.recording.silent ?? false;
   recordingHotkeys.value = appConfig.recording.hotkeys;
   videoExporterConfig.value = appConfig.exporter.video;
@@ -303,6 +305,7 @@ async function saveAppConfig() {
     },
     recording: {
       outputDirectory: recordingDirectory.value || null,
+      browserDirectory: recordingBrowserDirectory.value || null,
       silent: silentRecording.value,
       hotkeys: recordingHotkeys.value,
     },
@@ -391,6 +394,19 @@ function updateExportConfig(exportConfig: ExportConfig) {
 function updateVideoExporterConfig(exporterConfig: VideoExporterConfig) {
   videoExporterConfig.value = exporterConfig;
   scheduleAppConfigSave();
+}
+
+async function chooseRecordingBrowserDirectory() {
+  const selectedPath = await open({
+    title: "Choose recording files folder",
+    directory: true,
+    multiple: false,
+  });
+
+  if (typeof selectedPath === "string") {
+    recordingBrowserDirectory.value = selectedPath;
+    scheduleAppConfigSave();
+  }
 }
 
 function profileNameFromFileName(fileName: string): string {
@@ -571,6 +587,7 @@ onUnmounted(() => {
       :recent-profiles="recentProfiles"
       :recording-directory="recordingDirectory"
       :default-recording-directory="defaultRecordingDirectory"
+      :recording-browser-directory="recordingBrowserDirectory"
       :silent-recording="silentRecording"
       :is-recording="isRecording"
       :recording-countdown="recordingCountdown"
@@ -594,6 +611,7 @@ onUnmounted(() => {
       @export-and-apply-config="exportAndApplyConfig"
       @overwrite-and-apply-config="overwriteAndApplyConfig"
       @choose-recording-directory="chooseRecordingDirectory"
+      @choose-recording-browser-directory="chooseRecordingBrowserDirectory"
       @update-silent-recording="updateSilentRecording"
       @update-recording-config="updateRecordingConfig"
       @update-export-config="updateExportConfig"

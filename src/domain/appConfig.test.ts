@@ -25,6 +25,7 @@ describe("app config", () => {
       },
       recording: {
         outputDirectory: "/tmp/recordings",
+        browserDirectory: "/tmp/browser-recordings",
         silent: true,
         hotkeys: {
           mode: "toggle",
@@ -52,6 +53,7 @@ describe("app config", () => {
     expect("keys" in appConfig.currentProfile.overlay).toBe(false);
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
+    expect(appConfig.recording.browserDirectory).toBe("/tmp/browser-recordings");
     expect(appConfig.recording.silent).toBe(true);
     expect(appConfig.exporter.video.userSelectedPath).toBe("/opt/ffmpeg");
   });
@@ -82,6 +84,7 @@ describe("app config", () => {
       },
       recording: {
         outputDirectory: null,
+        browserDirectory: null,
         silent: false,
         hotkeys: {
           mode: "toggle",
@@ -129,6 +132,7 @@ describe("app config", () => {
       },
       recording: {
         outputDirectory: null,
+        browserDirectory: null,
         silent: false,
         hotkeys: {
           mode: "toggle",
@@ -179,6 +183,7 @@ describe("app config", () => {
         },
         recording: {
           outputDirectory: null,
+          browserDirectory: "  /tmp/browse-recordings  ",
           silent: false,
           hotkeys: {
             mode: "disabled",
@@ -204,6 +209,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.overlay.position).toBe("center");
     expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
+    expect(appConfig.recording.browserDirectory).toBe("/tmp/browse-recordings");
     expect(appConfig.exporter.video.userSelectedPath).toBe("/Applications/ffmpeg");
   });
 
@@ -248,6 +254,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.recording.maxFps).toBe(1000);
     expect(appConfig.recording.hotkeys.sync).toEqual(["f8"]);
     expect(appConfig.recording.hotkeys.start).toEqual(["ctrl-left", "shift-left", "r"]);
+    expect(appConfig.recording.browserDirectory).toBeNull();
     expect(appConfig.exporter.video.userSelectedPath).toBeNull();
   });
 });

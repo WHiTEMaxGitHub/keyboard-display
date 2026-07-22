@@ -156,6 +156,7 @@
   },
   "recording": {
     "outputDirectory": null,
+    "browserDirectory": null,
     "silent": false,
     "hotkeys": {
       "mode": "toggle",

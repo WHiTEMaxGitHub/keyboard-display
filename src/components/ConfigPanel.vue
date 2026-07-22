@@ -47,6 +47,7 @@ const props = defineProps<{
   recentProfiles: RecentProfile[];
   recordingDirectory: string;
   defaultRecordingDirectory: string;
+  recordingBrowserDirectory: string;
   silentRecording: boolean;
   isRecording: boolean;
   recordingCountdown: number;
@@ -77,6 +78,7 @@ const emit = defineEmits<{
   "export-and-apply-config": [];
   "overwrite-and-apply-config": [];
   "choose-recording-directory": [];
+  "choose-recording-browser-directory": [];
   "update-silent-recording": [value: boolean];
   "update-recording-config": [recording: AppConfig["recording"]];
   "update-export-config": [exportConfig: ExportConfig];
@@ -394,14 +396,14 @@ async function uninstallAppManagedVideoExporter() {
 
       <section v-else-if="activePage === 'recording' && recordingSubPage === 'files'" class="page-stack">
         <RecordingBrowserPanel
-          :recording-directory="recordingDirectory"
-          :default-recording-directory="defaultRecordingDirectory"
+          :recording-browser-directory="recordingBrowserDirectory"
           :current-recording-path="currentRecordingPath"
           :recording-inspection="recordingInspection"
           :recording-inspection-error="recordingInspectionError"
           @inspect-recording-file="emit('inspect-recording-file')"
           @inspect-recording-path="emit('inspect-recording-path', $event)"
           @clear-recording-inspection="emit('clear-recording-inspection')"
+          @choose-recording-browser-directory="emit('choose-recording-browser-directory')"
         />
       </section>
 

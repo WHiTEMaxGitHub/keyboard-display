@@ -12,8 +12,7 @@ import RecordingMetadataEditor from "./RecordingMetadataEditor.vue";
 import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
 
 const props = defineProps<{
-  recordingDirectory: string;
-  defaultRecordingDirectory: string;
+  recordingBrowserDirectory: string;
   currentRecordingPath: string;
   recordingInspection: RecordingInspection | null;
   recordingInspectionError: string;
@@ -26,12 +25,13 @@ const folderNameDraft = ref("");
 const folderCreating = ref(false);
 const folderEditorVisible = ref(false);
 
-const recordingRoot = computed(() => props.recordingDirectory || props.defaultRecordingDirectory);
+const recordingRoot = computed(() => props.recordingBrowserDirectory);
 
 const emit = defineEmits<{
   "inspect-recording-file": [];
   "inspect-recording-path": [path: string];
   "clear-recording-inspection": [];
+  "choose-recording-browser-directory": [];
 }>();
 
 function inspectRecordingFile() {
@@ -41,7 +41,7 @@ function inspectRecordingFile() {
 async function refreshRecordingTree() {
   const root = recordingRoot.value;
   if (!root) {
-    recordingTreeError.value = "Recording folder is not ready.";
+    recordingTreeError.value = "Choose a recording files folder first.";
     return;
   }
 
@@ -84,7 +84,7 @@ async function createRecordingFolder() {
   const folderName = folderNameDraft.value.trim();
 
   if (!root) {
-    recordingTreeError.value = "Recording folder is not ready.";
+    recordingTreeError.value = "Choose a recording files folder first.";
     return;
   }
 
@@ -119,6 +119,9 @@ function inspectRecordingPath(path: string) {
     <div class="section-header">
       <h3>Recording files</h3>
       <div class="header-actions">
+        <BaseButton @click="emit('choose-recording-browser-directory')">
+          Choose folder
+        </BaseButton>
         <BaseButton @click="showFolderEditor">
           New folder
         </BaseButton>
@@ -128,7 +131,7 @@ function inspectRecordingPath(path: string) {
       </div>
     </div>
     <p class="quiet">
-      {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
+      {{ recordingBrowserDirectory || "Choose a folder to browse .kbdrec files." }}
     </p>
     <form v-if="folderEditorVisible" class="new-folder-form" @submit.prevent="createRecordingFolder">
       <label>

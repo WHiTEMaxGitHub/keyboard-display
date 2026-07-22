@@ -48,6 +48,7 @@ export type AppConfigFile = {
   currentProfile: CurrentProfile;
   recording: {
     outputDirectory: string | null;
+    browserDirectory?: string | null;
     silent?: boolean;
     hotkeys: RecordingHotkeyConfig;
   };
@@ -168,6 +169,7 @@ export function parseAppConfigFile(text: string): AppConfigFile {
     },
     recording: {
       ...config.recording,
+      browserDirectory: cleanOptionalPath(config.recording.browserDirectory),
       hotkeys: normalizeRecordingHotkeyConfig(config.recording.hotkeys),
     },
     exporter: {
@@ -205,4 +207,9 @@ function rowsFromKeys(keys: AppConfig["keys"]): OverlayRow[] {
 function profileNameFromPath(path: string): string {
   const fileName = path.split(/[\\/]/).pop() ?? path;
   return fileName.replace(/\.json$/i, "") || path;
+}
+
+function cleanOptionalPath(path: string | null | undefined): string | null {
+  const trimmedPath = path?.trim() ?? "";
+  return trimmedPath ? trimmedPath : null;
 }

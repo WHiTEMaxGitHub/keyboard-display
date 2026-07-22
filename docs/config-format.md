@@ -244,6 +244,7 @@ recording format; `.kbdrec` is the source of truth.
 | `currentProfile` | object | Current active profile state. Its `overlay` and `recording` use the same schema as profile configs. |
 | `currentProfile.changed` | boolean | Whether current profile state differs from `currentProfile.sourcePath`. |
 | `recording.outputDirectory` | string or null | Folder for new `.kbdrec` recordings. |
+| `recording.browserDirectory` | string or null | Folder shown in the Recording Files browser. This is independent from the save folder. |
 | `recording.silent` | boolean | Whether recording should destroy the POV overlay window while recording. |
 | `recording.hotkeys` | object | Recording hotkey settings. |
 | `ui.language` | string | Future UI language setting. `system` means follow system/default behavior. |
