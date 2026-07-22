@@ -2,6 +2,7 @@ mod commands;
 mod exporter;
 mod input;
 mod recording;
+mod video_export;
 
 use recording::RecordingManager;
 
