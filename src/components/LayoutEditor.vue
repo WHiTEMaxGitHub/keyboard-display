@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onUnmounted, reactive, ref, watch } from "vue";
+import BaseButton from "./BaseButton.vue";
 import {
   addRow,
   addGapToRow,
@@ -284,7 +285,7 @@ function updateGapWidth(
 <template>
   <div class="layout-editor">
     <div class="editor-toolbar">
-      <button type="button" @click="appendRow">Add row</button>
+      <BaseButton @click="appendRow">Add row</BaseButton>
     </div>
     <article
       v-for="(row, rowIndex) in rows"
@@ -298,11 +299,11 @@ function updateGapWidth(
           <small>{{ rowSummary(row) }}</small>
         </button>
         <div class="row-actions">
-          <button type="button" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</button>
-          <button type="button" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</button>
-          <button type="button" @click="addKey(rowIndex)">Add key</button>
-          <button type="button" @click="addGap(rowIndex)">Add gap</button>
-          <button type="button" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">Delete row</button>
+          <BaseButton size="sm" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</BaseButton>
+          <BaseButton size="sm" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</BaseButton>
+          <BaseButton size="sm" @click="addKey(rowIndex)">Add key</BaseButton>
+          <BaseButton size="sm" @click="addGap(rowIndex)">Add gap</BaseButton>
+          <BaseButton size="sm" variant="danger" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">Delete row</BaseButton>
         </div>
       </div>
 
@@ -353,13 +354,11 @@ function updateGapWidth(
                 @input="updateWidthDraft(rowIndex, itemIndex, $event)"
               />
             </label>
-            <button
-              class="capture-button"
-              type="button"
+            <BaseButton
               @click="captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? cancelCapture() : beginCapture(rowIndex, itemIndex, item.id)"
             >
               {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
-            </button>
+            </BaseButton>
             <div class="platform-label-fields">
               <label>
                 macOS label
@@ -402,16 +401,16 @@ function updateGapWidth(
               />
             </label>
           </template>
-          <button class="remove-button" type="button" @click="removeItem(rowIndex, itemIndex)">
+          <BaseButton variant="danger" @click="removeItem(rowIndex, itemIndex)">
             Delete
-          </button>
+          </BaseButton>
           <div class="item-move-actions">
-            <button type="button" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
+            <BaseButton size="sm" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
               Left
-            </button>
-            <button type="button" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
+            </BaseButton>
+            <BaseButton size="sm" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
               Right
-            </button>
+            </BaseButton>
           </div>
         </div>
       </div>
@@ -428,17 +427,6 @@ function updateGapWidth(
 .editor-toolbar {
   display: flex;
   justify-content: flex-end;
-}
-
-.editor-toolbar button {
-  min-height: 32px;
-  border: 1px solid rgba(37, 211, 102, 0.3);
-  border-radius: 7px;
-  background: rgba(37, 211, 102, 0.12);
-  color: #eafff0;
-  cursor: pointer;
-  font-weight: 800;
-  padding: 0 10px;
 }
 
 .row-editor {
@@ -487,35 +475,6 @@ function updateGapWidth(
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.row-actions button,
-.remove-button,
-.capture-button,
-.item-move-actions button {
-  min-height: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 9px;
-}
-
-.row-actions button:hover,
-.remove-button:hover,
-.capture-button:hover,
-.item-move-actions button:hover {
-  background: #29313d;
-}
-
-.row-actions button:disabled,
-.remove-button:disabled,
-.capture-button:disabled,
-.item-move-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.42;
 }
 
 .row-item-list {
@@ -583,14 +542,6 @@ function updateGapWidth(
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
-}
-
-.remove-button {
-  color: #ffb3b3;
-}
-
-.capture-button {
-  color: #eafff0;
 }
 
 .item-move-actions {

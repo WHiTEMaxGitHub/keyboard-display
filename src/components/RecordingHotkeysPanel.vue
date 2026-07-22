@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
+import BaseButton from "./BaseButton.vue";
 
 defineProps<{
   recordingHotkeys: RecordingHotkeyConfig;
@@ -41,23 +42,23 @@ function formatHotkey(keys: string[]) {
     <div v-if="recordingHotkeys.mode !== 'disabled'" class="hotkey-row">
       <span>Start</span>
       <strong>{{ formatHotkey(recordingHotkeys.start) }}</strong>
-      <button type="button" @click="beginHotkeyCapture('start')">
+      <BaseButton size="sm" @click="beginHotkeyCapture('start')">
         {{ hotkeyCaptureTarget === "start" ? "Press shortcut..." : "Set" }}
-      </button>
+      </BaseButton>
     </div>
     <div v-if="recordingHotkeys.mode === 'separate'" class="hotkey-row">
       <span>Stop</span>
       <strong>{{ formatHotkey(recordingHotkeys.stop) }}</strong>
-      <button type="button" @click="beginHotkeyCapture('stop')">
+      <BaseButton size="sm" @click="beginHotkeyCapture('stop')">
         {{ hotkeyCaptureTarget === "stop" ? "Press shortcut..." : "Set" }}
-      </button>
+      </BaseButton>
     </div>
     <div class="hotkey-row">
       <span>Sync</span>
       <strong>{{ formatHotkey(recordingHotkeys.sync) }}</strong>
-      <button type="button" @click="beginHotkeyCapture('sync')">
+      <BaseButton size="sm" @click="beginHotkeyCapture('sync')">
         {{ hotkeyCaptureTarget === "sync" ? "Press shortcut..." : "Set" }}
-      </button>
+      </BaseButton>
     </div>
   </div>
 </template>
@@ -96,26 +97,6 @@ function formatHotkey(keys: string[]) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.hotkey-row button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.hotkey-row button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.hotkey-row button:not(:disabled):hover {
-  background: #29313d;
 }
 
 select {

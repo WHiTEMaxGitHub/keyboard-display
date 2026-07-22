@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { RecordingFileSummary, RecordingTreeNode } from "../types/recording";
+import BaseButton from "./BaseButton.vue";
 
 defineProps<{
   node: RecordingTreeNode;
@@ -134,9 +135,9 @@ function padFrame(frame: number, fps: number) {
           </small>
           <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
         </span>
-        <button class="inspect-file-button" type="button" @click.stop="inspect(node.path)">
+        <BaseButton class="inspect-file-button" size="sm" @click.stop="inspect(node.path)">
           Inspect / edit
-        </button>
+        </BaseButton>
       </div>
       <div
         v-if="fileDetailsVisible && hasFileDetails(node.summary)"
@@ -354,19 +355,6 @@ function padFrame(frame: number, fps: number) {
 
 .inspect-file-button {
   justify-self: end;
-  min-height: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 800;
-  padding: 0 10px;
-}
-
-.inspect-file-button:hover {
-  background: #29313d;
 }
 
 .marker-table {

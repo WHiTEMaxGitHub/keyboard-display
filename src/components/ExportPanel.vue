@@ -9,6 +9,7 @@ import {
   type VideoExporterStatus,
 } from "../domain/videoExporter";
 import BasePanel from "./BasePanel.vue";
+import BaseButton from "./BaseButton.vue";
 
 const props = defineProps<{
   renderMarkers: boolean;
@@ -144,9 +145,9 @@ async function uninstallAppManagedExporter() {
     <div class="exporter-panel">
       <div class="section-header">
         <h3>Video exporter</h3>
-        <button type="button" :disabled="exporterChecking" @click="refreshExporterStatus">
+        <BaseButton :disabled="exporterChecking" @click="refreshExporterStatus">
           {{ exporterChecking ? "Checking..." : "Check again" }}
-        </button>
+        </BaseButton>
       </div>
       <div class="field-row">
         <span>Status</span>
@@ -161,32 +162,31 @@ async function uninstallAppManagedExporter() {
         PATH installation, or install an app-managed exporter later.
       </p>
       <div class="exporter-actions">
-        <button type="button" @click="chooseFfmpegPath">
+        <BaseButton @click="chooseFfmpegPath">
           Choose ffmpeg path
-        </button>
-        <button
-          type="button"
+        </BaseButton>
+        <BaseButton
           :disabled="!videoExporterConfig.userSelectedPath"
           @click="clearFfmpegPath"
         >
           Clear selected path
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           v-if="exporterStatus?.appManaged.available"
-          type="button"
+          variant="danger"
           :disabled="uninstallingAppManagedExporter"
           @click="uninstallAppManagedExporter"
         >
           {{ uninstallingAppManagedExporter ? "Uninstalling..." : "Uninstall app-managed exporter" }}
-        </button>
-        <button
+        </BaseButton>
+        <BaseButton
           v-else
-          type="button"
+          variant="primary"
           :disabled="installingAppManagedExporter"
           @click="installAppManagedExporter"
         >
           {{ installingAppManagedExporter ? "Installing..." : "Install app-managed exporter" }}
-        </button>
+        </BaseButton>
       </div>
       <div v-if="exporterStatus" class="candidate-list">
         <div class="candidate-row">
@@ -237,24 +237,6 @@ async function uninstallAppManagedExporter() {
   font-size: 16px;
   letter-spacing: 0;
   line-height: 22px;
-}
-
-.section-header button,
-.exporter-actions button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.section-header button:disabled,
-.exporter-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .field-row span,

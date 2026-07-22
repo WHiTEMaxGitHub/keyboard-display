@@ -3,11 +3,15 @@ withDefaults(
   defineProps<{
     type?: "button" | "submit";
     variant?: "primary" | "secondary" | "danger";
+    size?: "sm" | "md";
+    block?: boolean;
     disabled?: boolean;
   }>(),
   {
     type: "button",
     variant: "secondary",
+    size: "md",
+    block: false,
     disabled: false,
   },
 );
@@ -16,7 +20,7 @@ withDefaults(
 <template>
   <button
     :type="type"
-    :class="['base-button', variant]"
+    :class="['base-button', variant, size, { block }]"
     :disabled="disabled"
   >
     <slot />
@@ -25,6 +29,10 @@ withDefaults(
 
 <style scoped>
 .base-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
   min-height: 34px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
@@ -39,6 +47,16 @@ withDefaults(
     border-color 140ms ease,
     color 140ms ease,
     opacity 140ms ease;
+}
+
+.base-button.sm {
+  min-height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.base-button.block {
+  width: 100%;
 }
 
 .base-button:hover:not(:disabled) {

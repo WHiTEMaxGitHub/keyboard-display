@@ -10,6 +10,7 @@ import {
   formatBytesPerSecond,
 } from "../domain/recordingEstimate";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
+import BaseButton from "./BaseButton.vue";
 import BasePanel from "./BasePanel.vue";
 import RecordingHotkeysPanel from "./RecordingHotkeysPanel.vue";
 
@@ -166,20 +167,20 @@ function addSyncMarker() {
       </strong>
     </div>
     <div class="recording-actions">
-      <button type="button" @click="chooseRecordingDirectory">Choose folder</button>
-      <button
-        type="button"
+      <BaseButton @click="chooseRecordingDirectory">Choose folder</BaseButton>
+      <BaseButton
+        variant="primary"
         :disabled="isRecording || recordingCountdown > 0"
         @click="startRecording"
       >
         {{ recordingCountdown > 0 ? `Starting in ${recordingCountdown}` : "Start recording" }}
-      </button>
-      <button type="button" :disabled="!isRecording" @click="stopRecording">
+      </BaseButton>
+      <BaseButton :disabled="!isRecording" @click="stopRecording">
         Stop recording
-      </button>
-      <button type="button" :disabled="!isRecording" @click="addSyncMarker">
+      </BaseButton>
+      <BaseButton :disabled="!isRecording" @click="addSyncMarker">
         Add sync marker
-      </button>
+      </BaseButton>
     </div>
     <label class="toggle-row">
       <input
@@ -308,26 +309,6 @@ function addSyncMarker() {
   flex-wrap: wrap;
   gap: 8px;
   margin: 16px 0;
-}
-
-.recording-actions button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.recording-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.recording-actions button:not(:disabled):hover {
-  background: #29313d;
 }
 
 .toggle-row {

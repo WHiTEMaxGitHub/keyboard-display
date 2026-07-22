@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { normalizeHexColor } from "../domain/colorPicker";
 import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
+import BaseButton from "./BaseButton.vue";
 import ColorPicker from "./ColorPicker.vue";
 
 const props = defineProps<{
@@ -88,9 +89,9 @@ function setHexAlpha(color: string, alpha: number) {
   <article class="panel wide-panel">
     <div class="section-header">
       <h2>Appearance</h2>
-      <button class="panel-action-button" type="button" @click="emit('refresh-pov')">
+      <BaseButton @click="emit('refresh-pov')">
         Refresh POV
-      </button>
+      </BaseButton>
     </div>
     <label class="range-control">
       <span class="range-label">
@@ -222,21 +223,6 @@ function setHexAlpha(color: string, alpha: number) {
   font-size: 18px;
   letter-spacing: 0;
   line-height: 24px;
-}
-
-.panel-action-button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.panel-action-button:hover {
-  background: #29313d;
 }
 
 label {

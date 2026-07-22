@@ -6,6 +6,7 @@ import type {
   RecordingTreeNode,
 } from "../types/recording";
 import BasePanel from "./BasePanel.vue";
+import BaseButton from "./BaseButton.vue";
 import RecordingInspectionPanel from "./RecordingInspectionPanel.vue";
 import RecordingMetadataEditor from "./RecordingMetadataEditor.vue";
 import RecordingTreeNodeView from "./RecordingTreeNodeView.vue";
@@ -131,12 +132,12 @@ function inspectSelectedRecording() {
     <div class="section-header">
       <h3>Recording files</h3>
       <div class="header-actions">
-        <button type="button" @click="showFolderEditor">
+        <BaseButton @click="showFolderEditor">
           New folder
-        </button>
-        <button type="button" :disabled="recordingTreeLoading" @click="refreshRecordingTree">
+        </BaseButton>
+        <BaseButton :disabled="recordingTreeLoading" @click="refreshRecordingTree">
           {{ recordingTreeLoading ? "Loading..." : "Refresh" }}
-        </button>
+        </BaseButton>
       </div>
     </div>
     <p class="quiet">
@@ -153,12 +154,12 @@ function inspectSelectedRecording() {
         />
       </label>
       <div class="header-actions">
-        <button type="submit" :disabled="folderCreating">
+        <BaseButton type="submit" :disabled="folderCreating">
           {{ folderCreating ? "Creating..." : "Create" }}
-        </button>
-        <button type="button" :disabled="folderCreating" @click="cancelFolderEditor">
+        </BaseButton>
+        <BaseButton :disabled="folderCreating" @click="cancelFolderEditor">
           Cancel
-        </button>
+        </BaseButton>
       </div>
     </form>
     <p v-if="recordingTreeError" class="error-text">
@@ -179,19 +180,18 @@ function inspectSelectedRecording() {
     <div class="inspection-panel">
       <div class="section-header">
         <h3>Recording inspection</h3>
-        <button type="button" @click="inspectRecordingFile">
+        <BaseButton @click="inspectRecordingFile">
           Inspect .kbdrec
-        </button>
+        </BaseButton>
       </div>
       <div class="selected-recording-actions">
         <span>{{ currentRecordingPath || "No recording selected" }}</span>
-        <button
-          type="button"
+        <BaseButton
           :disabled="!currentRecordingPath"
           @click="inspectSelectedRecording"
         >
           Inspect / edit selected
-        </button>
+        </BaseButton>
       </div>
       <p v-if="recordingInspectionError" class="error-text">
         {{ recordingInspectionError }}
@@ -234,22 +234,6 @@ function inspectSelectedRecording() {
   letter-spacing: 0;
   font-size: 16px;
   line-height: 22px;
-}
-
-.section-header button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.section-header button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .new-folder-form {
@@ -314,22 +298,6 @@ function inspectSelectedRecording() {
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.selected-recording-actions button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.selected-recording-actions button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
 }
 
 .error-text {

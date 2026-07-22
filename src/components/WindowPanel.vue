@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BaseButton from "./BaseButton.vue";
 import BasePanel from "./BasePanel.vue";
 
 defineProps<{
@@ -30,16 +31,15 @@ const emit = defineEmits<{
     <div class="adjust-control">
       <span>Visual adjust</span>
       <div class="adjust-actions">
-        <button
+        <BaseButton
           v-if="!overlayAdjusting"
-          type="button"
           @click="emit('start-overlay-adjust')"
         >
           Adjust position
-        </button>
+        </BaseButton>
         <template v-else>
-          <button type="button" @click="emit('save-overlay-adjust')">Save position</button>
-          <button type="button" @click="emit('cancel-overlay-adjust')">Cancel</button>
+          <BaseButton variant="primary" @click="emit('save-overlay-adjust')">Save position</BaseButton>
+          <BaseButton @click="emit('cancel-overlay-adjust')">Cancel</BaseButton>
         </template>
       </div>
     </div>
@@ -62,10 +62,10 @@ const emit = defineEmits<{
     <div class="position-control">
       <span>Position</span>
       <div class="position-grid">
-        <button type="button" @click="emit('move-overlay', 'top-left')">Top left</button>
-        <button type="button" @click="emit('move-overlay', 'top-right')">Top right</button>
-        <button type="button" @click="emit('move-overlay', 'bottom-left')">Bottom left</button>
-        <button type="button" @click="emit('move-overlay', 'bottom-right')">Bottom right</button>
+        <BaseButton block @click="emit('move-overlay', 'top-left')">Top left</BaseButton>
+        <BaseButton block @click="emit('move-overlay', 'top-right')">Top right</BaseButton>
+        <BaseButton block @click="emit('move-overlay', 'bottom-left')">Bottom left</BaseButton>
+        <BaseButton block @click="emit('move-overlay', 'bottom-right')">Bottom right</BaseButton>
       </div>
     </div>
   </BasePanel>
@@ -127,23 +127,6 @@ const emit = defineEmits<{
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 8px;
-}
-
-.adjust-actions button,
-.position-grid button {
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font-weight: 700;
-  padding: 0 10px;
-}
-
-.adjust-actions button:hover,
-.position-grid button:hover {
-  background: #29313d;
 }
 
 .position-control {
