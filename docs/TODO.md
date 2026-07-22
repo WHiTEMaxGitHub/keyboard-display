@@ -42,8 +42,8 @@
   - Support adding, deleting, and reordering rows.
   - Support adding, deleting, and reordering key and gap items within a row.
   - Support editing key `id`, `label`, `group`, and `widthUnit`.
-  - Keep `platformLabels` as hand-written JSON compatibility only unless a
-    later real need appears.
+  - Keep `platformLabels` behind a closed advanced editor because only a few
+    keys need per-platform display names.
   - Support editing gap `widthUnit`.
   - Show a live preview using the same renderer as the POV overlay.
   - Export the result as the documented profile JSON format.
