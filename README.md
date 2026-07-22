@@ -1,109 +1,139 @@
 # Keyboard Display
 
-Keyboard Display is a desktop key input overlay for game POV videos. The goal is
-to show pressed keys in real time, similar to the keyboard indicators often seen
-in CS POV content.
+Keyboard Display 是一个面向桌面端的按键显示工具，用来给游戏 POV
+视频显示实时按键状态。它的目标是做出类似 CS POV 内容里常见的键盘指示器：
+观众能直接看到 `W`、`A`、`S`、`D`、鼠标按键、跳跃、蹲伏等输入状态。
 
-The project is desktop-first. It does not target iOS or Android because the core
-features depend on desktop global input capture, overlay windows, and video
-export workflows.
+项目优先支持桌面端，不面向 iOS 或 Android。核心能力依赖桌面全局输入捕获、
+透明置顶窗口和后续视频导出工作流，这些能力不适合移动端运行模型。
 
-## Product Direction
+英文说明保留在 [`README.ENGLISH.md`](README.ENGLISH.md)。
 
-The app should provide:
+## 产品方向
 
-- A transparent or compact desktop overlay for keys such as `W`, `A`, `S`, `D`,
-  `Space`, `Shift`, `Ctrl`, mouse buttons, and other game-specific controls.
-- Global keyboard and mouse capture from the native desktop layer.
-- A configurable visual layout for streamers, players, and video editors.
-- A recording format that stores input data, not rendered video frames.
-- Replay and video export based on the recorded input timeline.
+应用应提供：
 
-## Global Input Capture
+- 用于游戏画面的透明或紧凑桌面按键 Overlay。
+- 来自原生桌面层的全局键盘和鼠标捕获。
+- 可配置的键位布局、颜色、字号比例和窗口位置。
+- 保存输入数据而不是保存渲染后视频帧的录制格式。
+- 基于录制输入时间线的回放和视频导出能力。
 
-Global input capture is a core feature and must be designed as a cross-platform
-native layer. The project should not depend on a macOS-only implementation or a
-library path that hides platform-specific behavior behind one unstable API.
+## 全局输入捕获
 
-The intended shape is:
+全局输入捕获是核心功能，需要作为跨平台原生层设计。项目不应该依赖单一
+macOS 实现，也不应该把平台差异隐藏在不稳定的通用库后面。
+
+目标数据流是：
 
 ```text
 native input backend -> normalized input event -> overlay renderer / recorder
 ```
 
-Requirements:
+基本要求：
 
-- Support at least macOS and Windows.
-- Keep a shared normalized event model for keys and mouse buttons.
-- Implement platform backends behind a common Rust interface.
-- On macOS, avoid libraries that convert keyboard codes through AppKit or input
-  source APIs from background hook threads.
-- On Windows, use the appropriate native low-level keyboard and mouse hooks.
-- Treat OS permissions as part of setup: macOS may require Accessibility/Input
-  Monitoring permission for real background capture.
+- 至少支持 macOS 和 Windows。
+- 键盘和鼠标按钮使用统一的 normalized event 模型。
+- 平台后端通过共同的 Rust 接口接入。
+- macOS 后端避免在后台 hook 线程里通过 AppKit 或输入源 API 转换键码。
+- Windows 后端使用合适的低级键盘和鼠标 hook。
+- 把系统权限视为使用前提：macOS 可能需要 Accessibility/Input Monitoring
+  权限才能进行真实后台捕获。
 
-Until the platform backends are implemented, frontend key events are only a
-preview mechanism and do not represent true background capture.
+在平台后端不可用时，前端键盘事件只能作为预览机制，不能代表真实后台捕获。
 
-## Recording Strategy
+## 录制策略
 
-The main product difference is the save format. The app should not save raw
-overlay video as the primary artifact. Instead, it should save a compact binary
-recording file made of input frames.
+这个项目的关键差异在保存格式。应用不把 Overlay 视频作为主要产物保存，
+而是保存紧凑的二进制输入录制文件 `.kbdrec`。
 
-The user chooses a capture frame rate, such as `30fps`, `60fps`, or `120fps`.
-Profiles may also enable a custom capture frame rate up to `1000fps`. Each
-captured frame stores the current input state:
+用户可以选择采集帧率，例如 `30fps`、`60fps` 或 `120fps`。Profile 也可以
+启用自定义采集帧率，当前上限为 `1000fps`。每个采样帧保存当前输入状态：
 
-- key states as bitsets;
-- mouse button states as bitsets;
-- frame index or timestamp;
-- optional future extensions such as mouse movement or layout metadata.
+- 键盘按键状态 bitset。
+- 鼠标按钮状态 bitset。
+- 帧序号或时间基准。
+- 未来可扩展的鼠标移动、布局快照或其他元数据。
 
-This keeps the original recording small. For example, if 64 keys fit in an
-8-byte bitset, a 60fps recording needs only about 28.8KB per minute for the core
-key state stream, before headers and optional metadata.
+这种方式让原始录制保持很小。比如 64 个按键可以放进 8 字节 bitset，
+60fps 录制一分钟的核心按键状态大约只有 28.8KB，还不包含头部和可选元数据。
 
-## Replay And Export
+## 回放与导出
 
-The binary input recording is the source of truth:
+二进制输入录制是 source of truth：
 
 ```text
 .kbdrec -> replay engine -> overlay renderer -> video encoder
 ```
 
-This design allows the same recording to be rendered later with different
-layouts, colors, sizes, transparency settings, or output formats. Video should
-be treated as an export result, not the original save format.
+同一份录制后续可以用不同布局、颜色、尺寸、透明度或输出格式重新渲染。
+视频应被视为导出结果，而不是原始保存格式。
 
-For video export, the app should prioritize low file size:
+视频导出应优先控制文件体积：
 
-- configurable output frame rate;
-- configurable resolution and bitrate;
-- transparent WebM when alpha is needed;
-- MP4/H.264 when compatibility matters more;
-- no full video frame storage in the primary recording file.
+- 可配置输出帧率。
+- 可配置分辨率和码率。
+- 需要透明通道时使用透明 WebM。
+- 更重视兼容性时使用 MP4/H.264。
+- 主要录制文件不保存完整视频帧。
 
-## Development
+## 录制工作流
 
-This project uses Tauri, Vue, TypeScript, and Vite.
+项目支持两类录制思路，细节见
+[`docs/recording-workflows.md`](docs/recording-workflows.md)。
 
-The default POV profile shape is documented in
-[`docs/default-config.json`](docs/default-config.json). The app-level
-configuration shape is documented in [`docs/app-config.json`](docs/app-config.json).
-For hand-written profile files, see
-[`docs/config-format.md`](docs/config-format.md).
-Recording workflows are documented in
-[`docs/recording-workflows.md`](docs/recording-workflows.md).
+实时 OBS 捕获：
 
-Layout sizes use project-defined units. `overlay.layout.unitPx` defines the
-pixel size of one unit, while each key's `widthUnit` and the layout `gapUnit`
-store unit counts. Unit counts are normalized to at most two decimal places.
+1. 加载或编辑 POV profile。
+2. 保持 `Show POV overlay` 开启。
+3. 保持 `Silent recording` 关闭。
+4. 启动 OBS 或其他屏幕录制工具。
+5. 启动 Keyboard Display 录制。
+6. 需要对齐点时点击 `Add sync marker` 或使用同步热键。
+7. 停止 Keyboard Display 录制并停止屏幕录制。
 
-Use the Node version declared in `.nvmrc`:
+后期导出：
+
+1. 加载或编辑 POV profile。
+2. 选择录制目录，或使用默认 app 录制目录。
+3. 如果游戏过程中不希望显示实时 POV 窗口，可以启用 `Silent recording`。
+4. 启动 Keyboard Display 录制。
+5. 用偏好的工具单独录制游戏画面。
+6. 在画面中可识别的时刻添加 sync marker。
+7. 停止录制。
+8. 检查 `.kbdrec` 文件，使用 marker 元数据对齐未来生成的 Overlay 视频。
+
+## 配置文件
+
+默认 POV profile 结构见
+[`docs/default-config.json`](docs/default-config.json)。应用级本地配置结构见
+[`docs/app-config.json`](docs/app-config.json)。如果需要手写或分享 profile，
+请看 [`docs/config-format.md`](docs/config-format.md)。
+
+布局尺寸使用项目自定义单位：
+
+- `overlay.layout.unitPx` 定义一个布局单位对应的像素大小。
+- 每个按键的 `widthUnit` 定义按键宽度。
+- `overlay.layout.gapUnit` 定义默认间隔。
+
+单位数量在加载时会规范化到最多两位小数。
+
+## 开发
+
+项目使用 Tauri、Vue、TypeScript 和 Vite。
+
+请使用 `.nvmrc` 声明的 Node 版本：
 
 ```sh
 nvm use
 pnpm install
 pnpm tauri dev
+```
+
+常用验证命令：
+
+```sh
+pnpm test
+pnpm build
+cargo test --manifest-path src-tauri/Cargo.toml
 ```
