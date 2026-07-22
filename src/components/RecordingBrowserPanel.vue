@@ -30,6 +30,7 @@ const recordingRoot = computed(() => props.recordingDirectory || props.defaultRe
 const emit = defineEmits<{
   "inspect-recording-file": [];
   "inspect-recording-path": [path: string];
+  "clear-recording-inspection": [];
 }>();
 
 function inspectRecordingFile() {
@@ -108,6 +109,10 @@ async function createRecordingFolder() {
 function inspectRecordingPath(path: string) {
   emit("inspect-recording-path", path);
 }
+
+function clearRecordingInspection() {
+  emit("clear-recording-inspection");
+}
 </script>
 
 <template>
@@ -173,6 +178,7 @@ function inspectRecordingPath(path: string) {
       <RecordingMetadataEditor
         v-if="inspectedRecordingPath"
         :path="inspectedRecordingPath"
+        @close="clearRecordingInspection"
         @saved="refreshRecordingTree"
       />
       <p v-if="recordingInspectionError" class="error-text">

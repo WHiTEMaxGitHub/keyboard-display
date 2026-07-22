@@ -189,6 +189,12 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
   }
 
+  function clearRecordingInspection() {
+    inspectedRecordingPath.value = "";
+    recordingInspection.value = null;
+    recordingInspectionError.value = "";
+  }
+
   function updateSilentRecording(value: boolean) {
     silentRecording.value = value;
     options.scheduleAppConfigSave();
@@ -340,6 +346,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     stopRecording,
     inspectRecordingFile,
     inspectRecordingPath,
+    clearRecordingInspection,
     updateSilentRecording,
     updateRecordingHotkeyMode,
     addSyncMarker,

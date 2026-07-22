@@ -41,6 +41,14 @@ const emit = defineEmits<{
   "update-active-page": [page: ConfigPage];
   "update-recording-sub-page": [page: RecordingSubPage];
 }>();
+
+function selectPage(page: ConfigPage) {
+  emit("update-active-page", page);
+}
+
+function selectRecordingSubPage(page: RecordingSubPage) {
+  emit("update-recording-sub-page", page);
+}
 </script>
 
 <template>
@@ -66,7 +74,8 @@ const emit = defineEmits<{
         <button
           :class="{ active: activePage === item.id }"
           type="button"
-          @click="emit('update-active-page', item.id)"
+          @pointerdown="selectPage(item.id)"
+          @click="selectPage(item.id)"
         >
           <component :is="item.icon" :size="18" aria-hidden="true" />
           <span v-if="!collapsed">{{ item.label }}</span>
@@ -80,7 +89,8 @@ const emit = defineEmits<{
             :key="child.id"
             :class="{ active: recordingSubPage === child.id }"
             type="button"
-            @click="emit('update-recording-sub-page', child.id)"
+            @pointerdown="selectRecordingSubPage(child.id)"
+            @click="selectRecordingSubPage(child.id)"
           >
             {{ child.label }}
           </button>

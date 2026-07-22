@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   saved: [];
+  close: [];
 }>();
 
 const metadataDraft = ref<RecordingMetadata>(createEmptyMetadata());
@@ -101,9 +102,14 @@ function createEmptyMetadata(): RecordingMetadata {
   <div class="metadata-editor">
     <div class="section-header">
       <h3>Sidecar metadata</h3>
-      <button type="button" :disabled="metadataSaving" @click="saveRecordingMetadata">
-        {{ metadataSaving ? "Saving..." : "Save metadata" }}
-      </button>
+      <div class="header-actions">
+        <button type="button" :disabled="metadataSaving" @click="emit('close')">
+          Close
+        </button>
+        <button type="button" :disabled="metadataSaving" @click="saveRecordingMetadata">
+          {{ metadataSaving ? "Saving..." : "Save metadata" }}
+        </button>
+      </div>
     </div>
     <label>
       <span>Display name</span>
@@ -128,6 +134,13 @@ function createEmptyMetadata(): RecordingMetadata {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .section-header h3 {

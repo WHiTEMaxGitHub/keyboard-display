@@ -17,54 +17,12 @@ function inspect(path: string) {
   emit("inspect", path);
 }
 
-function inspectAndToggleFile(path: string) {
+function toggleFileDetails() {
   fileDetailsVisible.value = !fileDetailsVisible.value;
-  inspect(path);
 }
 
 function toggleExpanded() {
   expanded.value = !expanded.value;
-}
-
-function collapseDuration(element: HTMLElement) {
-  return `${Math.min(560, Math.max(260, element.scrollHeight * 1.6))}ms`;
-}
-
-function setCollapseDuration(element: HTMLElement) {
-  element.style.setProperty("--collapse-duration", collapseDuration(element));
-}
-
-function beforeEnter(element: Element) {
-  const el = element as HTMLElement;
-  setCollapseDuration(el);
-  el.style.height = "0";
-}
-
-function enter(element: Element) {
-  const el = element as HTMLElement;
-  el.style.height = `${el.scrollHeight}px`;
-}
-
-function afterEnter(element: Element) {
-  const el = element as HTMLElement;
-  el.style.height = "auto";
-}
-
-function beforeLeave(element: Element) {
-  const el = element as HTMLElement;
-  setCollapseDuration(el);
-  el.style.height = `${el.scrollHeight}px`;
-  void el.offsetHeight;
-}
-
-function leave(element: Element) {
-  const el = element as HTMLElement;
-  el.style.height = "0";
-}
-
-function afterLeave(element: Element) {
-  const el = element as HTMLElement;
-  el.style.height = "";
 }
 
 function formatFileSize(bytes: number) {
@@ -140,33 +98,23 @@ function padFrame(frame: number, fps: number) {
         <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
         <strong>{{ node.name }}</strong>
       </button>
-      <Transition
-        name="tree-collapse"
-        @before-enter="beforeEnter"
-        @enter="enter"
-        @after-enter="afterEnter"
-        @before-leave="beforeLeave"
-        @leave="leave"
-        @after-leave="afterLeave"
-      >
-        <div v-show="expanded && node.children.length > 0" class="tree-children-shell">
-          <div class="tree-children">
-            <RecordingTreeNodeView
-              v-for="child in node.children"
-              :key="child.path"
-              :node="child"
-              @inspect="inspect"
-            />
-          </div>
+      <div v-if="expanded && node.children.length > 0" class="tree-children-shell">
+        <div class="tree-children">
+          <RecordingTreeNodeView
+            v-for="child in node.children"
+            :key="child.path"
+            :node="child"
+            @inspect="inspect"
+          />
         </div>
-      </Transition>
+      </div>
     </div>
     <div v-else class="file-branch">
       <button
         class="file-node"
         type="button"
         :aria-expanded="fileDetailsVisible"
-        @click="inspectAndToggleFile(node.path)"
+        @click="toggleFileDetails"
       >
         <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
         <span class="file-main">
@@ -182,55 +130,48 @@ function padFrame(frame: number, fps: number) {
           <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
         </span>
       </button>
-      <Transition
-        name="tree-collapse"
-        @before-enter="beforeEnter"
-        @enter="enter"
-        @after-enter="afterEnter"
-        @before-leave="beforeLeave"
-        @leave="leave"
-        @after-leave="afterLeave"
+      <div
+        v-if="fileDetailsVisible && hasFileDetails(node.summary)"
+        class="tree-children-shell"
       >
-        <div
-          v-show="fileDetailsVisible && hasFileDetails(node.summary)"
-          class="tree-children-shell"
-        >
-          <div v-if="node.summary" class="file-details">
-            <div v-if="node.summary.metadata.description" class="file-detail-block">
-              <strong>Description</strong>
-              <span>{{ node.summary.metadata.description }}</span>
+        <div v-if="node.summary" class="file-details">
+          <div v-if="node.summary.metadata.description" class="file-detail-block">
+            <strong>Description</strong>
+            <span>{{ node.summary.metadata.description }}</span>
+          </div>
+          <div v-if="node.summary.metadata.tags.length" class="file-detail-block">
+            <strong>Tags</strong>
+            <span>{{ node.summary.metadata.tags.join(", ") }}</span>
+          </div>
+          <div class="marker-detail-section">
+            <div class="marker-detail-header">
+              <strong>Markers</strong>
+              <span>{{ node.summary.markerCount }} total</span>
             </div>
-            <div v-if="node.summary.metadata.tags.length" class="file-detail-block">
-              <strong>Tags</strong>
-              <span>{{ node.summary.metadata.tags.join(", ") }}</span>
-            </div>
-            <div class="marker-detail-section">
-              <div class="marker-detail-header">
-                <strong>Markers</strong>
-                <span>{{ node.summary.markerCount }} total</span>
+            <button class="inspect-file-button" type="button" @click="inspect(node.path)">
+              Inspect / edit metadata
+            </button>
+            <div v-if="node.summary.markers.length" class="marker-table">
+              <div class="marker-table-head" aria-hidden="true">
+                <span>Name</span>
+                <span>Frame</span>
+                <span>Timecode</span>
+                <span>Note</span>
               </div>
-              <div v-if="node.summary.markers.length" class="marker-table">
-                <div class="marker-table-head" aria-hidden="true">
-                  <span>Name</span>
-                  <span>Frame</span>
-                  <span>Timecode</span>
-                  <span>Note</span>
-                </div>
-                <div
-                  v-for="marker in node.summary.markers"
-                  :key="`${marker.frame}-${marker.name}`"
-                  class="marker-note-row"
-                >
-                  <strong>{{ marker.name || "marker" }}</strong>
-                  <span>frame {{ marker.frame }}</span>
-                  <span>{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
-                  <span>{{ markerNoteFor(node.summary, marker)?.note || "-" }}</span>
-                </div>
+              <div
+                v-for="marker in node.summary.markers"
+                :key="`${marker.frame}-${marker.name}`"
+                class="marker-note-row"
+              >
+                <strong>{{ marker.name || "marker" }}</strong>
+                <span>frame {{ marker.frame }}</span>
+                <span>{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
+                <span>{{ markerNoteFor(node.summary, marker)?.note || "-" }}</span>
               </div>
             </div>
           </div>
         </div>
-      </Transition>
+      </div>
     </div>
   </div>
 </template>
@@ -325,13 +266,7 @@ function padFrame(frame: number, fps: number) {
 }
 
 .tree-children-shell {
-  clip-path: inset(0 0 0 0);
-  height: auto;
-  overflow: hidden;
-  opacity: 1;
-  transform: translateY(0) scaleY(1);
-  transform-origin: top;
-  will-change: height, opacity, transform, clip-path;
+  min-width: 0;
 }
 
 .tree-children {
@@ -395,6 +330,23 @@ function padFrame(frame: number, fps: number) {
   font-weight: 700;
 }
 
+.inspect-file-button {
+  justify-self: start;
+  min-height: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #202630;
+  color: #dfe5ec;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 10px;
+}
+
+.inspect-file-button:hover {
+  background: #29313d;
+}
+
 .marker-table {
   display: grid;
   overflow: hidden;
@@ -444,26 +396,4 @@ function padFrame(frame: number, fps: number) {
   overflow-wrap: anywhere;
 }
 
-.tree-collapse-enter-active,
-.tree-collapse-leave-active {
-  transition:
-    height var(--collapse-duration, 240ms) cubic-bezier(0.16, 1, 0.3, 1),
-    opacity calc(var(--collapse-duration, 240ms) * 0.75) ease,
-    transform var(--collapse-duration, 240ms) cubic-bezier(0.16, 1, 0.3, 1),
-    clip-path var(--collapse-duration, 240ms) cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.tree-collapse-enter-from,
-.tree-collapse-leave-to {
-  clip-path: inset(0 0 100% 0);
-  opacity: 0;
-  transform: translateY(-3px) scaleY(0.96);
-}
-
-.tree-collapse-enter-to,
-.tree-collapse-leave-from {
-  clip-path: inset(0 0 0 0);
-  opacity: 1;
-  transform: translateY(0) scaleY(1);
-}
 </style>
