@@ -35,8 +35,6 @@ import {
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
   OVERLAY_VISIBLE_EVENT,
-  keyIdFromKeyboardCode,
-  keyIdFromMouseButton,
   type InputStatePayload,
 } from "./domain/inputEvents";
 import type { RecordingHotkeyMode } from "./domain/recordingHotkeys";
@@ -414,48 +412,6 @@ function profileNameFromFileName(fileName: string): string {
   return fileName.replace(/\.json$/i, "");
 }
 
-function handleKeydown(event: KeyboardEvent) {
-  const keyId = keyIdFromKeyboardCode(event.code);
-
-  if (keyId) {
-    updateActiveKey(keyId, true);
-    captureHotkeyKey(keyId);
-  }
-}
-
-function handleKeyup(event: KeyboardEvent) {
-  const keyId = keyIdFromKeyboardCode(event.code);
-
-  if (keyId) {
-    updateActiveKey(keyId, false);
-    if (hotkeyCaptureTarget.value) {
-      finishHotkeyCapture();
-    }
-  }
-}
-
-function handleMousedown(event: MouseEvent) {
-  if (!isOverlayWindow.value) {
-    return;
-  }
-
-  const keyId = keyIdFromMouseButton(event.button);
-  if (keyId) {
-    updateActiveKey(keyId, true);
-  }
-}
-
-function handleMouseup(event: MouseEvent) {
-  if (!isOverlayWindow.value) {
-    return;
-  }
-
-  const keyId = keyIdFromMouseButton(event.button);
-  if (keyId) {
-    updateActiveKey(keyId, false);
-  }
-}
-
 onMounted(async () => {
   if (!isOverlayWindow.value) {
     await restoreAppConfig();
@@ -532,11 +488,6 @@ onMounted(async () => {
     );
   }
 
-  window.addEventListener("keydown", handleKeydown);
-  window.addEventListener("keyup", handleKeyup);
-  window.addEventListener("mousedown", handleMousedown);
-  window.addEventListener("mouseup", handleMouseup);
-
   if (!isOverlayWindow.value) {
     stopAppConfigWatch = watch(
       [config, isOverlayVisible, profileName, profileSourcePath, profileChanged, overlayPosition],
@@ -559,10 +510,6 @@ onUnmounted(() => {
   unlistenInputState?.();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
-  window.removeEventListener("keydown", handleKeydown);
-  window.removeEventListener("keyup", handleKeyup);
-  window.removeEventListener("mousedown", handleMousedown);
-  window.removeEventListener("mouseup", handleMouseup);
 });
 </script>
 

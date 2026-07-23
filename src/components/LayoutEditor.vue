@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onUnmounted, reactive, ref, watch } from "vue";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { onMounted, onUnmounted, reactive, ref, watch } from "vue";
 import BaseButton from "./BaseButton.vue";
 import {
   addRow,
@@ -19,7 +20,7 @@ import {
   type OverlayRow,
   type OverlayRowItem,
 } from "../domain/defaultConfig";
-import { keyIdFromKeyboardCode } from "../domain/inputEvents";
+import { INPUT_STATE_EVENT, type InputStatePayload } from "../domain/inputEvents";
 
 const props = defineProps<{
   rows: OverlayRow[];
@@ -36,6 +37,7 @@ const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
 const platformLabelDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
+let unlistenInputState: UnlistenFn | undefined;
 
 watch(
   () => props.rows,
@@ -98,23 +100,18 @@ function shiftItem(rowIndex: number, itemIndex: number, offset: -1 | 1) {
 
 function beginCapture(rowIndex: number, itemIndex: number, currentId: string) {
   captureTarget.value = { rowIndex, itemIndex, currentId };
-  window.addEventListener("keydown", captureKey, { once: true, capture: true });
 }
 
 function cancelCapture() {
   captureTarget.value = null;
-  window.removeEventListener("keydown", captureKey, { capture: true });
 }
 
-function captureKey(event: KeyboardEvent) {
-  event.preventDefault();
-  event.stopPropagation();
+function commitCapturedKey(capturedId: string) {
   const target = captureTarget.value;
   if (!target) {
     return;
   }
 
-  const capturedId = keyIdFromKeyboardCode(event.code) ?? `browser-code-${event.code.toLowerCase()}`;
   const item = props.rows[target.rowIndex]?.[target.itemIndex];
   if (!item || !isKeyBinding(item)) {
     captureTarget.value = null;
@@ -136,8 +133,19 @@ function captureKey(event: KeyboardEvent) {
   captureTarget.value = null;
 }
 
+onMounted(async () => {
+  unlistenInputState = await listen<InputStatePayload>(
+    INPUT_STATE_EVENT,
+    (event) => {
+      if (event.payload.pressed) {
+        commitCapturedKey(event.payload.keyId);
+      }
+    },
+  );
+});
+
 onUnmounted(() => {
-  window.removeEventListener("keydown", captureKey, { capture: true });
+  unlistenInputState?.();
 });
 
 function textDraftKey(

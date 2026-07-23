@@ -80,6 +80,9 @@ describe("layout editor helpers", () => {
     ]];
 
     expect(validateKeyId("new-key", rows)).toBe("");
+    expect(validateKeyId("macos-keycode-123", rows)).toBe("");
+    expect(validateKeyId("windows-scancode-91", rows)).toBe("");
+    expect(validateKeyId("windows-vk-255", rows)).toBe("");
     expect(validateKeyId("", rows)).toBe("Key ID is required.");
     expect(validateKeyId("Bad Key", rows)).toBe("Use lowercase letters, numbers, and hyphens only.");
     expect(validateKeyId("w", rows)).toBe("Key ID already exists.");
