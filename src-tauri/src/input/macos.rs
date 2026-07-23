@@ -28,6 +28,8 @@ pub fn start(app_handle: AppHandle) {
                 CGEventType::LeftMouseUp,
                 CGEventType::RightMouseDown,
                 CGEventType::RightMouseUp,
+                CGEventType::OtherMouseDown,
+                CGEventType::OtherMouseUp,
             ],
             move |_proxy, event_type, event| {
                 handle_event(&app_handle, &callback_modifier_state, event_type, event);
@@ -107,6 +109,16 @@ fn handle_event(
                     app_handle,
                     key_id,
                     matches!(event_type, CGEventType::RightMouseDown),
+                );
+            }
+        }
+        CGEventType::OtherMouseDown | CGEventType::OtherMouseUp => {
+            let button = event.get_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER) as u16;
+            if let Some(key_id) = mapping::key_id_from_mouse_button(button) {
+                emit_input_state(
+                    app_handle,
+                    key_id,
+                    matches!(event_type, CGEventType::OtherMouseDown),
                 );
             }
         }

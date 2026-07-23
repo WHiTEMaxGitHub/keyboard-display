@@ -9,7 +9,8 @@ use windows_sys::Win32::{
     UI::WindowsAndMessaging::{
         CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage,
         KBDLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN,
-        WM_LBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+        WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP,
+        WM_SYSKEYDOWN, WM_SYSKEYUP,
     },
 };
 
@@ -70,6 +71,8 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
             WM_LBUTTONUP => Some(("mouse-left", false)),
             WM_RBUTTONDOWN => Some(("mouse-right", true)),
             WM_RBUTTONUP => Some(("mouse-right", false)),
+            WM_MBUTTONDOWN => Some(("mouse-middle", true)),
+            WM_MBUTTONUP => Some(("mouse-middle", false)),
             _ => None,
         };
 

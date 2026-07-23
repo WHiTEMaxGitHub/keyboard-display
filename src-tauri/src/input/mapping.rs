@@ -264,6 +264,7 @@ pub fn key_id_from_mouse_button(button: u16) -> Option<&'static str> {
     match button {
         0 => Some("mouse-left"),
         1 => Some("mouse-right"),
+        2 => Some("mouse-middle"),
         _ => None,
     }
 }
@@ -398,7 +399,8 @@ mod tests {
     fn maps_mouse_buttons_to_overlay_ids() {
         assert_eq!(key_id_from_mouse_button(0), Some("mouse-left"));
         assert_eq!(key_id_from_mouse_button(1), Some("mouse-right"));
-        assert_eq!(key_id_from_mouse_button(2), None);
+        assert_eq!(key_id_from_mouse_button(2), Some("mouse-middle"));
+        assert_eq!(key_id_from_mouse_button(3), None);
     }
 
     #[test]
