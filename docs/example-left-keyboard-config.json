@@ -225,24 +225,24 @@
           "type": "key"
         },
         {
-          "id": "meta-left",
-          "label": "Meta",
+          "id": "alt-left",
+          "label": "Cmd",
           "group": "modifier",
           "widthUnit": 1.25,
           "platformLabels": {
             "macos": "Cmd",
-            "windows": "Win"
+            "windows": "Alt"
           },
           "type": "key"
         },
         {
-          "id": "alt-left",
-          "label": "Alt",
+          "id": "meta-left",
+          "label": "Opt",
           "group": "modifier",
           "widthUnit": 1.25,
           "platformLabels": {
             "macos": "Opt",
-            "windows": "Alt"
+            "windows": "Win"
           },
           "type": "key"
         },

@@ -461,7 +461,7 @@
         {
           "type": "key",
           "id": "alt-left",
-          "label": "Alt",
+          "label": "Cmd",
           "group": "modifier",
           "widthUnit": 1.3,
           "platformLabels": {
@@ -472,7 +472,7 @@
         {
           "type": "key",
           "id": "meta-left",
-          "label": "Cmd",
+          "label": "Opt",
           "group": "modifier",
           "widthUnit": 1.3,
           "platformLabels": {
@@ -490,7 +490,7 @@
         {
           "type": "key",
           "id": "meta-right",
-          "label": "Cmd",
+          "label": "Opt",
           "group": "modifier",
           "widthUnit": 1.5,
           "platformLabels": {
@@ -501,7 +501,7 @@
         {
           "type": "key",
           "id": "alt-right",
-          "label": "Opt",
+          "label": "Cmd",
           "group": "modifier",
           "widthUnit": 1.5,
           "platformLabels": {

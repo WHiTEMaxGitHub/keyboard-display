@@ -36,6 +36,12 @@ describe("displayLabelForKey", () => {
       widthUnit: 1,
     }, "macos")).toBe("Cmd");
     expect(displayLabelForKey({
+      id: "alt-left",
+      label: "Alt",
+      group: "modifier",
+      widthUnit: 1,
+    }, "macos")).toBe("Cmd");
+    expect(displayLabelForKey({
       id: "alt-right",
       label: "Alt",
       group: "modifier",
@@ -43,6 +49,12 @@ describe("displayLabelForKey", () => {
     }, "windows")).toBe("AltRight");
     expect(displayLabelForKey({
       id: "meta-left",
+      label: "Meta",
+      group: "modifier",
+      widthUnit: 1,
+    }, "macos")).toBe("Opt");
+    expect(displayLabelForKey({
+      id: "meta-right",
       label: "Meta",
       group: "modifier",
       widthUnit: 1,
