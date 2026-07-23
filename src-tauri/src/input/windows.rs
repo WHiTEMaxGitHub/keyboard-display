@@ -48,9 +48,13 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
         let released = matches!(wparam as u32, WM_KEYUP | WM_SYSKEYUP);
 
         if pressed || released {
-            let key_id = mapping::key_id_from_windows_event(keyboard.vkCode, keyboard.scanCode);
+            let key_id = mapping::key_id_from_windows_event(keyboard.vkCode, keyboard.scanCode)
+                .map(str::to_owned)
+                .unwrap_or_else(|| {
+                    mapping::layout_id_from_windows_codes(keyboard.vkCode, keyboard.scanCode)
+                });
 
-            if let (Some(app_handle), Some(key_id)) = (APP_HANDLE.get(), key_id) {
+            if let Some(app_handle) = APP_HANDLE.get() {
                 emit_input_state(app_handle, key_id, pressed);
             }
         }

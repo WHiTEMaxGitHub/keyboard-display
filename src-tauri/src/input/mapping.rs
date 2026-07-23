@@ -55,10 +55,10 @@ pub fn key_id_from_macos_keycode(keycode: u16) -> Option<&'static str> {
         44 => Some("slash"),
         59 => Some("ctrl-left"),
         62 => Some("ctrl-right"),
-        55 => Some("meta-left"),
-        54 => Some("meta-right"),
-        58 => Some("alt-left"),
-        61 => Some("alt-right"),
+        55 => Some("alt-left"),
+        54 => Some("alt-right"),
+        58 => Some("meta-left"),
+        61 => Some("meta-right"),
         63 => Some("fn"),
         49 => Some("space"),
         51 => Some("backspace"),
@@ -268,11 +268,27 @@ pub fn key_id_from_mouse_button(button: u16) -> Option<&'static str> {
     }
 }
 
+// These ids are stable layout handles for native hardware codes that do not
+// have a semantic key mapping. They are not key names.
+pub fn layout_id_from_macos_keycode(keycode: u16) -> String {
+    format!("macos-keycode-{keycode}")
+}
+
+#[cfg_attr(not(any(test, target_os = "windows")), allow(dead_code))]
+pub fn layout_id_from_windows_codes(vk_code: u32, scan_code: u32) -> String {
+    if scan_code > 0 {
+        format!("windows-scancode-{scan_code}")
+    } else {
+        format!("windows-vk-{vk_code}")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         key_id_from_macos_keycode, key_id_from_mouse_button, key_id_from_windows_event,
-        key_id_from_windows_scancode, key_id_from_windows_vk,
+        key_id_from_windows_scancode, key_id_from_windows_vk, layout_id_from_macos_keycode,
+        layout_id_from_windows_codes,
     };
 
     #[test]
@@ -308,10 +324,10 @@ mod tests {
         assert_eq!(key_id_from_macos_keycode(9), Some("v"));
         assert_eq!(key_id_from_macos_keycode(11), Some("b"));
         assert_eq!(key_id_from_macos_keycode(59), Some("ctrl-left"));
-        assert_eq!(key_id_from_macos_keycode(55), Some("meta-left"));
-        assert_eq!(key_id_from_macos_keycode(54), Some("meta-right"));
-        assert_eq!(key_id_from_macos_keycode(58), Some("alt-left"));
-        assert_eq!(key_id_from_macos_keycode(61), Some("alt-right"));
+        assert_eq!(key_id_from_macos_keycode(55), Some("alt-left"));
+        assert_eq!(key_id_from_macos_keycode(54), Some("alt-right"));
+        assert_eq!(key_id_from_macos_keycode(58), Some("meta-left"));
+        assert_eq!(key_id_from_macos_keycode(61), Some("meta-right"));
         assert_eq!(key_id_from_macos_keycode(63), Some("fn"));
         assert_eq!(key_id_from_macos_keycode(49), Some("space"));
         assert_eq!(key_id_from_macos_keycode(122), Some("f1"));
@@ -383,5 +399,18 @@ mod tests {
         assert_eq!(key_id_from_mouse_button(0), Some("mouse-left"));
         assert_eq!(key_id_from_mouse_button(1), Some("mouse-right"));
         assert_eq!(key_id_from_mouse_button(2), None);
+    }
+
+    #[test]
+    fn leaves_unmapped_native_keys_for_unknown_id_fallback() {
+        assert_eq!(key_id_from_macos_keycode(10_000), None);
+        assert_eq!(key_id_from_windows_event(0, 10_000), None);
+    }
+
+    #[test]
+    fn builds_stable_unknown_native_key_ids() {
+        assert_eq!(layout_id_from_macos_keycode(123), "macos-keycode-123");
+        assert_eq!(layout_id_from_windows_codes(0xFF, 91), "windows-scancode-91");
+        assert_eq!(layout_id_from_windows_codes(0xFF, 0), "windows-vk-255");
     }
 }

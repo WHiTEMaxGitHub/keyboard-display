@@ -53,42 +53,44 @@ fn handle_event(
     match event_type {
         CGEventType::KeyDown | CGEventType::KeyUp => {
             let keycode = event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u16;
-            if let Some(key_id) = mapping::key_id_from_macos_keycode(keycode) {
-                if is_macos_modifier_keycode(keycode) {
-                    return;
-                }
-
-                emit_input_state(
-                    app_handle,
-                    key_id,
-                    matches!(event_type, CGEventType::KeyDown),
-                );
+            if is_macos_modifier_keycode(keycode) {
+                return;
             }
+
+            let key_id = mapping::key_id_from_macos_keycode(keycode)
+                .map(str::to_owned)
+                .unwrap_or_else(|| mapping::layout_id_from_macos_keycode(keycode));
+
+            emit_input_state(
+                app_handle,
+                key_id,
+                matches!(event_type, CGEventType::KeyDown),
+            );
         }
         CGEventType::FlagsChanged => {
             let keycode = event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE) as u16;
-            if let Some(key_id) = mapping::key_id_from_macos_keycode(keycode) {
-                if key_id == "caps-lock" {
-                    emit_pulse(app_handle, key_id);
-                    return;
-                }
+            let key_id = mapping::key_id_from_macos_keycode(keycode)
+                .map(str::to_owned)
+                .unwrap_or_else(|| mapping::layout_id_from_macos_keycode(keycode));
 
-                let Ok(mut state) = modifier_state.lock() else {
-                    return;
-                };
-
-                let pressed = if state.contains(&keycode) {
-                    state.remove(&keycode);
-                    false
-                } else {
-                    state.insert(keycode);
-                    true
-                };
-
-                emit_input_state(app_handle, key_id, pressed);
-            } else {
-                eprintln!("unmapped macOS modifier keycode: {keycode}");
+            if key_id == "caps-lock" {
+                emit_pulse(app_handle, key_id);
+                return;
             }
+
+            let Ok(mut state) = modifier_state.lock() else {
+                return;
+            };
+
+            let pressed = if state.contains(&keycode) {
+                state.remove(&keycode);
+                false
+            } else {
+                state.insert(keycode);
+                true
+            };
+
+            emit_input_state(app_handle, key_id, pressed);
         }
         CGEventType::LeftMouseDown | CGEventType::LeftMouseUp => {
             if let Some(key_id) = mapping::key_id_from_mouse_button(0) {
@@ -116,8 +118,8 @@ fn is_macos_modifier_keycode(keycode: u16) -> bool {
     matches!(keycode, 56 | 60 | 59 | 62 | 55 | 54 | 58 | 61 | 57 | 63)
 }
 
-fn emit_pulse(app_handle: &AppHandle, key_id: &'static str) {
-    emit_input_state(app_handle, key_id, true);
+fn emit_pulse(app_handle: &AppHandle, key_id: String) {
+    emit_input_state(app_handle, key_id.clone(), true);
 
     let app_handle = app_handle.clone();
     std::thread::spawn(move || {
