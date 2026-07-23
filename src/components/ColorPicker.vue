@@ -35,6 +35,8 @@ const pickerRoot = ref<HTMLElement | null>(null);
 const colorTrigger = ref<HTMLButtonElement | null>(null);
 const popoverDirection = ref<"down" | "up">("down");
 const hexDraft = ref(normalizeHexColor(props.value));
+const sessionStartColor = ref(normalizeHexColor(props.value));
+const hasPendingRecentColor = ref(false);
 
 const rgb = computed(() => hexToRgb(hexDraft.value));
 
@@ -46,13 +48,26 @@ watch(
 );
 
 function togglePicker() {
-  if (!pickerOpen.value) {
-    updatePopoverDirection();
+  if (pickerOpen.value) {
+    closePicker();
+    return;
   }
-  pickerOpen.value = !pickerOpen.value;
+
+  openPicker();
+}
+
+function openPicker() {
+  hexDraft.value = normalizeHexColor(props.value, hexDraft.value);
+  sessionStartColor.value = normalizePickerColor(hexDraft.value);
+  hasPendingRecentColor.value = false;
+  updatePopoverDirection();
+  pickerOpen.value = true;
 }
 
 function closePicker() {
+  if (pickerOpen.value) {
+    rememberCurrentColor(false);
+  }
   pickerOpen.value = false;
 }
 
@@ -92,12 +107,12 @@ function updateHex(event: Event) {
   hexDraft.value = (event.target as HTMLInputElement).value;
   const normalizedColor = normalizePickerColor(hexDraft.value, "");
   if (normalizedColor) {
-    applyColor(normalizedColor, false);
+    applyColor(normalizedColor);
   }
 }
 
 function commitHex() {
-  commitColor(hexDraft.value);
+  previewColor(hexDraft.value);
 }
 
 function updateChannel(channel: keyof RgbColor, event: Event) {
@@ -107,26 +122,42 @@ function updateChannel(channel: keyof RgbColor, event: Event) {
     [channel]: Number((event.target as HTMLInputElement).value),
   };
 
-  commitColor(
+  previewColor(
     rgbToHex(props.alphaEnabled ? nextRgb : { r: nextRgb.r, g: nextRgb.g, b: nextRgb.b }),
   );
 }
 
 function chooseColor(color: string) {
-  commitColor(color);
+  previewColor(color);
 }
 
-function commitColor(color: string) {
+function previewColor(color: string) {
   const normalizedColor = normalizePickerColor(color, normalizeHexColor(props.value));
-  applyColor(normalizedColor, true);
+  applyColor(normalizedColor);
 }
 
-function applyColor(normalizedColor: string, remember: boolean) {
+function applyColor(normalizedColor: string) {
   hexDraft.value = normalizedColor;
   emit("update:value", normalizedColor);
-  if (remember) {
+  hasPendingRecentColor.value = true;
+}
+
+function applyCurrentColor() {
+  rememberCurrentColor(true);
+  pickerOpen.value = false;
+}
+
+function rememberCurrentColor(force: boolean) {
+  const normalizedColor = normalizePickerColor(hexDraft.value, normalizeHexColor(props.value));
+  hexDraft.value = normalizedColor;
+  emit("update:value", normalizedColor);
+
+  if (force || (hasPendingRecentColor.value && normalizedColor !== sessionStartColor.value)) {
     emit("remember-color", normalizedColor);
   }
+
+  sessionStartColor.value = normalizedColor;
+  hasPendingRecentColor.value = false;
 }
 
 function normalizePickerColor(color: string, fallback = normalizeHexColor(props.value)) {
@@ -210,6 +241,11 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
               @click="chooseColor(color)"
             />
           </div>
+        </div>
+        <div class="picker-actions">
+          <button class="apply-button" type="button" @click="applyCurrentColor">
+            Apply
+          </button>
         </div>
       </div>
     </Transition>
@@ -372,5 +408,28 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 .swatch-button:hover {
   outline: 2px solid rgba(255, 255, 255, 0.22);
   outline-offset: 2px;
+}
+
+.picker-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.apply-button {
+  min-height: 32px;
+  border: 1px solid rgba(37, 211, 102, 0.42);
+  border-radius: 7px;
+  background: rgba(37, 211, 102, 0.12);
+  color: #eafff0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 0 12px;
+}
+
+.apply-button:hover {
+  border-color: rgba(37, 211, 102, 0.7);
+  background: rgba(37, 211, 102, 0.18);
 }
 </style>
