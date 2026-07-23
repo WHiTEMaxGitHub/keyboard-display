@@ -38,17 +38,44 @@ const textDrafts = reactive(new Map<string, string>());
 const platformLabelDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
 let unlistenInputState: UnlistenFn | undefined;
+let collapsedRowsInitialized = false;
+let previousRowCount = 0;
 
 watch(
   () => props.rows,
-  () => {
+  (rows) => {
+    syncCollapsedRows(rows);
     widthDrafts.clear();
     textDrafts.clear();
     platformLabelDrafts.clear();
     platformLabelEditors.clear();
     idErrors.clear();
   },
+  { immediate: true },
 );
+
+function syncCollapsedRows(rows: OverlayRow[]) {
+  if (!collapsedRowsInitialized) {
+    rows.forEach((_row, rowIndex) => collapsedRows.add(rowIndex));
+    collapsedRowsInitialized = true;
+    previousRowCount = rows.length;
+    return;
+  }
+
+  Array.from(collapsedRows)
+    .filter((rowIndex) => rowIndex >= rows.length)
+    .forEach((rowIndex) => collapsedRows.delete(rowIndex));
+
+  if (rows.length > previousRowCount) {
+    rows.forEach((_row, rowIndex) => {
+      if (rowIndex >= previousRowCount) {
+        collapsedRows.add(rowIndex);
+      }
+    });
+  }
+
+  previousRowCount = rows.length;
+}
 
 function addKey(rowIndex: number) {
   emit("update-rows", addKeyToRow(props.rows, rowIndex));
@@ -313,7 +340,7 @@ function updateGapWidth(
     >
       <div class="row-editor-header">
         <button class="row-title-button" type="button" @click="toggleRow(rowIndex)">
-          <span>{{ collapsedRows.has(rowIndex) ? "▸" : "▾" }}</span>
+          <span class="row-chevron" :class="{ expanded: !collapsedRows.has(rowIndex) }">▸</span>
           <strong>Row {{ rowIndex + 1 }}</strong>
           <small>{{ rowSummary(row) }}</small>
         </button>
@@ -326,12 +353,14 @@ function updateGapWidth(
         </div>
       </div>
 
-      <div v-if="!collapsedRows.has(rowIndex)" class="row-item-list">
-        <div
-          v-for="(item, itemIndex) in row"
-          :key="`${rowIndex}-${itemIndex}`"
-          class="row-item-editor"
-        >
+      <Transition name="row-collapse">
+        <div v-if="!collapsedRows.has(rowIndex)" class="row-item-list">
+          <TransitionGroup name="row-item" tag="div" class="row-item-list-inner">
+            <div
+              v-for="(item, itemIndex) in row"
+              :key="`${rowIndex}-${itemIndex}`"
+              class="row-item-editor"
+            >
           <div class="item-summary">{{ itemSummary(item) }}</div>
           <template v-if="isKeyBinding(item)">
             <label>
@@ -385,35 +414,37 @@ function updateGapWidth(
             >
               {{ isPlatformLabelEditorOpen(rowIndex, itemIndex) ? "Hide platform labels" : "Platform labels" }}
             </BaseButton>
-            <div
-              v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex)"
-              class="platform-label-fields"
-            >
-              <label>
-                macOS label
-                <input
-                  :value="platformLabelDraft(rowIndex, itemIndex, item, 'macos')"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
-                  @change="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
-                  @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'macos', $event)"
-                />
-              </label>
-              <label>
-                Windows label
-                <input
-                  :value="platformLabelDraft(rowIndex, itemIndex, item, 'windows')"
-                  autocapitalize="off"
-                  autocorrect="off"
-                  spellcheck="false"
-                  @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
-                  @change="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
-                  @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
-                />
-              </label>
-            </div>
+            <Transition name="field-reveal">
+              <div
+                v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex)"
+                class="platform-label-fields"
+              >
+                <label>
+                  macOS label
+                  <input
+                    :value="platformLabelDraft(rowIndex, itemIndex, item, 'macos')"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
+                    @change="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
+                    @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'macos', $event)"
+                  />
+                </label>
+                <label>
+                  Windows label
+                  <input
+                    :value="platformLabelDraft(rowIndex, itemIndex, item, 'windows')"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
+                    @change="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
+                    @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
+                  />
+                </label>
+              </div>
+            </Transition>
           </template>
           <template v-else>
             <div class="gap-label">{{ item.type }}</div>
@@ -441,8 +472,10 @@ function updateGapWidth(
               Right
             </BaseButton>
           </div>
+            </div>
+          </TransitionGroup>
         </div>
-      </div>
+      </Transition>
     </article>
   </div>
 </template>
@@ -465,6 +498,16 @@ function updateGapWidth(
   border-radius: 8px;
   background: #151a20;
   padding: 12px;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.row-editor:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #171d24;
 }
 
 .row-editor-header {
@@ -476,7 +519,7 @@ function updateGapWidth(
 
 .row-title-button {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   min-width: 0;
   border: 0;
@@ -487,8 +530,31 @@ function updateGapWidth(
   text-align: left;
 }
 
+.row-title-button:hover strong {
+  color: #f4f7fb;
+}
+
+.row-chevron {
+  display: inline-grid;
+  place-items: center;
+  width: 14px;
+  color: #8f9baa;
+  font-size: 12px;
+  line-height: 1;
+  transform-origin: center;
+  transition:
+    color 160ms ease,
+    transform 180ms ease;
+}
+
+.row-chevron.expanded {
+  color: #dfe5ec;
+  transform: rotate(90deg);
+}
+
 .row-title-button strong {
   font-size: 14px;
+  transition: color 160ms ease;
 }
 
 .row-title-button small {
@@ -507,11 +573,16 @@ function updateGapWidth(
 }
 
 .row-item-list {
+  overflow: hidden;
+}
+
+.row-item-list-inner {
   display: grid;
   gap: 8px;
 }
 
 .row-item-editor {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto auto auto;
   align-items: end;
@@ -520,6 +591,17 @@ function updateGapWidth(
   border-radius: 7px;
   background: #10141a;
   padding: 10px;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.row-item-editor:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #121820;
+  transform: translateY(-1px);
 }
 
 .item-summary {
@@ -549,6 +631,59 @@ function updateGapWidth(
   gap: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 8px;
+}
+
+.row-collapse-enter-active,
+.row-collapse-leave-active {
+  max-height: 1800px;
+  opacity: 1;
+  transition:
+    max-height 220ms ease,
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+
+.row-collapse-enter-from,
+.row-collapse-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.field-reveal-enter-active,
+.field-reveal-leave-active {
+  max-height: 120px;
+  opacity: 1;
+  transition:
+    max-height 180ms ease,
+    opacity 150ms ease,
+    transform 150ms ease;
+}
+
+.field-reveal-enter-from,
+.field-reveal-leave-to {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+.row-item-enter-active,
+.row-item-leave-active,
+.row-item-move {
+  transition:
+    opacity 160ms ease,
+    transform 180ms ease;
+}
+
+.row-item-enter-from,
+.row-item-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.row-item-leave-active {
+  position: absolute;
+  width: 100%;
 }
 
 .row-item-editor input,
@@ -589,6 +724,22 @@ function updateGapWidth(
 @media (max-width: 920px) {
   .row-item-editor {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-editor,
+  .row-chevron,
+  .row-title-button strong,
+  .row-item-editor,
+  .row-collapse-enter-active,
+  .row-collapse-leave-active,
+  .field-reveal-enter-active,
+  .field-reveal-leave-active,
+  .row-item-enter-active,
+  .row-item-leave-active,
+  .row-item-move {
+    transition: none;
   }
 }
 </style>
