@@ -332,11 +332,21 @@ async function uninstallAppManagedVideoExporter() {
               </span>
             </div>
           </div>
-          <LayoutEditor
-            v-else
-            :rows="config.rows"
-            @update-rows="emit('update-overlay-rows', $event)"
-          />
+          <div v-else class="layout-editor-stack">
+            <div class="layout-editor-preview">
+              <PovOverlay
+                :layout="config.layout"
+                :rows="config.rows"
+                :keys="config.keys"
+                :active-keys="activeKeys"
+                :overlay-style="config.style"
+              />
+            </div>
+            <LayoutEditor
+              :rows="config.rows"
+              @update-rows="emit('update-overlay-rows', $event)"
+            />
+          </div>
         </article>
       </section>
 
@@ -567,6 +577,28 @@ h2 {
   display: grid;
   gap: 10px;
   margin-top: 16px;
+}
+
+.layout-editor-stack {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.layout-editor-preview {
+  display: grid;
+  align-items: center;
+  min-height: 160px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: #11161d;
+  padding: 14px;
+}
+
+.layout-editor-preview :deep(.pov-shell) {
+  flex: 0 0 auto;
 }
 
 .layout-line {

@@ -37,6 +37,8 @@
   - Current third pass supports capturing native input into a key id.
   - Current fourth pass adds native hardware-code fallback ids such as
     `macos-keycode-<keycode>` and `windows-scancode-<scanCode>`.
+  - Current fifth pass shows a live preview in the layout editor using the POV
+    renderer.
   - TODO: Consider a user-editable key id registry for naming unusual input
     devices.
   - Users should be able to edit `overlay.rows` without hand-writing JSON.
