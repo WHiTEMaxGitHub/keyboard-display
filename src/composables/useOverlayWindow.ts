@@ -103,7 +103,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
             queueCssStyleSync(pendingCssStyle);
           }
         });
-    }, 33);
+    }, 16);
   }
 
   function cancelCssStyleSync() {
