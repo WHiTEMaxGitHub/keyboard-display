@@ -132,7 +132,7 @@ fn summarize_recording_file(path: &PathBuf) -> Result<RecordingFileSummary, Stri
         .ok_or_else(|| "recording file has no file name".to_string())?
         .to_string_lossy()
         .to_string();
-    let (start_unix_ms, end_unix_ms) = parse_recording_file_times(&file_name);
+    let (start_unix_ms, end_unix_ms) = recording_time_range(&file_name, &decoded, &metadata);
 
     Ok(RecordingFileSummary {
         file_name,
@@ -152,4 +152,31 @@ fn summarize_recording_file(path: &PathBuf) -> Result<RecordingFileSummary, Stri
             .collect(),
         metadata: read_recording_metadata(path.clone())?,
     })
+}
+
+fn recording_time_range(
+    file_name: &str,
+    decoded: &binary::DecodedKbdrec,
+    metadata: &std::fs::Metadata,
+) -> (Option<u64>, Option<u64>) {
+    let (start_unix_ms, end_unix_ms) = parse_recording_file_times(file_name);
+    if start_unix_ms.is_some() && end_unix_ms.is_some() {
+        return (start_unix_ms, end_unix_ms);
+    }
+
+    let Ok(modified) = metadata.modified() else {
+        return (None, None);
+    };
+    let Ok(end_duration) = modified.duration_since(std::time::UNIX_EPOCH) else {
+        return (None, None);
+    };
+
+    let end_ms = end_duration.as_millis() as u64;
+    let duration_ms = if decoded.fps == 0 {
+        0
+    } else {
+        ((decoded.frame_count * 1000) / u64::from(decoded.fps)).max(1)
+    };
+
+    (Some(end_ms.saturating_sub(duration_ms)), Some(end_ms))
 }

@@ -18,6 +18,7 @@ import type { OverlayPosition } from "./useOverlayWindow";
 export type RecordingHotkeyTarget = "start" | "stop" | "sync";
 
 type UseRecordingControllerOptions = {
+  enabled: boolean;
   config: AppConfig;
   profileName: Ref<string>;
   isOverlayWindow: ComputedRef<boolean>;
@@ -45,16 +46,21 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   const recordingInspectionError = ref("");
   const recordingHotkeys = ref<RecordingHotkeyConfig>(normalizeRecordingHotkeyConfig(undefined));
   const activeRecordingHotkeys = ref<RecordingHotkeyConfig | null>(null);
+  const activeRecordingFps = ref<number | null>(null);
   const hotkeyCaptureTarget = ref<RecordingHotkeyTarget | null>(null);
   const capturedHotkeyKeys = ref(new Set<string>());
   const activeRecordingHotkeySignature = ref("");
 
   async function initializeDefaultRecordingDirectory() {
+    if (!options.enabled) {
+      return;
+    }
+
     defaultRecordingDirectory.value = await tauriApi.defaultRecordingDir();
   }
 
   async function recordInputIfNeeded(keyId: string, pressed: boolean) {
-    if (options.isOverlayWindow.value || !isRecording.value) {
+    if (!options.enabled || options.isOverlayWindow.value || !isRecording.value) {
       return;
     }
 
@@ -66,6 +72,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function chooseRecordingDirectory() {
+    if (!options.enabled) {
+      return;
+    }
+
     const selectedPath = await open({
       title: "Choose recording folder",
       directory: true,
@@ -96,6 +106,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
 
   /// 启动录制前保留倒计时，避免用户按下控制热键本身被录入开头帧。
   async function startRecordingWithCountdown() {
+    if (!options.enabled) {
+      return;
+    }
+
     await resolveRecordingDirectory();
 
     if (isRecording.value || recordingCountdown.value > 0) {
@@ -117,6 +131,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
         if (silentRecording.value) {
           await options.destroyOverlayWindow();
         }
+        activeRecordingFps.value = recordingFps;
         isRecording.value = true;
         lastRecordingPath.value = "";
         recordingStatusMessage.value = `Recording started at ${recordingFps}fps.`;
@@ -130,21 +145,24 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
       recordingCountdownTimer.value = null;
     }
     recordingCountdown.value = 0;
+    activeRecordingFps.value = null;
   }
 
   async function stopRecording() {
-    if (!isRecording.value) {
+    if (!options.enabled || !isRecording.value) {
       return;
     }
 
+    const recordingFps = activeRecordingFps.value ?? effectiveRecordingFps(options.config.recording);
     const result = await tauriApi.stopRecording(
       await resolveRecordingDirectory(),
       options.config.recording.filenameTemplate,
       options.profileName.value,
-      effectiveRecordingFps(options.config.recording),
+      recordingFps,
     );
     isRecording.value = false;
     activeRecordingHotkeys.value = null;
+    activeRecordingFps.value = null;
     lastRecordingPath.value = result.path;
     recordingStatusMessage.value = `Recording saved: ${result.path}`;
 
@@ -156,6 +174,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function inspectRecordingFile() {
+    if (!options.enabled) {
+      return;
+    }
+
     const selectedPath = await open({
       title: "Inspect keyboard recording",
       filters: [{ name: "Keyboard recording", extensions: ["kbdrec"] }],
@@ -170,6 +192,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function inspectRecordingPath(selectedPath: string) {
+    if (!options.enabled) {
+      return;
+    }
+
     currentRecordingPath.value = selectedPath;
     recordingInspection.value = null;
     recordingInspectionError.value = "";
@@ -188,11 +214,19 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   function updateSilentRecording(value: boolean) {
+    if (!options.enabled) {
+      return;
+    }
+
     silentRecording.value = value;
     options.scheduleAppConfigSave();
   }
 
   function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
+    if (!options.enabled) {
+      return;
+    }
+
     recordingHotkeys.value = normalizeRecordingHotkeyConfig({
       mode,
       start: recordingHotkeys.value.start,
@@ -203,6 +237,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function addSyncMarker() {
+    if (!options.enabled) {
+      return;
+    }
+
     if (!isRecording.value) {
       recordingStatusMessage.value = "Start recording before adding a sync marker.";
       return;
@@ -222,7 +260,16 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
       return;
     }
 
-    await tauriApi.suppressRecordingKeys(normalizeHotkey(keys));
+    const normalizedKeys = normalizeHotkey(keys);
+    await tauriApi.suppressRecordingKeys(normalizedKeys);
+    releaseSuppressedHotkeyKeys(normalizedKeys);
+  }
+
+  function releaseSuppressedHotkeyKeys(keys: string[]) {
+    const nextActiveKeys = new Set(options.activeKeyIds.value);
+    keys.forEach((key) => nextActiveKeys.delete(key));
+    options.activeKeyIds.value = nextActiveKeys;
+    activeRecordingHotkeySignature.value = "";
   }
 
   function beginHotkeyCapture(target: RecordingHotkeyTarget) {
@@ -255,6 +302,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function handleRecordingHotkeys(): Promise<boolean> {
+    if (!options.enabled) {
+      return false;
+    }
+
     if (hotkeyCaptureTarget.value) {
       return false;
     }
@@ -276,9 +327,8 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
       return false;
     }
 
-    activeRecordingHotkeySignature.value = activeSignature;
-
     if (matchesSync && isRecording.value) {
+      activeRecordingHotkeySignature.value = activeSignature;
       await suppressRecordingHotkeyInput(hotkeys.sync);
       await addSyncMarker();
       return true;
@@ -290,14 +340,17 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
 
     if (hotkeys.mode === "toggle") {
       if (recordingCountdown.value > 0) {
+        activeRecordingHotkeySignature.value = activeSignature;
         cancelRecordingCountdown();
         return true;
       }
 
       if (isRecording.value) {
+        activeRecordingHotkeySignature.value = activeSignature;
         await suppressRecordingHotkeyInput(hotkeys.stop);
         await stopRecording();
       } else {
+        activeRecordingHotkeySignature.value = activeSignature;
         await startRecordingWithCountdown();
       }
       return true;
@@ -305,9 +358,11 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
 
     if (hotkeys.mode === "separate") {
       if (!isRecording.value && matchesStart) {
+        activeRecordingHotkeySignature.value = activeSignature;
         await startRecordingWithCountdown();
         return true;
       } else if (isRecording.value && matchesStop) {
+        activeRecordingHotkeySignature.value = activeSignature;
         await suppressRecordingHotkeyInput(hotkeys.stop);
         await stopRecording();
         return true;

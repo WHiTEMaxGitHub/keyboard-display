@@ -121,6 +121,7 @@ const {
   finishHotkeyCapture,
   handleRecordingHotkeys,
 } = useRecordingController({
+  enabled: !isOverlayWindow.value,
   config,
   profileName,
   isOverlayWindow,
@@ -294,7 +295,6 @@ function scheduleAppConfigSave() {
     return;
   }
 
-  console.info("[app-config] schedule-save");
   if (appConfigSaveTimer !== undefined) {
     window.clearTimeout(appConfigSaveTimer);
   }
@@ -305,7 +305,6 @@ function scheduleAppConfigSave() {
 }
 
 async function saveAppConfig() {
-  console.info("[app-config] write-start");
   const appConfig = buildAppConfigFile({
     defaultProfilePath: "docs/default-config.json",
     recentProfiles: recentProfiles.value,
@@ -338,7 +337,6 @@ async function saveAppConfig() {
   recentProfiles.value = appConfig.profiles.recentProfiles;
 
   await tauriApi.saveAppConfig(`${JSON.stringify(appConfig, null, 2)}\n`);
-  console.info("[app-config] write-done");
 }
 
 async function applyConfigToOverlay() {
@@ -454,12 +452,14 @@ onMounted(async () => {
         return;
       }
 
-      void (async () => {
-        const consumed = await handleRecordingHotkeys();
-        if (!consumed) {
-          await recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
-        }
-      })();
+      if (!isOverlayWindow.value) {
+        void (async () => {
+          const consumed = await handleRecordingHotkeys();
+          if (!consumed) {
+            await recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
+          }
+        })();
+      }
     },
   );
 

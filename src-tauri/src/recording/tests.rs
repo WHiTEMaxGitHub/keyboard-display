@@ -381,6 +381,11 @@ fn lists_recording_files_recursively() {
         encode_kbdrec(&snapshot).unwrap(),
     )
     .unwrap();
+    std::fs::write(
+        nested.join("custom-name-240.kbdrec"),
+        encode_kbdrec(&snapshot).unwrap(),
+    )
+    .unwrap();
     std::fs::write(root.join("ignore.txt"), "not a recording").unwrap();
 
     let tree = list_recording_files(root.clone()).unwrap();
@@ -400,6 +405,15 @@ fn lists_recording_files_recursively() {
     assert_eq!(summary.marker_count, 1);
     assert_eq!(summary.markers[0].frame, 2);
     assert_eq!(summary.markers[0].name, "sync");
+
+    let custom_file_node = nested_node
+        .children
+        .iter()
+        .find(|node| node.name == "custom-name-240.kbdrec")
+        .unwrap();
+    let custom_summary = custom_file_node.summary.as_ref().unwrap();
+    assert!(custom_summary.start_unix_ms.is_some());
+    assert!(custom_summary.end_unix_ms >= custom_summary.start_unix_ms);
 
     let _ = std::fs::remove_dir_all(root);
 }
