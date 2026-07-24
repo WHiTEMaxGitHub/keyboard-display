@@ -75,6 +75,7 @@ const layoutRows = computed(() => {
 });
 
 const emit = defineEmits<{
+  "preview-overlay-style": [style: OverlayStyle];
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-rows": [rows: AppConfig["rows"]];
   "update-overlay-visible": [visible: boolean];
@@ -343,6 +344,7 @@ async function uninstallAppManagedVideoExporter() {
         <AppearancePanel
           :config="config"
           :recent-colors="recentColors"
+          @preview-overlay-style="emit('preview-overlay-style', $event)"
           @update-overlay-style="emit('update-overlay-style', $event)"
           @remember-color="rememberColor"
           @refresh-pov="refreshPov"

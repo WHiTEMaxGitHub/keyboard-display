@@ -42,6 +42,8 @@ type UseOverlayWindowOptions = {
   scheduleAppConfigSave: () => void;
 };
 
+export type OverlayStyleSyncMode = "css" | "window";
+
 export function normalizeOverlayPosition(position: string | null | undefined): OverlayPosition {
   return position === "top-left" ||
     position === "top-right" ||
@@ -55,8 +57,18 @@ export function normalizeOverlayPosition(position: string | null | undefined): O
 /// 管理独立 POV overlay 窗口的生命周期和位置同步。
 export function useOverlayWindow(options: UseOverlayWindowOptions) {
   const overlayAdjusting = ref(false);
+  let cssStyleSyncTimer: number | undefined;
+  let pendingCssStyle: OverlayStyle | undefined;
+  let cssStyleSyncInFlight: Promise<void> | undefined;
 
-  async function updateOverlayStyle(style: OverlayStyle) {
+  async function updateOverlayStyle(style: OverlayStyle, mode: OverlayStyleSyncMode = "window") {
+    if (mode === "css") {
+      queueCssStyleSync(style);
+      return;
+    }
+
+    cancelCssStyleSync();
+    await cssStyleSyncInFlight;
     const overlayWindow = await Window.getByLabel("pov");
     await resizeOverlayWindow(overlayWindow);
     await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
@@ -64,6 +76,46 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     if (options.isOverlayVisible.value && options.overlayPosition.value !== "custom") {
       await moveOverlay(options.overlayPosition.value, false, false);
     }
+  }
+
+  function queueCssStyleSync(style: OverlayStyle) {
+    pendingCssStyle = style;
+    if (cssStyleSyncTimer !== undefined || cssStyleSyncInFlight) {
+      return;
+    }
+
+    cssStyleSyncTimer = window.setTimeout(() => {
+      cssStyleSyncTimer = undefined;
+      const styleToEmit = pendingCssStyle;
+      pendingCssStyle = undefined;
+
+      if (!styleToEmit) {
+        return;
+      }
+
+      cssStyleSyncInFlight = emitTo<OverlayStyle>("pov", "overlay-style", styleToEmit)
+        .catch((error) => {
+          console.error("failed to sync overlay CSS style", error);
+        })
+        .finally(() => {
+          cssStyleSyncInFlight = undefined;
+          if (pendingCssStyle) {
+            queueCssStyleSync(pendingCssStyle);
+          }
+        });
+    }, 33);
+  }
+
+  function cancelCssStyleSync() {
+    pendingCssStyle = undefined;
+    if (cssStyleSyncTimer !== undefined) {
+      window.clearTimeout(cssStyleSyncTimer);
+      cssStyleSyncTimer = undefined;
+    }
+  }
+
+  function disposeOverlayStyleSync() {
+    cancelCssStyleSync();
   }
 
   async function updateOverlayRows() {
@@ -335,6 +387,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
   return {
     overlayAdjusting,
     updateOverlayStyle,
+    disposeOverlayStyleSync,
     updateOverlayRows,
     resizeOverlayWindow,
     syncOverlayWindow,

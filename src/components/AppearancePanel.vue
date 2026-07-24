@@ -11,6 +11,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
+  "preview-overlay-style": [style: OverlayStyle];
   "update-overlay-style": [style: OverlayStyle];
   "remember-color": [color: string];
   "refresh-pov": [];
@@ -67,6 +68,22 @@ function updateStyleColor(
 ) {
   const nextColor = normalizeHexColor(color, props.config.style[field]);
   emit("update-overlay-style", {
+    ...props.config.style,
+    [field]: nextColor,
+  });
+}
+
+function previewStyleColor(
+  field:
+    | "idleColor"
+    | "activeColor"
+    | "idleTextColor"
+    | "activeTextColor"
+    | "backgroundColor",
+  color: string,
+) {
+  const nextColor = normalizeHexColor(color, props.config.style[field]);
+  emit("preview-overlay-style", {
     ...props.config.style,
     [field]: nextColor,
   });
@@ -151,6 +168,7 @@ function setHexAlpha(color: string, alpha: number) {
         :value="config.style.idleColor"
         :recent-colors="recentColors"
         alpha-enabled
+        @preview:value="previewStyleColor('idleColor', $event)"
         @update:value="updateStyleColor('idleColor', $event)"
         @remember-color="emit('remember-color', $event)"
       />
@@ -159,6 +177,7 @@ function setHexAlpha(color: string, alpha: number) {
         :value="config.style.activeColor"
         :recent-colors="recentColors"
         alpha-enabled
+        @preview:value="previewStyleColor('activeColor', $event)"
         @update:value="updateStyleColor('activeColor', $event)"
         @remember-color="emit('remember-color', $event)"
       />
@@ -167,6 +186,7 @@ function setHexAlpha(color: string, alpha: number) {
         :value="config.style.idleTextColor"
         :recent-colors="recentColors"
         alpha-enabled
+        @preview:value="previewStyleColor('idleTextColor', $event)"
         @update:value="updateStyleColor('idleTextColor', $event)"
         @remember-color="emit('remember-color', $event)"
       />
@@ -175,6 +195,7 @@ function setHexAlpha(color: string, alpha: number) {
         :value="config.style.activeTextColor"
         :recent-colors="recentColors"
         alpha-enabled
+        @preview:value="previewStyleColor('activeTextColor', $event)"
         @update:value="updateStyleColor('activeTextColor', $event)"
         @remember-color="emit('remember-color', $event)"
       />
@@ -183,6 +204,7 @@ function setHexAlpha(color: string, alpha: number) {
         :value="config.style.backgroundColor"
         :recent-colors="recentColors"
         alpha-enabled
+        @preview:value="previewStyleColor('backgroundColor', $event)"
         @update:value="updateStyleColor('backgroundColor', $event)"
         @remember-color="emit('remember-color', $event)"
       />

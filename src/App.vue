@@ -10,6 +10,7 @@ import {
   useOverlayWindow,
   type OverlayPosition,
   type OverlayRuntimeConfig,
+  type OverlayStyleSyncMode,
 } from "./composables/useOverlayWindow";
 import {
   useRecordingController,
@@ -72,6 +73,7 @@ let stopAppConfigWatch: WatchStopHandle | undefined;
 const {
   overlayAdjusting,
   updateOverlayStyle: syncOverlayStyle,
+  disposeOverlayStyleSync,
   updateOverlayRows: syncOverlayRows,
   resizeOverlayWindow,
   destroyOverlayWindow,
@@ -147,6 +149,19 @@ function applyOverlayStyle(style: OverlayStyle) {
   config.style = { ...style };
 }
 
+function isBackplateVisible(style: OverlayStyle) {
+  return !/^#[0-9a-fA-F]{8}$/.test(style.backgroundColor) ||
+    !style.backgroundColor.endsWith("00");
+}
+
+function overlayStyleSyncMode(previousStyle: OverlayStyle, nextStyle: OverlayStyle): OverlayStyleSyncMode {
+  return previousStyle.scale !== nextStyle.scale ||
+    previousStyle.alwaysOnTop !== nextStyle.alwaysOnTop ||
+    isBackplateVisible(previousStyle) !== isBackplateVisible(nextStyle)
+    ? "window"
+    : "css";
+}
+
 function applyOverlayLayout(layout: typeof config.layout) {
   config.layout = { ...layout };
 }
@@ -164,10 +179,16 @@ function applyExportConfig(exportConfig: ExportConfig) {
   config.export = { ...exportConfig };
 }
 
+function previewOverlayStyle(style: OverlayStyle) {
+  void syncOverlayStyle(style, "css");
+}
+
 async function updateOverlayStyle(style: OverlayStyle) {
+  const previousStyle = { ...config.style };
+  const syncMode = overlayStyleSyncMode(previousStyle, style);
   applyOverlayStyle(style);
   markProfileChanged();
-  await syncOverlayStyle(style);
+  await syncOverlayStyle(style, syncMode);
 }
 
 async function updateOverlayRows(rows: typeof config.rows) {
@@ -273,6 +294,7 @@ function scheduleAppConfigSave() {
     return;
   }
 
+  console.info("[app-config] schedule-save");
   if (appConfigSaveTimer !== undefined) {
     window.clearTimeout(appConfigSaveTimer);
   }
@@ -283,6 +305,7 @@ function scheduleAppConfigSave() {
 }
 
 async function saveAppConfig() {
+  console.info("[app-config] write-start");
   const appConfig = buildAppConfigFile({
     defaultProfilePath: "docs/default-config.json",
     recentProfiles: recentProfiles.value,
@@ -315,6 +338,7 @@ async function saveAppConfig() {
   recentProfiles.value = appConfig.profiles.recentProfiles;
 
   await tauriApi.saveAppConfig(`${JSON.stringify(appConfig, null, 2)}\n`);
+  console.info("[app-config] write-done");
 }
 
 async function applyConfigToOverlay() {
@@ -507,6 +531,7 @@ onUnmounted(() => {
     window.clearTimeout(syncFeedbackTimer);
   }
   stopAppConfigWatch?.();
+  disposeOverlayStyleSync();
   unlistenInputState?.();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
@@ -550,6 +575,7 @@ onUnmounted(() => {
       :hotkey-capture-target="hotkeyCaptureTarget"
       :video-exporter-config="videoExporterConfig"
       :notifications="notifications"
+      @preview-overlay-style="previewOverlayStyle"
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-rows="updateOverlayRows"
       @update-overlay-visible="setOverlayVisible"
