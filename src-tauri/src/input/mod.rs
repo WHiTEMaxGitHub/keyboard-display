@@ -10,7 +10,13 @@ mod windows;
 mod unsupported;
 
 use serde::Serialize;
-use std::{collections::BTreeSet, sync::Mutex};
+use std::{
+    collections::BTreeSet,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Mutex,
+    },
+};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::debug_log;
@@ -42,12 +48,14 @@ pub struct InputBackendLogPayload {
 
 pub struct InputStateBridge {
     active_keys: Mutex<BTreeSet<String>>,
+    log_count: AtomicUsize,
 }
 
 impl InputStateBridge {
     pub fn new() -> Self {
         Self {
             active_keys: Mutex::new(BTreeSet::new()),
+            log_count: AtomicUsize::new(0),
         }
     }
 
@@ -59,7 +67,7 @@ impl InputStateBridge {
     ) -> Result<(), String> {
         let mut active_keys = self.active_keys.lock().map_err(|error| error.to_string())?;
         if pressed {
-            active_keys.insert(key_id);
+            active_keys.insert(key_id.clone());
         } else {
             active_keys.remove(&key_id);
         }
@@ -67,6 +75,15 @@ impl InputStateBridge {
         let payload = OverlayActiveKeysPayload {
             key_ids: active_keys.iter().cloned().collect(),
         };
+        if self.log_count.fetch_add(1, Ordering::Relaxed) < 80 {
+            debug_log::write(
+                "input-bridge",
+                &format!(
+                    "active-update key_id={key_id} pressed={pressed} active={:?}",
+                    payload.key_ids
+                ),
+            );
+        }
         app_handle
             .emit_to("pov", OVERLAY_ACTIVE_KEYS_EVENT, payload)
             .map_err(|error| error.to_string())
