@@ -48,14 +48,16 @@ pub struct InputBackendLogPayload {
 
 pub struct InputStateBridge {
     active_keys: Mutex<BTreeSet<String>>,
-    log_count: AtomicUsize,
+    keyboard_log_count: AtomicUsize,
+    mouse_log_count: AtomicUsize,
 }
 
 impl InputStateBridge {
     pub fn new() -> Self {
         Self {
             active_keys: Mutex::new(BTreeSet::new()),
-            log_count: AtomicUsize::new(0),
+            keyboard_log_count: AtomicUsize::new(0),
+            mouse_log_count: AtomicUsize::new(0),
         }
     }
 
@@ -75,7 +77,13 @@ impl InputStateBridge {
         let payload = OverlayActiveKeysPayload {
             key_ids: active_keys.iter().cloned().collect(),
         };
-        if self.log_count.fetch_add(1, Ordering::Relaxed) < 80 {
+        let log_count = if key_id.starts_with("mouse-") {
+            self.mouse_log_count.fetch_add(1, Ordering::Relaxed)
+        } else {
+            self.keyboard_log_count.fetch_add(1, Ordering::Relaxed)
+        };
+        let log_limit = if key_id.starts_with("mouse-") { 24 } else { 160 };
+        if log_count < log_limit {
             debug_log::write(
                 "input-bridge",
                 &format!(

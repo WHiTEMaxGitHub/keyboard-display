@@ -17,8 +17,10 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
   const activeKeyIds = ref(new Set<string>());
   const overlayInputDebug = ref("");
   const overlayInputDebugCount = ref(0);
-  let configLogCount = 0;
-  let overlayLogCount = 0;
+  let configKeyboardLogCount = 0;
+  let configMouseLogCount = 0;
+  let overlayKeyboardLogCount = 0;
+  let overlayMouseLogCount = 0;
   let unlistenInputState: UnlistenFn | undefined;
 
   function updateActiveKey(keyId: string, pressed: boolean) {
@@ -41,8 +43,10 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
           overlayInputDebugCount.value += 1;
           overlayInputDebug.value = `${event.payload.keyIds.join("+") || "none"} #${overlayInputDebugCount.value}`;
           activeKeyIds.value = new Set(event.payload.keyIds);
-          if (overlayLogCount < 80) {
-            overlayLogCount += 1;
+          const hasMouseKey = event.payload.keyIds.some((keyId) => keyId.startsWith("mouse-"));
+          const logCount = hasMouseKey ? overlayMouseLogCount++ : overlayKeyboardLogCount++;
+          const logLimit = hasMouseKey ? 24 : 160;
+          if (logCount < logLimit) {
             void tauriApi.writeDebugLog(
               "frontend-pov-input",
               `active=${JSON.stringify(event.payload.keyIds)}`,
@@ -57,8 +61,10 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
       INPUT_STATE_EVENT,
       (event) => {
         updateActiveKey(event.payload.keyId, event.payload.pressed);
-        if (configLogCount < 80) {
-          configLogCount += 1;
+        const isMouseKey = event.payload.keyId.startsWith("mouse-");
+        const logCount = isMouseKey ? configMouseLogCount++ : configKeyboardLogCount++;
+        const logLimit = isMouseKey ? 24 : 160;
+        if (logCount < logLimit) {
           void tauriApi.writeDebugLog(
             "frontend-config-input",
             `keyId=${event.payload.keyId} pressed=${event.payload.pressed} active=${JSON.stringify([...activeKeyIds.value])}`,

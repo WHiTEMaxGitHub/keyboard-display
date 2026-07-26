@@ -69,7 +69,7 @@ pub fn start(app_handle: AppHandle) {
 
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
     if let Some(app_handle) = APP_HANDLE.get() {
-        if KEYBOARD_CALLBACK_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 32 {
+        if KEYBOARD_CALLBACK_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 160 {
             if code >= 0 {
                 let keyboard = *(lparam as *const KBDLLHOOKSTRUCT);
                 emit_backend_log(
@@ -110,7 +110,7 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
                 });
 
             if let Some(app_handle) = APP_HANDLE.get() {
-                if KEYBOARD_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 24 {
+                if KEYBOARD_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 160 {
                     emit_backend_log(
                         app_handle,
                         "windows-keyboard-event",
