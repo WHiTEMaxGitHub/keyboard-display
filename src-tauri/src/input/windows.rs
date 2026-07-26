@@ -20,6 +20,7 @@ use windows_sys::Win32::{
 use super::{emit_backend_log, emit_input_state, mapping};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+static KEYBOARD_CALLBACK_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
 static KEYBOARD_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
 static MOUSE_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
 
@@ -67,6 +68,35 @@ pub fn start(app_handle: AppHandle) {
 }
 
 unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
+    if let Some(app_handle) = APP_HANDLE.get() {
+        if KEYBOARD_CALLBACK_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 32 {
+            if code >= 0 {
+                let keyboard = *(lparam as *const KBDLLHOOKSTRUCT);
+                emit_backend_log(
+                    app_handle,
+                    "windows-keyboard-callback",
+                    [
+                        ("code", code.to_string()),
+                        ("wparam", (wparam as u32).to_string()),
+                        ("vkCode", keyboard.vkCode.to_string()),
+                        ("scanCode", keyboard.scanCode.to_string()),
+                        ("flags", keyboard.flags.to_string()),
+                        ("time", keyboard.time.to_string()),
+                    ],
+                );
+            } else {
+                emit_backend_log(
+                    app_handle,
+                    "windows-keyboard-callback",
+                    [
+                        ("code", code.to_string()),
+                        ("wparam", (wparam as u32).to_string()),
+                    ],
+                );
+            }
+        }
+    }
+
     if code >= 0 {
         let keyboard = *(lparam as *const KBDLLHOOKSTRUCT);
         let pressed = matches!(wparam as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
