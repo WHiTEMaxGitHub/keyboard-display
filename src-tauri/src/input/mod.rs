@@ -47,8 +47,10 @@ fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: 
         pressed,
     };
 
-    if let Err(error) = app_handle.emit(INPUT_STATE_EVENT, payload) {
-        eprintln!("failed to emit input state: {error}");
+    for window_label in ["config", "pov"] {
+        if let Err(error) = app_handle.emit_to(window_label, INPUT_STATE_EVENT, payload.clone()) {
+            eprintln!("failed to emit input state to {window_label}: {error}");
+        }
     }
 }
 
@@ -66,5 +68,7 @@ fn emit_backend_log(
             .collect(),
     };
 
-    let _ = app_handle.emit(INPUT_BACKEND_LOG_EVENT, payload);
+    for window_label in ["config", "pov"] {
+        let _ = app_handle.emit_to(window_label, INPUT_BACKEND_LOG_EVENT, payload.clone());
+    }
 }
