@@ -130,8 +130,8 @@ unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
         dwFlags: RIDEV_INPUTSINK,
         hwndTarget: hwnd,
     };
-    let ok = RegisterRawInputDevices(&[device], size_of::<RAWINPUTDEVICE>() as u32);
-    if !ok {
+    let ok = RegisterRawInputDevices(&device, 1, size_of::<RAWINPUTDEVICE>() as u32);
+    if ok == 0 {
         if let Some(app_handle) = APP_HANDLE.get() {
             emit_backend_log(
                 app_handle,
