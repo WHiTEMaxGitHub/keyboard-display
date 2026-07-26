@@ -44,10 +44,6 @@ export const tauriApi = {
     return invoke<void>("record_input_event", { keyId, pressed });
   },
 
-  updateOverlayInputState(keyId: string, pressed: boolean) {
-    return invoke<void>("update_overlay_input_state", { keyId, pressed });
-  },
-
   addRecordingMarker(name: string) {
     return invoke<void>("add_recording_marker", { name });
   },

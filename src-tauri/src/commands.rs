@@ -2,7 +2,6 @@ use tauri::Manager;
 
 use crate::{
     exporter::{self, InstallVideoExporterResult, VideoExporterStatus},
-    input::InputStateBridge,
     recording::{self, RecordingManager},
 };
 
@@ -73,16 +72,6 @@ pub fn record_input_event(
     pressed: bool,
 ) -> Result<(), String> {
     state.record_input(recording::monotonic_now_ms(), key_id, pressed)
-}
-
-#[tauri::command]
-pub fn update_overlay_input_state(
-    app: tauri::AppHandle,
-    state: tauri::State<'_, InputStateBridge>,
-    key_id: String,
-    pressed: bool,
-) -> Result<(), String> {
-    state.update(&app, key_id, pressed)
 }
 
 #[tauri::command]

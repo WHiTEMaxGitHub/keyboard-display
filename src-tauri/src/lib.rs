@@ -20,7 +20,6 @@ pub fn run() {
             commands::save_app_config,
             commands::default_recording_dir,
             commands::start_recording,
-            commands::update_overlay_input_state,
             commands::record_input_event,
             commands::add_recording_marker,
             commands::suppress_recording_keys,

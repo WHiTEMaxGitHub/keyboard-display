@@ -11,7 +11,7 @@ mod unsupported;
 
 use serde::Serialize;
 use std::{collections::BTreeSet, sync::Mutex};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 const INPUT_STATE_EVENT: &str = "input-state";
 const OVERLAY_ACTIVE_KEYS_EVENT: &str = "overlay-active-keys";
@@ -83,10 +83,17 @@ pub fn start_native_input_backend(app_handle: AppHandle) {
 }
 
 fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: bool) {
+    let key_id = key_id.into();
     let payload = InputStatePayload {
-        key_id: key_id.into(),
+        key_id: key_id.clone(),
         pressed,
     };
+
+    if let Some(state) = app_handle.try_state::<InputStateBridge>() {
+        if let Err(error) = state.update(app_handle, key_id, pressed) {
+            eprintln!("failed to update overlay input state: {error}");
+        }
+    }
 
     if let Err(error) = app_handle.emit_to("config", INPUT_STATE_EVENT, payload) {
         eprintln!("failed to emit input state to config: {error}");
