@@ -33,6 +33,7 @@ import {
   INPUT_BACKEND_LOG_EVENT,
   INPUT_STATE_EVENT,
   OVERLAY_CONFIG_EVENT,
+  OVERLAY_INPUT_STATE_EVENT,
   OVERLAY_READY_EVENT,
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
@@ -460,33 +461,39 @@ onMounted(async () => {
     await restoreAppConfig();
   }
 
-  unlistenInputState = await listen<InputStatePayload>(
-    INPUT_STATE_EVENT,
-    (event) => {
-      if (isOverlayWindow.value) {
+  if (isOverlayWindow.value) {
+    unlistenInputState = await listen<InputStatePayload>(
+      OVERLAY_INPUT_STATE_EVENT,
+      (event) => {
         overlayInputDebugCount.value += 1;
         overlayInputDebug.value = `${event.payload.keyId} ${event.payload.pressed ? "down" : "up"} #${overlayInputDebugCount.value}`;
-      }
-      updateActiveKey(event.payload.keyId, event.payload.pressed);
-      if (hotkeyCaptureTarget.value) {
-        if (event.payload.pressed) {
-          captureHotkeyKey(event.payload.keyId);
-        } else {
-          finishHotkeyCapture();
+        updateActiveKey(event.payload.keyId, event.payload.pressed);
+      },
+    );
+  } else {
+    unlistenInputState = await listen<InputStatePayload>(
+      INPUT_STATE_EVENT,
+      (event) => {
+        void emitTo<InputStatePayload>("pov", OVERLAY_INPUT_STATE_EVENT, event.payload);
+        updateActiveKey(event.payload.keyId, event.payload.pressed);
+        if (hotkeyCaptureTarget.value) {
+          if (event.payload.pressed) {
+            captureHotkeyKey(event.payload.keyId);
+          } else {
+            finishHotkeyCapture();
+          }
+          return;
         }
-        return;
-      }
 
-      if (!isOverlayWindow.value) {
         void (async () => {
           const consumed = await handleRecordingHotkeys();
           if (!consumed) {
             await recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
           }
         })();
-      }
-    },
-  );
+      },
+    );
+  }
 
   unlistenInputBackendLog = await listen<InputBackendLogPayload>(
     INPUT_BACKEND_LOG_EVENT,

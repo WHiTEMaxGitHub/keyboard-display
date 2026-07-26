@@ -1,4 +1,5 @@
 export const INPUT_STATE_EVENT = "input-state";
+export const OVERLAY_INPUT_STATE_EVENT = "overlay-input-state";
 export const INPUT_BACKEND_LOG_EVENT = "input-backend-log";
 export const OVERLAY_STYLE_EVENT = "overlay-style";
 export const OVERLAY_VISIBLE_EVENT = "overlay-visible";
