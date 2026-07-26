@@ -1,5 +1,6 @@
-import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { type ComputedRef, ref } from "vue";
+import { tauriApi } from "../api/tauri";
 import {
   INPUT_STATE_EVENT,
   OVERLAY_ACTIVE_KEYS_EVENT,
@@ -31,10 +32,8 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
   }
 
   // Config 窗口是唯一输入汇聚点；POV 只接收完整 active key 快照用于显示。
-  function syncOverlayActiveKeys() {
-    void emitTo<OverlayActiveKeysPayload>("pov", OVERLAY_ACTIVE_KEYS_EVENT, {
-      keyIds: [...activeKeyIds.value],
-    });
+  function syncOverlayActiveKeys(keyId: string, pressed: boolean) {
+    void tauriApi.updateOverlayInputState(keyId, pressed);
   }
 
   async function startInputBridge() {
@@ -54,7 +53,7 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
       INPUT_STATE_EVENT,
       (event) => {
         updateActiveKey(event.payload.keyId, event.payload.pressed);
-        syncOverlayActiveKeys();
+        syncOverlayActiveKeys(event.payload.keyId, event.payload.pressed);
         options.onConfigInput(event.payload);
       },
     );
