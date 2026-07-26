@@ -313,6 +313,14 @@
   - Always-on-top via `setAlwaysOnTop`.
   - Window sizing and position controls.
 
+- [ ] Evaluate mature cross-platform input capture libraries.
+  - Keep current native hook backends as the baseline while experimenting.
+  - Compare candidates against full-state overlay needs, not only hotkey
+    registration.
+  - Verify left/right modifier fidelity, mouse button coverage, background
+    capture, and macOS permission behavior.
+  - Re-check the previous `rdev` crash path before adopting any replacement.
+
 - [ ] Verify macOS overlay window behavior.
   - Transparent window background with `macOSPrivateApi`.
   - Click-through via `setIgnoreCursorEvents(true)`.
