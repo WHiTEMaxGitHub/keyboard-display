@@ -12,6 +12,7 @@ import {
   type OverlayRuntimeConfig,
   type OverlayStyleSyncMode,
 } from "./composables/useOverlayWindow";
+import { useInputStateBridge } from "./composables/useInputStateBridge";
 import {
   useRecordingController,
 } from "./composables/useRecordingController";
@@ -31,9 +32,7 @@ import {
 } from "./domain/defaultConfig";
 import {
   INPUT_BACKEND_LOG_EVENT,
-  INPUT_STATE_EVENT,
   OVERLAY_CONFIG_EVENT,
-  OVERLAY_INPUT_STATE_EVENT,
   OVERLAY_READY_EVENT,
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
@@ -49,7 +48,6 @@ import {
 } from "./domain/videoExporter";
 
 const config = reactive(createDefaultConfig());
-const activeKeyIds = ref(new Set<string>());
 const isOverlayVisible = ref(true);
 const profileName = ref("CS POV");
 const profileSourcePath = ref<string | null>(null);
@@ -58,8 +56,6 @@ const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const customOverlayPosition = ref<OverlayCustomPosition | null>(null);
 const syncFeedbackActive = ref(false);
-const overlayInputDebug = ref("");
-const overlayInputDebugCount = ref(0);
 const videoExporterConfig = ref<VideoExporterConfig>(createDefaultVideoExporterConfig());
 const recordingBrowserDirectory = ref("");
 const { notifications, notify, dismissNotification } = useNotifications();
@@ -68,7 +64,16 @@ const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
 });
 
-let unlistenInputState: UnlistenFn | undefined;
+const {
+  activeKeyIds,
+  overlayInputDebug,
+  startInputBridge,
+  stopInputBridge,
+} = useInputStateBridge({
+  isOverlayWindow,
+  onConfigInput: handleConfigInput,
+});
+
 let unlistenInputBackendLog: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
 let unlistenOverlayReady: UnlistenFn | undefined;
@@ -140,16 +145,22 @@ const {
   scheduleAppConfigSave,
 });
 
-function updateActiveKey(keyId: string, pressed: boolean) {
-  const nextKeys = new Set(activeKeyIds.value);
-
-  if (pressed) {
-    nextKeys.add(keyId);
-  } else {
-    nextKeys.delete(keyId);
+function handleConfigInput(payload: InputStatePayload) {
+  if (hotkeyCaptureTarget.value) {
+    if (payload.pressed) {
+      captureHotkeyKey(payload.keyId);
+    } else {
+      finishHotkeyCapture();
+    }
+    return;
   }
 
-  activeKeyIds.value = nextKeys;
+  void (async () => {
+    const consumed = await handleRecordingHotkeys();
+    if (!consumed) {
+      await recordInputIfNeeded(payload.keyId, payload.pressed);
+    }
+  })();
 }
 
 function applyOverlayStyle(style: OverlayStyle) {
@@ -461,39 +472,7 @@ onMounted(async () => {
     await restoreAppConfig();
   }
 
-  if (isOverlayWindow.value) {
-    unlistenInputState = await listen<InputStatePayload>(
-      OVERLAY_INPUT_STATE_EVENT,
-      (event) => {
-        overlayInputDebugCount.value += 1;
-        overlayInputDebug.value = `${event.payload.keyId} ${event.payload.pressed ? "down" : "up"} #${overlayInputDebugCount.value}`;
-        updateActiveKey(event.payload.keyId, event.payload.pressed);
-      },
-    );
-  } else {
-    unlistenInputState = await listen<InputStatePayload>(
-      INPUT_STATE_EVENT,
-      (event) => {
-        void emitTo<InputStatePayload>("pov", OVERLAY_INPUT_STATE_EVENT, event.payload);
-        updateActiveKey(event.payload.keyId, event.payload.pressed);
-        if (hotkeyCaptureTarget.value) {
-          if (event.payload.pressed) {
-            captureHotkeyKey(event.payload.keyId);
-          } else {
-            finishHotkeyCapture();
-          }
-          return;
-        }
-
-        void (async () => {
-          const consumed = await handleRecordingHotkeys();
-          if (!consumed) {
-            await recordInputIfNeeded(event.payload.keyId, event.payload.pressed);
-          }
-        })();
-      },
-    );
-  }
+  await startInputBridge();
 
   unlistenInputBackendLog = await listen<InputBackendLogPayload>(
     INPUT_BACKEND_LOG_EVENT,
@@ -571,7 +550,7 @@ onUnmounted(() => {
   }
   stopAppConfigWatch?.();
   disposeOverlayStyleSync();
-  unlistenInputState?.();
+  stopInputBridge();
   unlistenInputBackendLog?.();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
