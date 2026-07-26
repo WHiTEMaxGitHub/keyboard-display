@@ -10,18 +10,13 @@ use tauri::AppHandle;
 use windows_sys::Win32::{
     Foundation::{GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
     System::LibraryLoader::GetModuleHandleW,
-    UI::{
-        Input::KeyboardAndMouse::{
-            GetRawInputData, RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE,
-            RID_INPUT, RIDEV_INPUTSINK, RIM_TYPEKEYBOARD,
-        },
-        WindowsAndMessaging::{
-            CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-            RegisterClassW, SetWindowsHookExW, TranslateMessage, KBDLLHOOKSTRUCT, MSG, WNDCLASSW,
-            WH_KEYBOARD_LL, WH_MOUSE_LL, WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN,
-            WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP,
-            WM_SYSKEYDOWN, WM_SYSKEYUP,
-        },
+    UI::WindowsAndMessaging::{
+        CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
+        GetRawInputData, RegisterClassW, RegisterRawInputDevices, SetWindowsHookExW,
+        TranslateMessage, HRAWINPUT, KBDLLHOOKSTRUCT, MSG, RAWINPUT, RAWINPUTDEVICE,
+        RAWINPUTHEADER, RID_INPUT, RIDEV_INPUTSINK, RIM_TYPEKEYBOARD, WNDCLASSW, WH_KEYBOARD_LL,
+        WH_MOUSE_LL, WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
+        WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
     },
 };
 
@@ -114,7 +109,7 @@ unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
         0,
         0,
         0,
-        HWND(-3isize as _),
+        -3isize as HWND,
         null_mut(),
         instance,
         null_mut(),
@@ -161,7 +156,7 @@ unsafe extern "system" fn raw_input_window_proc(
 
 unsafe fn handle_raw_input(raw_input: HRAWINPUT) {
     let mut size = 0_u32;
-    let header_size = size_of::<windows_sys::Win32::UI::Input::KeyboardAndMouse::RAWINPUTHEADER>() as u32;
+    let header_size = size_of::<RAWINPUTHEADER>() as u32;
     if GetRawInputData(raw_input, RID_INPUT, null_mut(), &mut size, header_size) == u32::MAX {
         return;
     }
