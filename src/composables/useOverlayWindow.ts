@@ -55,6 +55,10 @@ export function normalizeOverlayPosition(position: string | null | undefined): O
     : "bottom-right";
 }
 
+function effectiveOverlayAlwaysOnTop(style: OverlayStyle) {
+  return navigator.platform.toLowerCase().includes("win") || style.alwaysOnTop;
+}
+
 /// 管理独立 POV overlay 窗口的生命周期和位置同步。
 export function useOverlayWindow(options: UseOverlayWindowOptions) {
   const overlayAdjusting = ref(false);
@@ -72,7 +76,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     await cssStyleSyncInFlight;
     const overlayWindow = await Window.getByLabel("pov");
     await resizeOverlayWindow(overlayWindow);
-    await overlayWindow?.setAlwaysOnTop(style.alwaysOnTop);
+    await overlayWindow?.setAlwaysOnTop(effectiveOverlayAlwaysOnTop(style));
     await emitTo<OverlayStyle>("pov", "overlay-style", style);
     if (options.isOverlayVisible.value && options.overlayPosition.value !== "custom") {
       await moveOverlay(options.overlayPosition.value, false, false);
@@ -163,7 +167,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       transparent: true,
       backgroundColor: [0, 0, 0, 0],
       shadow: false,
-      alwaysOnTop: options.config.style.alwaysOnTop,
+      alwaysOnTop: effectiveOverlayAlwaysOnTop(options.config.style),
       visible: false,
       resizable: false,
       skipTaskbar: true,
@@ -185,7 +189,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     }
 
     await resizeOverlayWindow(targetWindow);
-    await targetWindow.setAlwaysOnTop(options.config.style.alwaysOnTop);
+    await targetWindow.setAlwaysOnTop(effectiveOverlayAlwaysOnTop(options.config.style));
     await emitRuntimeConfig();
   }
 
