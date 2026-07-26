@@ -39,8 +39,8 @@
     `macos-keycode-<keycode>` and `windows-scancode-<scanCode>`.
   - Current fifth pass shows a live preview in the layout editor using the POV
     renderer.
-  - TODO: Consider a user-editable key id registry for naming unusual input
-    devices.
+  - Current sixth pass adds a user-editable key id label registry for naming
+    unusual input devices.
   - Users should be able to edit `overlay.rows` without hand-writing JSON.
   - Support adding, deleting, and reordering rows.
   - Support adding, deleting, and reordering key and gap items within a row.

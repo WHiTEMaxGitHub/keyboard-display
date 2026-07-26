@@ -47,6 +47,7 @@ const layoutSubPageOptions: Array<{ value: LayoutSubPage; label: string }> = [
 const props = defineProps<{
   config: AppConfig;
   activeKeys: Set<string>;
+  keyIdLabels: AppConfig["keyIdLabels"];
   overlayVisible: boolean;
   profileName: string;
   profileChanged: boolean;
@@ -76,6 +77,7 @@ const layoutRows = computed(() => {
 
 const emit = defineEmits<{
   "preview-overlay-style": [style: OverlayStyle];
+  "update-key-id-labels": [labels: AppConfig["keyIdLabels"]];
   "update-overlay-style": [style: OverlayStyle];
   "update-overlay-rows": [rows: AppConfig["rows"]];
   "update-overlay-visible": [visible: boolean];
@@ -259,6 +261,7 @@ async function uninstallAppManagedVideoExporter() {
               :layout="config.layout"
               :rows="config.rows"
               :keys="config.keys"
+              :key-id-labels="keyIdLabels"
               :active-keys="activeKeys"
               :overlay-style="config.style"
             />
@@ -338,12 +341,15 @@ async function uninstallAppManagedVideoExporter() {
                 :layout="config.layout"
                 :rows="config.rows"
                 :keys="config.keys"
+                :key-id-labels="keyIdLabels"
                 :active-keys="activeKeys"
                 :overlay-style="config.style"
               />
             </div>
             <LayoutEditor
               :rows="config.rows"
+              :key-id-labels="keyIdLabels"
+              @update-key-id-labels="emit('update-key-id-labels', $event)"
               @update-rows="emit('update-overlay-rows', $event)"
             />
           </div>

@@ -24,10 +24,12 @@ import { INPUT_STATE_EVENT, type InputStatePayload } from "../domain/inputEvents
 
 const props = defineProps<{
   rows: OverlayRow[];
+  keyIdLabels: Record<string, string>;
 }>();
 
 const emit = defineEmits<{
   "update-rows": [rows: OverlayRow[]];
+  "update-key-id-labels": [labels: Record<string, string>];
 }>();
 
 const collapsedRows = reactive(new Set<number>());
@@ -36,6 +38,7 @@ const captureTarget = ref<{ rowIndex: number; itemIndex: number; currentId: stri
 const widthDrafts = reactive(new Map<string, string>());
 const textDrafts = reactive(new Map<string, string>());
 const platformLabelDrafts = reactive(new Map<string, string>());
+const registryLabelDrafts = reactive(new Map<string, string>());
 const idErrors = reactive(new Map<string, string>());
 let unlistenInputState: UnlistenFn | undefined;
 let collapsedRowsInitialized = false;
@@ -48,6 +51,7 @@ watch(
     widthDrafts.clear();
     textDrafts.clear();
     platformLabelDrafts.clear();
+    registryLabelDrafts.clear();
     platformLabelEditors.clear();
     idErrors.clear();
   },
@@ -209,6 +213,10 @@ function platformLabelEditorKey(rowIndex: number, itemIndex: number) {
   return `${rowIndex}-${itemIndex}`;
 }
 
+function registryLabelDraftKey(rowIndex: number, itemIndex: number) {
+  return `${rowIndex}-${itemIndex}-registry-label`;
+}
+
 function isPlatformLabelEditorOpen(rowIndex: number, itemIndex: number) {
   return platformLabelEditors.has(platformLabelEditorKey(rowIndex, itemIndex));
 }
@@ -243,6 +251,34 @@ function updatePlatformLabelDraft(
     platformLabelDraftKey(rowIndex, itemIndex, platform),
     (event.target as HTMLInputElement).value,
   );
+}
+
+function registryLabelDraft(rowIndex: number, itemIndex: number, item: KeyBinding) {
+  return registryLabelDrafts.get(registryLabelDraftKey(rowIndex, itemIndex)) ??
+    props.keyIdLabels[item.id] ??
+    "";
+}
+
+function updateRegistryLabelDraft(rowIndex: number, itemIndex: number, event: Event) {
+  registryLabelDrafts.set(
+    registryLabelDraftKey(rowIndex, itemIndex),
+    (event.target as HTMLInputElement).value,
+  );
+}
+
+function commitRegistryLabel(rowIndex: number, itemIndex: number, item: KeyBinding) {
+  const key = registryLabelDraftKey(rowIndex, itemIndex);
+  const value = (registryLabelDrafts.get(key) ?? props.keyIdLabels[item.id] ?? "").trim();
+  registryLabelDrafts.delete(key);
+
+  const nextLabels = { ...props.keyIdLabels };
+  if (value) {
+    nextLabels[item.id] = value;
+  } else {
+    delete nextLabels[item.id];
+  }
+
+  emit("update-key-id-labels", nextLabels);
 }
 
 function commitPlatformLabel(
@@ -443,6 +479,18 @@ function updateGapWidth(
                     @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
                   />
                 </label>
+                <label>
+                  Registered label
+                  <input
+                    :value="registryLabelDraft(rowIndex, itemIndex, item)"
+                    autocapitalize="off"
+                    autocorrect="off"
+                    spellcheck="false"
+                    @blur="commitRegistryLabel(rowIndex, itemIndex, item)"
+                    @change="commitRegistryLabel(rowIndex, itemIndex, item)"
+                    @input="updateRegistryLabelDraft(rowIndex, itemIndex, $event)"
+                  />
+                </label>
               </div>
             </Transition>
           </template>
@@ -627,7 +675,7 @@ function updateGapWidth(
 .platform-label-fields {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
   padding-top: 8px;

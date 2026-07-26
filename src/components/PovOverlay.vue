@@ -3,6 +3,7 @@ import { computed } from "vue";
 import {
   isKeyBinding,
   type KeyBinding,
+  type KeyIdLabelRegistry,
   type OverlayLayout,
   type OverlayRow,
   type OverlayStyle,
@@ -14,6 +15,7 @@ const props = defineProps<{
   layout: OverlayLayout;
   rows: OverlayRow[];
   keys: KeyBinding[];
+  keyIdLabels?: KeyIdLabelRegistry;
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
   syncFeedbackActive?: boolean;
@@ -82,7 +84,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
               :style="{ '--key-width-unit': normalizeUnit(item.widthUnit) }"
               :class="{ active: activeKeys.has(item.id), hidden: !isKeyVisible(item.id, activeKeys, overlayStyle) }"
             >
-              {{ displayLabelForKey(item, platformKey) }}
+              {{ displayLabelForKey(item, platformKey, keyIdLabels) }}
             </span>
             <span
               v-else

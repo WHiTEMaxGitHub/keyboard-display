@@ -172,6 +172,10 @@ function applyOverlayRows(rows: typeof config.rows) {
   config.keys = flattenRowKeys(config.rows);
 }
 
+function applyKeyIdLabels(keyIdLabels: typeof config.keyIdLabels) {
+  config.keyIdLabels = { ...keyIdLabels };
+}
+
 function applyRecordingConfig(recording: RecordingConfig) {
   config.recording = { ...recording };
 }
@@ -198,6 +202,12 @@ async function updateOverlayRows(rows: typeof config.rows) {
   await syncOverlayRows();
 }
 
+async function updateKeyIdLabels(keyIdLabels: typeof config.keyIdLabels) {
+  applyKeyIdLabels(keyIdLabels);
+  markProfileChanged();
+  await syncOverlayRows();
+}
+
 function markProfileChanged() {
   profileChanged.value = true;
 }
@@ -212,6 +222,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
 
   applyOverlayLayout(loadedConfig.overlay.layout);
   applyOverlayRows(loadedConfig.overlay.rows);
+  applyKeyIdLabels(loadedConfig.overlay.keyIdLabels ?? {});
   applyOverlayStyle(loadedConfig.overlay.style);
   applyRecordingConfig(loadedConfig.recording);
   applyExportConfig(loadedConfig.export);
@@ -221,6 +232,7 @@ async function applyLoadedConfig(text: string, fileName: string, sourcePath: str
     layout: loadedConfig.overlay.layout,
     rows: loadedConfig.overlay.rows,
     keys: loadedConfig.overlay.keys,
+    keyIdLabels: loadedConfig.overlay.keyIdLabels ?? {},
     style: loadedConfig.overlay.style,
   });
   const visible = loadedConfig.overlay.visible ?? true;
@@ -273,6 +285,7 @@ async function restoreAppConfig() {
 
   applyOverlayLayout(appConfig.currentProfile.overlay.layout);
   applyOverlayRows(appConfig.currentProfile.overlay.rows);
+  applyKeyIdLabels(appConfig.currentProfile.overlay.keyIdLabels);
   applyOverlayStyle(appConfig.currentProfile.overlay.style);
   applyRecordingConfig(appConfig.currentProfile.recording);
   applyExportConfig(appConfig.currentProfile.export);
@@ -281,6 +294,7 @@ async function restoreAppConfig() {
     layout: appConfig.currentProfile.overlay.layout,
     rows: appConfig.currentProfile.overlay.rows,
     keys: appConfig.currentProfile.overlay.keys,
+    keyIdLabels: appConfig.currentProfile.overlay.keyIdLabels,
     style: appConfig.currentProfile.overlay.style,
   });
 
@@ -321,6 +335,7 @@ async function saveAppConfig() {
         style: config.style,
         rows: config.rows,
         keys: config.keys,
+        keyIdLabels: config.keyIdLabels,
         customPosition: customOverlayPosition.value,
       },
     },
@@ -345,6 +360,7 @@ async function applyConfigToOverlay() {
     layout: config.layout,
     rows: config.rows,
     keys: config.keys,
+    keyIdLabels: config.keyIdLabels,
     style: config.style,
   });
   await setOverlayVisible(isOverlayVisible.value);
@@ -545,6 +561,7 @@ onUnmounted(() => {
         :layout="config.layout"
         :rows="config.rows"
         :keys="config.keys"
+        :key-id-labels="config.keyIdLabels"
         :active-keys="activeKeyIds"
         :overlay-style="config.style"
         :sync-feedback-active="syncFeedbackActive"
@@ -554,6 +571,7 @@ onUnmounted(() => {
       v-else
       :config="config"
       :active-keys="activeKeyIds"
+      :key-id-labels="config.keyIdLabels"
       :overlay-visible="isOverlayVisible"
       :profile-name="profileName"
       :profile-changed="profileChanged"
@@ -576,6 +594,7 @@ onUnmounted(() => {
       :video-exporter-config="videoExporterConfig"
       :notifications="notifications"
       @preview-overlay-style="previewOverlayStyle"
+      @update-key-id-labels="updateKeyIdLabels"
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-rows="updateOverlayRows"
       @update-overlay-visible="setOverlayVisible"

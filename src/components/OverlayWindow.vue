@@ -3,13 +3,20 @@ import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { onMounted, onUnmounted, ref } from "vue";
 import { OVERLAY_ADJUST_MODE_EVENT, OVERLAY_READY_EVENT } from "../domain/inputEvents";
-import type { KeyBinding, OverlayLayout, OverlayRow, OverlayStyle } from "../domain/defaultConfig";
+import type {
+  KeyBinding,
+  KeyIdLabelRegistry,
+  OverlayLayout,
+  OverlayRow,
+  OverlayStyle,
+} from "../domain/defaultConfig";
 import PovOverlay from "./PovOverlay.vue";
 
 defineProps<{
   layout: OverlayLayout;
   rows: OverlayRow[];
   keys: KeyBinding[];
+  keyIdLabels?: KeyIdLabelRegistry;
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
   syncFeedbackActive?: boolean;
@@ -76,6 +83,7 @@ async function setClickThrough(enabled: boolean) {
       :layout="layout"
       :rows="rows"
       :keys="keys"
+      :key-id-labels="keyIdLabels"
       :active-keys="activeKeys"
       :overlay-style="overlayStyle"
       :sync-feedback-active="syncFeedbackActive"

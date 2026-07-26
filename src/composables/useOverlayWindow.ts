@@ -26,6 +26,7 @@ export type OverlayRuntimeConfig = {
   layout: AppConfig["layout"];
   rows: AppConfig["rows"];
   keys: AppConfig["keys"];
+  keyIdLabels: AppConfig["keyIdLabels"];
   style: OverlayStyle;
 };
 
@@ -193,6 +194,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       layout: options.config.layout,
       rows: options.config.rows,
       keys: options.config.keys,
+      keyIdLabels: options.config.keyIdLabels,
       style: options.config.style,
     });
   }
