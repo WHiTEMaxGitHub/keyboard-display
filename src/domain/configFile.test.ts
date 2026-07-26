@@ -28,6 +28,10 @@ describe("parseConfigFile", () => {
             idleTextColor: "#f5f7fa",
             activeTextColor: "#ffffff",
           },
+          keyIdLabels: {
+            "macos-keycode-123": "Extra key",
+            "  ": "ignored",
+          },
           keys: [
             {
               id: "w",
@@ -58,6 +62,9 @@ describe("parseConfigFile", () => {
       label: "W",
       row: 0,
       widthUnit: 1.23,
+    });
+    expect(config.overlay.keyIdLabels).toEqual({
+      "macos-keycode-123": "Extra key",
     });
     expect(config.recording.defaultFps).toBe(60);
     expect(config.recording.customFpsEnabled).toBe(true);
@@ -166,6 +173,7 @@ describe("buildConfigFileJson", () => {
     expect(parsed.overlay.layout).toEqual(config.layout);
     expect(parsed.overlay.style).toEqual(config.style);
     expect(parsed.overlay.rows).toEqual(config.rows);
+    expect(parsed.overlay.keyIdLabels).toEqual(config.keyIdLabels);
     expect(parsed.overlay.keys).toBeUndefined();
     expect(parsed.export.renderMarkers).toBe(true);
   });

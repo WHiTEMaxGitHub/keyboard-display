@@ -1,4 +1,4 @@
-import type { KeyBinding } from "./defaultConfig";
+import type { KeyBinding, KeyIdLabelRegistry } from "./defaultConfig";
 
 export type PlatformKey = "macos" | "windows" | "default";
 
@@ -35,10 +35,23 @@ export function detectPlatformKey(platform: string = navigator.platform): Platfo
   return "default";
 }
 
-export function displayLabelForKey(key: KeyBinding, platform: PlatformKey): string {
+export function displayLabelForKey(
+  key: KeyBinding,
+  platform: PlatformKey,
+  keyIdLabels: KeyIdLabelRegistry = {},
+): string {
+  const registryLabel = keyIdLabels[key.id];
+  if (registryLabel && isPlaceholderLabel(key.label)) {
+    return registryLabel;
+  }
+
   if (platform === "default") {
     return key.label;
   }
 
   return key.platformLabels?.[platform] ?? builtInPlatformLabels[key.id]?.[platform] ?? key.label;
+}
+
+function isPlaceholderLabel(label: string) {
+  return label.trim() === "" || label.trim().toLowerCase() === "key";
 }

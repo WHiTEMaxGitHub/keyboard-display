@@ -48,6 +48,8 @@ export type OverlayStyle = {
   activeTextColor: string;
 };
 
+export type KeyIdLabelRegistry = Record<string, string>;
+
 export type RecordingConfig = {
   defaultFps: number;
   fpsOptions: number[];
@@ -85,6 +87,7 @@ export type AppConfig = {
   layout: OverlayLayout;
   rows: OverlayRow[];
   keys: KeyBinding[];
+  keyIdLabels: KeyIdLabelRegistry;
   style: OverlayStyle;
   recording: RecordingConfig;
   export: ExportConfig;
@@ -227,6 +230,7 @@ export function createDefaultConfig(): AppConfig {
     },
     rows,
     keys: flattenRowKeys(rows),
+    keyIdLabels: {},
     style: {
       scale: 1,
       opacity: 0.92,

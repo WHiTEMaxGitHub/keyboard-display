@@ -21,6 +21,7 @@ describe("app config", () => {
           style: config.style,
           rows: config.rows,
           keys: config.keys,
+          keyIdLabels: config.keyIdLabels,
         },
       },
       recording: {
@@ -50,6 +51,7 @@ describe("app config", () => {
     expect("dirty" in appConfig.currentProfile).toBe(false);
     expect(appConfig.currentProfile.recording).toEqual(config.recording);
     expect(appConfig.currentProfile.overlay.rows).toEqual(config.rows);
+    expect(appConfig.currentProfile.overlay.keyIdLabels).toEqual(config.keyIdLabels);
     expect("keys" in appConfig.currentProfile.overlay).toBe(false);
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
     expect(appConfig.recording.outputDirectory).toBe("/tmp/recordings");
@@ -80,6 +82,7 @@ describe("app config", () => {
           style: config.style,
           rows: config.rows,
           keys: config.keys,
+          keyIdLabels: config.keyIdLabels,
         },
       },
       recording: {
@@ -128,6 +131,7 @@ describe("app config", () => {
           style: config.style,
           rows: config.rows,
           keys: config.keys,
+          keyIdLabels: config.keyIdLabels,
         },
       },
       recording: {

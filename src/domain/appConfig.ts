@@ -33,12 +33,15 @@ export type CurrentProfile = {
     style: AppConfig["style"];
     rows: AppConfig["rows"];
     keys: AppConfig["keys"];
+    keyIdLabels: AppConfig["keyIdLabels"];
     customPosition?: OverlayCustomPosition | null;
   };
 };
 
 type PersistedCurrentProfile = Omit<CurrentProfile, "overlay"> & {
-  overlay: Omit<CurrentProfile["overlay"], "keys">;
+  overlay: Omit<CurrentProfile["overlay"], "keys" | "keyIdLabels"> & {
+    keyIdLabels?: AppConfig["keyIdLabels"];
+  };
 };
 
 export type AppConfigFile = {
@@ -98,6 +101,7 @@ export function buildAppConfigFile({
         layout: currentProfile.overlay.layout,
         style: currentProfile.overlay.style,
         rows: currentProfile.overlay.rows,
+        keyIdLabels: currentProfile.overlay.keyIdLabels,
         customPosition: currentProfile.overlay.customPosition ?? null,
       },
     },
@@ -168,6 +172,7 @@ export function parseAppConfigFile(text: string): AppConfigFile {
         ...config.currentProfile.overlay,
         rows,
         keys: flattenRowKeys(rows),
+        keyIdLabels: normalizeKeyIdLabels(config.currentProfile.overlay.keyIdLabels),
       },
     },
     recording: {
@@ -181,6 +186,18 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       ),
     },
   };
+}
+
+function normalizeKeyIdLabels(labels: AppConfig["keyIdLabels"] | undefined): AppConfig["keyIdLabels"] {
+  if (!labels) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(labels)
+      .map(([keyId, label]) => [keyId.trim(), label.trim()])
+      .filter(([keyId, label]) => keyId && label),
+  );
 }
 
 function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppConfig["export"] {

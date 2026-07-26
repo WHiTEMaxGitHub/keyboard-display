@@ -24,6 +24,7 @@ export type OverlayConfigFile = {
     style: OverlayStyle;
     rows: OverlayRow[];
     keys: KeyBinding[];
+    keyIdLabels?: AppConfig["keyIdLabels"];
   };
   recording: AppConfig["recording"];
   export: AppConfig["export"];
@@ -46,6 +47,7 @@ export function parseConfigFile(text: string): OverlayConfigFile {
       },
       rows,
       keys: flattenRowKeys(rows),
+      keyIdLabels: normalizeKeyIdLabels(config.overlay.keyIdLabels),
     },
     recording,
     export: exportConfig,
@@ -76,6 +78,7 @@ export function buildConfigFileJson({
         layout: config.layout,
         style: config.style,
         rows: config.rows,
+        keyIdLabels: config.keyIdLabels,
       },
       recording: config.recording,
       export: config.export,
@@ -83,6 +86,18 @@ export function buildConfigFileJson({
     null,
     2,
   )}\n`;
+}
+
+function normalizeKeyIdLabels(labels: AppConfig["keyIdLabels"] | undefined): AppConfig["keyIdLabels"] {
+  if (!labels) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(labels)
+      .map(([keyId, label]) => [keyId.trim(), label.trim()])
+      .filter(([keyId, label]) => keyId && label),
+  );
 }
 
 function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppConfig["export"] {

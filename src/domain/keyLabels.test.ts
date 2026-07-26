@@ -60,4 +60,20 @@ describe("displayLabelForKey", () => {
       widthUnit: 1,
     }, "macos")).toBe("Opt");
   });
+
+  it("uses registry labels only for placeholder labels", () => {
+    expect(displayLabelForKey({
+      id: "macos-keycode-123",
+      label: "Key",
+      group: "action",
+      widthUnit: 1,
+    }, "macos", { "macos-keycode-123": "Macro" })).toBe("Macro");
+
+    expect(displayLabelForKey({
+      id: "macos-keycode-123",
+      label: "Custom",
+      group: "action",
+      widthUnit: 1,
+    }, "macos", { "macos-keycode-123": "Macro" })).toBe("Custom");
+  });
 });
