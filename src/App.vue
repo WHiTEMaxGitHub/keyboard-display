@@ -57,6 +57,8 @@ const recentProfiles = ref<RecentProfile[]>([]);
 const overlayPosition = ref<OverlayPosition>("bottom-right");
 const customOverlayPosition = ref<OverlayCustomPosition | null>(null);
 const syncFeedbackActive = ref(false);
+const overlayInputDebug = ref("");
+const overlayInputDebugCount = ref(0);
 const videoExporterConfig = ref<VideoExporterConfig>(createDefaultVideoExporterConfig());
 const recordingBrowserDirectory = ref("");
 const { notifications, notify, dismissNotification } = useNotifications();
@@ -461,6 +463,10 @@ onMounted(async () => {
   unlistenInputState = await listen<InputStatePayload>(
     INPUT_STATE_EVENT,
     (event) => {
+      if (isOverlayWindow.value) {
+        overlayInputDebugCount.value += 1;
+        overlayInputDebug.value = `${event.payload.keyId} ${event.payload.pressed ? "down" : "up"} #${overlayInputDebugCount.value}`;
+      }
       updateActiveKey(event.payload.keyId, event.payload.pressed);
       if (hotkeyCaptureTarget.value) {
         if (event.payload.pressed) {
@@ -576,6 +582,7 @@ onUnmounted(() => {
         :active-keys="activeKeyIds"
         :overlay-style="config.style"
         :sync-feedback-active="syncFeedbackActive"
+        :input-debug="overlayInputDebug"
       />
     </div>
     <ConfigPanel
