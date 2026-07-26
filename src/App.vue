@@ -478,6 +478,10 @@ onMounted(async () => {
     INPUT_BACKEND_LOG_EVENT,
     (event) => {
       console.info("[input-backend]", event.payload.message, event.payload.details ?? {});
+      void tauriApi.writeDebugLog(
+        "frontend-input-backend",
+        `${event.payload.message} ${JSON.stringify(event.payload.details ?? {})}`,
+      );
     },
   );
 

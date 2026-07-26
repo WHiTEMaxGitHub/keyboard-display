@@ -13,6 +13,8 @@ use serde::Serialize;
 use std::{collections::BTreeSet, sync::Mutex};
 use tauri::{AppHandle, Emitter, Manager};
 
+use crate::debug_log;
+
 const INPUT_STATE_EVENT: &str = "input-state";
 const OVERLAY_ACTIVE_KEYS_EVENT: &str = "overlay-active-keys";
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
@@ -91,12 +93,12 @@ fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: 
 
     if let Some(state) = app_handle.try_state::<InputStateBridge>() {
         if let Err(error) = state.update(app_handle, key_id, pressed) {
-            eprintln!("failed to update overlay input state: {error}");
+            debug_log::write("input", &format!("failed to update overlay input state: {error}"));
         }
     }
 
     if let Err(error) = app_handle.emit_to("config", INPUT_STATE_EVENT, payload) {
-        eprintln!("failed to emit input state to config: {error}");
+        debug_log::write("input", &format!("failed to emit input state to config: {error}"));
     }
 }
 
@@ -106,13 +108,16 @@ fn emit_backend_log(
     message: impl Into<String>,
     details: impl IntoIterator<Item = (impl Into<String>, String)>,
 ) {
+    let message = message.into();
+    let details = details
+        .into_iter()
+        .map(|(key, value)| (key.into(), value))
+        .collect::<std::collections::BTreeMap<String, String>>();
     let payload = InputBackendLogPayload {
-        message: message.into(),
-        details: details
-            .into_iter()
-            .map(|(key, value)| (key.into(), value))
-            .collect(),
+        message: message.clone(),
+        details: details.clone(),
     };
 
     let _ = app_handle.emit_to("config", INPUT_BACKEND_LOG_EVENT, payload);
+    debug_log::write("input-backend", &format!("{message} {details:?}"));
 }

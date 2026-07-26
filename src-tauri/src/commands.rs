@@ -1,6 +1,7 @@
 use tauri::Manager;
 
 use crate::{
+    debug_log,
     exporter::{self, InstallVideoExporterResult, VideoExporterStatus},
     recording::{self, RecordingManager},
 };
@@ -8,6 +9,11 @@ use crate::{
 #[tauri::command]
 pub fn save_config_file(path: std::path::PathBuf, contents: String) -> Result<(), String> {
     std::fs::write(path, contents).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn write_debug_log(source: String, message: String) {
+    debug_log::write(&source, &message);
 }
 
 #[tauri::command]

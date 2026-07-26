@@ -1867,6 +1867,7 @@ dependencies = [
  "chrono",
  "core-foundation",
  "core-graphics",
+ "once_cell",
  "serde",
  "serde_json",
  "tauri",

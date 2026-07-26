@@ -1,4 +1,5 @@
 mod commands;
+mod debug_log;
 mod exporter;
 mod input;
 mod recording;
@@ -15,6 +16,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             commands::save_config_file,
+            commands::write_debug_log,
             commands::read_config_file,
             commands::load_app_config,
             commands::save_app_config,

@@ -20,6 +20,10 @@ export const tauriApi = {
     return invoke<void>("save_config_file", { path, contents });
   },
 
+  writeDebugLog(source: string, message: string) {
+    return invoke<void>("write_debug_log", { source, message });
+  },
+
   readConfigFile(path: string) {
     return invoke<string>("read_config_file", { path });
   },
