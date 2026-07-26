@@ -13,12 +13,21 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter};
 
 const INPUT_STATE_EVENT: &str = "input-state";
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+const INPUT_BACKEND_LOG_EVENT: &str = "input-backend-log";
 
 #[derive(Clone, Serialize)]
 pub struct InputStatePayload {
     #[serde(rename = "keyId")]
     pub key_id: String,
     pub pressed: bool,
+}
+
+#[derive(Clone, Serialize)]
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+pub struct InputBackendLogPayload {
+    pub message: String,
+    pub details: std::collections::BTreeMap<String, String>,
 }
 
 pub fn start_native_input_backend(app_handle: AppHandle) {
@@ -41,4 +50,21 @@ fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: 
     if let Err(error) = app_handle.emit(INPUT_STATE_EVENT, payload) {
         eprintln!("failed to emit input state: {error}");
     }
+}
+
+#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+fn emit_backend_log(
+    app_handle: &AppHandle,
+    message: impl Into<String>,
+    details: impl IntoIterator<Item = (impl Into<String>, String)>,
+) {
+    let payload = InputBackendLogPayload {
+        message: message.into(),
+        details: details
+            .into_iter()
+            .map(|(key, value)| (key.into(), value))
+            .collect(),
+    };
+
+    let _ = app_handle.emit(INPUT_BACKEND_LOG_EVENT, payload);
 }

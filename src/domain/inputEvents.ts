@@ -1,4 +1,5 @@
 export const INPUT_STATE_EVENT = "input-state";
+export const INPUT_BACKEND_LOG_EVENT = "input-backend-log";
 export const OVERLAY_STYLE_EVENT = "overlay-style";
 export const OVERLAY_VISIBLE_EVENT = "overlay-visible";
 export const OVERLAY_CONFIG_EVENT = "overlay-config";
@@ -9,4 +10,9 @@ export const OVERLAY_ADJUST_MODE_EVENT = "overlay-adjust-mode";
 export type InputStatePayload = {
   keyId: string;
   pressed: boolean;
+};
+
+export type InputBackendLogPayload = {
+  message: string;
+  details?: Record<string, string | number | boolean | null>;
 };

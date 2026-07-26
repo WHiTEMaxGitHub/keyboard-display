@@ -1,10 +1,13 @@
 use std::{
     ptr::{null, null_mut},
-    sync::OnceLock,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        OnceLock,
+    },
 };
 use tauri::AppHandle;
 use windows_sys::Win32::{
-    Foundation::{LPARAM, LRESULT, WPARAM},
+    Foundation::{GetLastError, LPARAM, LRESULT, WPARAM},
     System::LibraryLoader::GetModuleHandleW,
     UI::WindowsAndMessaging::{
         CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage,
@@ -14,12 +17,15 @@ use windows_sys::Win32::{
     },
 };
 
-use super::{emit_input_state, mapping};
+use super::{emit_backend_log, emit_input_state, mapping};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
+static KEYBOARD_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
+static MOUSE_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 pub fn start(app_handle: AppHandle) {
-    let _ = APP_HANDLE.set(app_handle);
+    let _ = APP_HANDLE.set(app_handle.clone());
+    emit_backend_log(&app_handle, "windows-backend-starting", std::iter::empty::<(&str, String)>());
 
     std::thread::spawn(move || unsafe {
         let module = GetModuleHandleW(null());
@@ -27,11 +33,29 @@ pub fn start(app_handle: AppHandle) {
         let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), module, 0);
 
         if keyboard_hook.is_null() {
+            if let Some(app_handle) = APP_HANDLE.get() {
+                emit_backend_log(
+                    app_handle,
+                    "windows-keyboard-hook-failed",
+                    [("lastError", GetLastError().to_string())],
+                );
+            }
             eprintln!("Windows keyboard hook failed to start");
+        } else if let Some(app_handle) = APP_HANDLE.get() {
+            emit_backend_log(app_handle, "windows-keyboard-hook-started", std::iter::empty::<(&str, String)>());
         }
 
         if mouse_hook.is_null() {
+            if let Some(app_handle) = APP_HANDLE.get() {
+                emit_backend_log(
+                    app_handle,
+                    "windows-mouse-hook-failed",
+                    [("lastError", GetLastError().to_string())],
+                );
+            }
             eprintln!("Windows mouse hook failed to start");
+        } else if let Some(app_handle) = APP_HANDLE.get() {
+            emit_backend_log(app_handle, "windows-mouse-hook-started", std::iter::empty::<(&str, String)>());
         }
 
         let mut message = std::mem::zeroed::<MSG>();
@@ -56,6 +80,19 @@ unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARA
                 });
 
             if let Some(app_handle) = APP_HANDLE.get() {
+                if KEYBOARD_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 24 {
+                    emit_backend_log(
+                        app_handle,
+                        "windows-keyboard-event",
+                        [
+                            ("wparam", (wparam as u32).to_string()),
+                            ("vkCode", keyboard.vkCode.to_string()),
+                            ("scanCode", keyboard.scanCode.to_string()),
+                            ("pressed", pressed.to_string()),
+                            ("keyId", key_id.clone()),
+                        ],
+                    );
+                }
                 emit_input_state(app_handle, key_id, pressed);
             }
         }
@@ -78,6 +115,17 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
 
         if let Some((key_id, pressed)) = payload {
             if let Some(app_handle) = APP_HANDLE.get() {
+                if MOUSE_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 12 {
+                    emit_backend_log(
+                        app_handle,
+                        "windows-mouse-event",
+                        [
+                            ("wparam", (wparam as u32).to_string()),
+                            ("pressed", pressed.to_string()),
+                            ("keyId", key_id.to_string()),
+                        ],
+                    );
+                }
                 emit_input_state(app_handle, key_id, pressed);
             }
         }

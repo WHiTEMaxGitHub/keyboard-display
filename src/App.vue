@@ -30,12 +30,14 @@ import {
   type OverlayStyle,
 } from "./domain/defaultConfig";
 import {
+  INPUT_BACKEND_LOG_EVENT,
   INPUT_STATE_EVENT,
   OVERLAY_CONFIG_EVENT,
   OVERLAY_READY_EVENT,
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
   OVERLAY_VISIBLE_EVENT,
+  type InputBackendLogPayload,
   type InputStatePayload,
 } from "./domain/inputEvents";
 import type { RecordingHotkeyMode } from "./domain/recordingHotkeys";
@@ -64,6 +66,7 @@ const isOverlayWindow = computed(() => {
 });
 
 let unlistenInputState: UnlistenFn | undefined;
+let unlistenInputBackendLog: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
 let unlistenOverlayReady: UnlistenFn | undefined;
 let syncFeedbackTimer: number | undefined;
@@ -479,6 +482,13 @@ onMounted(async () => {
     },
   );
 
+  unlistenInputBackendLog = await listen<InputBackendLogPayload>(
+    INPUT_BACKEND_LOG_EVENT,
+    (event) => {
+      console.info("[input-backend]", event.payload.message, event.payload.details ?? {});
+    },
+  );
+
   if (isOverlayWindow.value) {
     unlistenOverlayStyle = await listen<OverlayStyle>(
       OVERLAY_STYLE_EVENT,
@@ -549,6 +559,7 @@ onUnmounted(() => {
   stopAppConfigWatch?.();
   disposeOverlayStyleSync();
   unlistenInputState?.();
+  unlistenInputBackendLog?.();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
 });
