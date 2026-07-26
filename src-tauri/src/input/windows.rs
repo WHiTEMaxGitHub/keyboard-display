@@ -10,13 +10,18 @@ use tauri::AppHandle;
 use windows_sys::Win32::{
     Foundation::{GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
     System::LibraryLoader::GetModuleHandleW,
-    UI::WindowsAndMessaging::{
-        CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-        GetRawInputData, RegisterClassW, RegisterRawInputDevices, SetWindowsHookExW,
-        TranslateMessage, HRAWINPUT, KBDLLHOOKSTRUCT, MSG, RAWINPUT, RAWINPUTDEVICE,
-        RAWINPUTHEADER, RID_INPUT, RIDEV_INPUTSINK, RIM_TYPEKEYBOARD, WNDCLASSW, WH_KEYBOARD_LL,
-        WH_MOUSE_LL, WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP,
-        WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+    UI::{
+        Input::{
+            GetRawInputData, RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE,
+            RAWINPUTHEADER, RID_INPUT, RIDEV_INPUTSINK, RIM_TYPEKEYBOARD,
+        },
+        WindowsAndMessaging::{
+            CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
+            RegisterClassW, SetWindowsHookExW, TranslateMessage, KBDLLHOOKSTRUCT, MSG, WNDCLASSW,
+            WH_KEYBOARD_LL, WH_MOUSE_LL, WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN,
+            WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP,
+            WM_SYSKEYDOWN, WM_SYSKEYUP,
+        },
     },
 };
 
