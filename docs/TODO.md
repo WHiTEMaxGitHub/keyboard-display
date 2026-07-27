@@ -332,6 +332,17 @@
   - Known Windows WebView2 / transparent-window behavior.
   - Fallback behavior if global capture permission is missing.
 
+## Debug logging
+
+- [ ] Extract the debug logger into a reusable crate.
+  - Keep the current in-app `debug_log` module as the first implementation.
+  - Provide a single-threaded writer for simple tools and tests.
+  - Provide a multi-threaded buffered writer for desktop apps and hot input
+    paths.
+  - Support explicit flush/shutdown so release builds can preserve the last
+    diagnostic events before exit.
+  - Keep log routing usable from both Rust backend code and frontend commands.
+
 ## Commit chain plan
 
 After cleaning up the current working tree, split the work into a logical commit

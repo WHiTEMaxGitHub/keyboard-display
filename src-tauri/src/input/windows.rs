@@ -1,10 +1,7 @@
 use std::{
     mem::size_of,
     ptr::{null, null_mut},
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        OnceLock,
-    },
+    sync::OnceLock,
 };
 use tauri::AppHandle;
 use windows_sys::Win32::{
@@ -17,10 +14,9 @@ use windows_sys::Win32::{
         },
         WindowsAndMessaging::{
             CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-            RegisterClassW, SetWindowsHookExW, TranslateMessage, KBDLLHOOKSTRUCT, MSG, WNDCLASSW,
-            WH_KEYBOARD_LL, WH_MOUSE_LL, WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN,
-            WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP,
-            WM_SYSKEYDOWN, WM_SYSKEYUP,
+            RegisterClassW, SetWindowsHookExW, TranslateMessage, MSG, WNDCLASSW, WH_MOUSE_LL,
+            WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
+            WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
         },
     },
 };
@@ -28,10 +24,6 @@ use windows_sys::Win32::{
 use super::{emit_backend_log, emit_input_state, mapping};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
-static KEYBOARD_CALLBACK_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
-static KEYBOARD_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
-static RAW_KEYBOARD_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
-static MOUSE_LOG_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 const RAW_INPUT_CLASS_NAME: &[u16] = &[
     'K' as u16, 'e' as u16, 'y' as u16, 'b' as u16, 'o' as u16, 'a' as u16, 'r' as u16,
@@ -47,7 +39,6 @@ pub fn start(app_handle: AppHandle) {
     std::thread::spawn(move || unsafe {
         let module = GetModuleHandleW(null());
         let raw_input_window = create_raw_input_window(module as HINSTANCE);
-        let keyboard_hook = SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), module, 0);
         let mouse_hook = SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), module, 0);
 
         if raw_input_window.is_null() {
@@ -60,19 +51,6 @@ pub fn start(app_handle: AppHandle) {
             }
         } else if let Some(app_handle) = APP_HANDLE.get() {
             emit_backend_log(app_handle, "windows-raw-input-window-started", std::iter::empty::<(&str, String)>());
-        }
-
-        if keyboard_hook.is_null() {
-            if let Some(app_handle) = APP_HANDLE.get() {
-                emit_backend_log(
-                    app_handle,
-                    "windows-keyboard-hook-failed",
-                    [("lastError", GetLastError().to_string())],
-                );
-            }
-            eprintln!("Windows keyboard hook failed to start");
-        } else if let Some(app_handle) = APP_HANDLE.get() {
-            emit_backend_log(app_handle, "windows-keyboard-hook-started", std::iter::empty::<(&str, String)>());
         }
 
         if mouse_hook.is_null() {
@@ -197,85 +175,8 @@ unsafe fn handle_raw_input(raw_input: HRAWINPUT) {
         .unwrap_or_else(|| mapping::layout_id_from_windows_codes(vk_code, scan_code));
 
     if let Some(app_handle) = APP_HANDLE.get() {
-        if RAW_KEYBOARD_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 160 {
-            emit_backend_log(
-                app_handle,
-                "windows-raw-keyboard-event",
-                [
-                    ("message", keyboard.Message.to_string()),
-                    ("vKey", vk_code.to_string()),
-                    ("makeCode", scan_code.to_string()),
-                    ("flags", keyboard.Flags.to_string()),
-                    ("pressed", pressed.to_string()),
-                    ("keyId", key_id.clone()),
-                ],
-            );
-        }
         emit_input_state(app_handle, key_id, pressed);
     }
-}
-
-unsafe extern "system" fn keyboard_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
-    if let Some(app_handle) = APP_HANDLE.get() {
-        if KEYBOARD_CALLBACK_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 160 {
-            if code >= 0 {
-                let keyboard = *(lparam as *const KBDLLHOOKSTRUCT);
-                emit_backend_log(
-                    app_handle,
-                    "windows-keyboard-callback",
-                    [
-                        ("code", code.to_string()),
-                        ("wparam", (wparam as u32).to_string()),
-                        ("vkCode", keyboard.vkCode.to_string()),
-                        ("scanCode", keyboard.scanCode.to_string()),
-                        ("flags", keyboard.flags.to_string()),
-                        ("time", keyboard.time.to_string()),
-                    ],
-                );
-            } else {
-                emit_backend_log(
-                    app_handle,
-                    "windows-keyboard-callback",
-                    [
-                        ("code", code.to_string()),
-                        ("wparam", (wparam as u32).to_string()),
-                    ],
-                );
-            }
-        }
-    }
-
-    if code >= 0 {
-        let keyboard = *(lparam as *const KBDLLHOOKSTRUCT);
-        let pressed = matches!(wparam as u32, WM_KEYDOWN | WM_SYSKEYDOWN);
-        let released = matches!(wparam as u32, WM_KEYUP | WM_SYSKEYUP);
-
-        if pressed || released {
-            let key_id = mapping::key_id_from_windows_event(keyboard.vkCode, keyboard.scanCode)
-                .map(str::to_owned)
-                .unwrap_or_else(|| {
-                    mapping::layout_id_from_windows_codes(keyboard.vkCode, keyboard.scanCode)
-                });
-
-            if let Some(app_handle) = APP_HANDLE.get() {
-                if KEYBOARD_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 160 {
-                    emit_backend_log(
-                        app_handle,
-                        "windows-keyboard-event",
-                        [
-                            ("wparam", (wparam as u32).to_string()),
-                            ("vkCode", keyboard.vkCode.to_string()),
-                            ("scanCode", keyboard.scanCode.to_string()),
-                            ("pressed", pressed.to_string()),
-                            ("keyId", key_id.clone()),
-                        ],
-                    );
-                }
-            }
-        }
-    }
-
-    CallNextHookEx(null_mut(), code, wparam, lparam)
 }
 
 unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
@@ -292,17 +193,6 @@ unsafe extern "system" fn mouse_proc(code: i32, wparam: WPARAM, lparam: LPARAM) 
 
         if let Some((key_id, pressed)) = payload {
             if let Some(app_handle) = APP_HANDLE.get() {
-                if MOUSE_LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 12 {
-                    emit_backend_log(
-                        app_handle,
-                        "windows-mouse-event",
-                        [
-                            ("wparam", (wparam as u32).to_string()),
-                            ("pressed", pressed.to_string()),
-                            ("keyId", key_id.to_string()),
-                        ],
-                    );
-                }
                 emit_input_state(app_handle, key_id, pressed);
             }
         }

@@ -12,10 +12,7 @@ mod unsupported;
 use serde::Serialize;
 use std::{
     collections::BTreeSet,
-    sync::{
-        atomic::{AtomicUsize, Ordering},
-        Mutex,
-    },
+    sync::Mutex,
 };
 use tauri::{AppHandle, Emitter, Manager};
 
@@ -23,8 +20,6 @@ use crate::debug_log;
 
 const INPUT_STATE_EVENT: &str = "input-state";
 const OVERLAY_ACTIVE_KEYS_EVENT: &str = "overlay-active-keys";
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-const INPUT_BACKEND_LOG_EVENT: &str = "input-backend-log";
 
 #[derive(Clone, Serialize)]
 pub struct InputStatePayload {
@@ -39,25 +34,14 @@ pub struct OverlayActiveKeysPayload {
     pub key_ids: Vec<String>,
 }
 
-#[derive(Clone, Serialize)]
-#[cfg_attr(not(target_os = "windows"), allow(dead_code))]
-pub struct InputBackendLogPayload {
-    pub message: String,
-    pub details: std::collections::BTreeMap<String, String>,
-}
-
 pub struct InputStateBridge {
     active_keys: Mutex<BTreeSet<String>>,
-    keyboard_log_count: AtomicUsize,
-    mouse_log_count: AtomicUsize,
 }
 
 impl InputStateBridge {
     pub fn new() -> Self {
         Self {
             active_keys: Mutex::new(BTreeSet::new()),
-            keyboard_log_count: AtomicUsize::new(0),
-            mouse_log_count: AtomicUsize::new(0),
         }
     }
 
@@ -77,21 +61,6 @@ impl InputStateBridge {
         let payload = OverlayActiveKeysPayload {
             key_ids: active_keys.iter().cloned().collect(),
         };
-        let log_count = if key_id.starts_with("mouse-") {
-            self.mouse_log_count.fetch_add(1, Ordering::Relaxed)
-        } else {
-            self.keyboard_log_count.fetch_add(1, Ordering::Relaxed)
-        };
-        let log_limit = if key_id.starts_with("mouse-") { 24 } else { 160 };
-        if log_count < log_limit {
-            debug_log::write(
-                "input-bridge",
-                &format!(
-                    "active-update key_id={key_id} pressed={pressed} active={:?}",
-                    payload.key_ids
-                ),
-            );
-        }
         app_handle
             .emit_to("pov", OVERLAY_ACTIVE_KEYS_EVENT, payload)
             .map_err(|error| error.to_string())
@@ -129,7 +98,7 @@ fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: 
 
 #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
 fn emit_backend_log(
-    app_handle: &AppHandle,
+    _app_handle: &AppHandle,
     message: impl Into<String>,
     details: impl IntoIterator<Item = (impl Into<String>, String)>,
 ) {
@@ -138,11 +107,6 @@ fn emit_backend_log(
         .into_iter()
         .map(|(key, value)| (key.into(), value))
         .collect::<std::collections::BTreeMap<String, String>>();
-    let payload = InputBackendLogPayload {
-        message: message.clone(),
-        details: details.clone(),
-    };
 
-    let _ = app_handle.emit_to("config", INPUT_BACKEND_LOG_EVENT, payload);
     debug_log::write("input-backend", &format!("{message} {details:?}"));
 }

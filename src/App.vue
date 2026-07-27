@@ -31,13 +31,11 @@ import {
   type OverlayStyle,
 } from "./domain/defaultConfig";
 import {
-  INPUT_BACKEND_LOG_EVENT,
   OVERLAY_CONFIG_EVENT,
   OVERLAY_READY_EVENT,
   OVERLAY_STYLE_EVENT,
   OVERLAY_SYNC_FEEDBACK_EVENT,
   OVERLAY_VISIBLE_EVENT,
-  type InputBackendLogPayload,
   type InputStatePayload,
 } from "./domain/inputEvents";
 import type { RecordingHotkeyMode } from "./domain/recordingHotkeys";
@@ -66,7 +64,6 @@ const isOverlayWindow = computed(() => {
 
 const {
   activeKeyIds,
-  overlayInputDebug,
   startInputBridge,
   stopInputBridge,
 } = useInputStateBridge({
@@ -74,7 +71,6 @@ const {
   onConfigInput: handleConfigInput,
 });
 
-let unlistenInputBackendLog: UnlistenFn | undefined;
 let unlistenOverlayStyle: UnlistenFn | undefined;
 let unlistenOverlayReady: UnlistenFn | undefined;
 let syncFeedbackTimer: number | undefined;
@@ -474,17 +470,6 @@ onMounted(async () => {
 
   await startInputBridge();
 
-  unlistenInputBackendLog = await listen<InputBackendLogPayload>(
-    INPUT_BACKEND_LOG_EVENT,
-    (event) => {
-      console.info("[input-backend]", event.payload.message, event.payload.details ?? {});
-      void tauriApi.writeDebugLog(
-        "frontend-input-backend",
-        `${event.payload.message} ${JSON.stringify(event.payload.details ?? {})}`,
-      );
-    },
-  );
-
   if (isOverlayWindow.value) {
     unlistenOverlayStyle = await listen<OverlayStyle>(
       OVERLAY_STYLE_EVENT,
@@ -555,7 +540,6 @@ onUnmounted(() => {
   stopAppConfigWatch?.();
   disposeOverlayStyleSync();
   stopInputBridge();
-  unlistenInputBackendLog?.();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
 });
@@ -572,7 +556,6 @@ onUnmounted(() => {
         :active-keys="activeKeyIds"
         :overlay-style="config.style"
         :sync-feedback-active="syncFeedbackActive"
-        :input-debug="overlayInputDebug"
       />
     </div>
     <ConfigPanel

@@ -20,7 +20,6 @@ defineProps<{
   activeKeys: Set<string>;
   overlayStyle: OverlayStyle;
   syncFeedbackActive?: boolean;
-  inputDebug?: string;
 }>();
 
 const adjusting = ref(false);
@@ -91,7 +90,6 @@ async function setClickThrough(enabled: boolean) {
       :adjusting="adjusting"
       @start-drag="startDrag"
     />
-    <span v-if="inputDebug" class="input-debug">{{ inputDebug }}</span>
   </main>
 </template>
 
@@ -104,20 +102,6 @@ async function setClickThrough(enabled: boolean) {
   justify-items: center;
   padding: 12px;
   background: transparent;
-}
-
-.input-debug {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 20;
-  border: 1px solid rgba(255, 255, 255, 0.24);
-  border-radius: 4px;
-  background: rgba(0, 0, 0, 0.72);
-  color: #eafff0;
-  font: 700 11px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  padding: 3px 5px;
-  pointer-events: none;
 }
 
 .overlay-root.adjusting,
