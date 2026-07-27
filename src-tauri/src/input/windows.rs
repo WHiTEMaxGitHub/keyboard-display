@@ -75,6 +75,8 @@ pub fn start(app_handle: AppHandle) {
 }
 
 unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
+    // Raw Input 需要一个 HWND 接收 WM_INPUT。这里创建 message-only window，
+    // 避免键盘采集依赖 WebView2 焦点状态。
     let class = WNDCLASSW {
         lpfnWndProc: Some(raw_input_window_proc),
         hInstance: instance,
@@ -102,6 +104,12 @@ unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
         return hwnd;
     }
 
+    register_raw_keyboard_input(hwnd);
+    hwnd
+}
+
+unsafe fn register_raw_keyboard_input(hwnd: HWND) {
+    // RIDEV_INPUTSINK 让窗口不在前台时仍可收到键盘 raw input。
     let device = RAWINPUTDEVICE {
         usUsagePage: 0x01,
         usUsage: 0x06,
@@ -120,8 +128,6 @@ unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
     } else if let Some(app_handle) = APP_HANDLE.get() {
         emit_backend_log(app_handle, "windows-raw-input-registered", std::iter::empty::<(&str, String)>());
     }
-
-    hwnd
 }
 
 unsafe extern "system" fn raw_input_window_proc(
@@ -138,25 +144,10 @@ unsafe extern "system" fn raw_input_window_proc(
 }
 
 unsafe fn handle_raw_input(raw_input: HRAWINPUT) {
-    let mut size = 0_u32;
-    let header_size = size_of::<RAWINPUTHEADER>() as u32;
-    if GetRawInputData(raw_input, RID_INPUT, null_mut(), &mut size, header_size) == u32::MAX {
+    let Some(input) = read_raw_input(raw_input) else {
         return;
-    }
+    };
 
-    let mut buffer = vec![0_u8; size as usize];
-    if GetRawInputData(
-        raw_input,
-        RID_INPUT,
-        buffer.as_mut_ptr().cast(),
-        &mut size,
-        header_size,
-    ) == u32::MAX
-    {
-        return;
-    }
-
-    let input = &*(buffer.as_ptr() as *const RAWINPUT);
     if input.header.dwType != RIM_TYPEKEYBOARD {
         return;
     }
@@ -176,6 +167,25 @@ unsafe fn handle_raw_input(raw_input: HRAWINPUT) {
 
     if let Some(app_handle) = APP_HANDLE.get() {
         emit_input_state(app_handle, key_id, pressed);
+    }
+}
+
+unsafe fn read_raw_input(raw_input: HRAWINPUT) -> Option<RAWINPUT> {
+    let mut input = std::mem::zeroed::<RAWINPUT>();
+    let mut size = size_of::<RAWINPUT>() as u32;
+    let header_size = size_of::<RAWINPUTHEADER>() as u32;
+    let result = GetRawInputData(
+        raw_input,
+        RID_INPUT,
+        (&mut input as *mut RAWINPUT).cast(),
+        &mut size,
+        header_size,
+    );
+
+    if result == u32::MAX || result == 0 {
+        None
+    } else {
+        Some(input)
     }
 }
 

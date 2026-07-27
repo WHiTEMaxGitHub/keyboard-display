@@ -288,18 +288,21 @@
 
 ## Cross-platform gaps
 
-- [ ] Implement the Windows native input backend.
+- [x] Implement the Windows native input backend.
   - Current state:
     - macOS backend has an initial `CGEventTap` implementation.
-    - Windows backend has an initial low-level hook implementation.
+    - Windows backend uses Raw Input for keyboard events and a low-level mouse
+      hook for mouse buttons.
   - Target:
-    - Use `SetWindowsHookExW(WH_KEYBOARD_LL)` for keyboard events.
+    - Use `WM_INPUT`/Raw Input for keyboard events so WebView2 focus does not
+      suppress capture.
     - Use `SetWindowsHookExW(WH_MOUSE_LL)` for mouse button events.
     - Emit the same normalized `input-state` payload used by macOS.
-  - Remaining:
-    - Build and run on a Windows machine.
-    - Confirm hook lifetime and message loop behavior.
-    - Confirm background capture when the app is not focused.
+
+- [ ] Harden Windows native input backend.
+  - Confirm Raw Input message-window lifetime in dev and release builds.
+  - Confirm background keyboard capture when the app is not focused.
+  - Confirm mouse hook lifetime and message loop behavior.
 
 - [ ] Verify macOS native input backend behavior.
   - Confirm Accessibility/Input Monitoring permission requirements.

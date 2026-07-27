@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, onUnmounted, reactive, ref, watch, type WatchStopHandle } from "vue";
 import { tauriApi } from "./api/tauri";
@@ -73,6 +74,7 @@ const {
 
 let unlistenOverlayStyle: UnlistenFn | undefined;
 let unlistenOverlayReady: UnlistenFn | undefined;
+let unlistenCloseRequested: UnlistenFn | undefined;
 let syncFeedbackTimer: number | undefined;
 let appConfigSaveTimer: number | undefined;
 let stopAppConfigWatch: WatchStopHandle | undefined;
@@ -466,6 +468,9 @@ function profileNameFromFileName(fileName: string): string {
 onMounted(async () => {
   if (!isOverlayWindow.value) {
     await restoreAppConfig();
+    unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async () => {
+      await destroyOverlayWindow();
+    });
   }
 
   await startInputBridge();
@@ -542,6 +547,7 @@ onUnmounted(() => {
   stopInputBridge();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
+  unlistenCloseRequested?.();
 });
 </script>
 
