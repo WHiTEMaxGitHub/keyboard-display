@@ -1,7 +1,12 @@
 #![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    io::Write,
+    path::Path,
+    process::{Command, Stdio},
+};
 use tiny_skia::{Color, Paint, Pixmap, Rect, Transform};
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -62,6 +67,16 @@ pub struct ExportVideoConfig {
 pub struct ExportOverlaySize {
     pub width: u32,
     pub height: u32,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportOverlayVideoResult {
+    pub output_path: String,
+    pub frame_count: u64,
+    pub width: u32,
+    pub height: u32,
+    pub fps: u16,
 }
 
 const BACKPLATE_PADDING: f32 = 10.0 * 2.0;
@@ -126,6 +141,62 @@ pub fn build_webm_ffmpeg_args(output_path: &str, size: ExportOverlaySize, fps: u
         "0".to_string(),
         output_path.to_string(),
     ]
+}
+
+/// 从 `.kbdrec` 帧状态流渲染透明 WebM overlay，不修改用户 ffmpeg 安装。
+pub fn export_overlay_video(
+    recording_path: &Path,
+    output_path: &Path,
+    ffmpeg_path: &Path,
+    profile: &ExportOverlayProfile,
+) -> Result<ExportOverlayVideoResult, String> {
+    let bytes = std::fs::read(recording_path).map_err(|error| error.to_string())?;
+    let decoded = crate::recording::decode_kbdrec(&bytes)?;
+    let size = estimate_export_overlay_size(profile);
+    let marker_frames = decoded
+        .markers
+        .iter()
+        .map(|marker| marker.frame)
+        .collect::<HashSet<_>>();
+    let output_path_string = output_path.to_string_lossy().to_string();
+    let args = build_webm_ffmpeg_args(&output_path_string, size, decoded.fps);
+    let mut child = Command::new(ffmpeg_path)
+        .args(&args)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to start ffmpeg: {error}"))?;
+
+    {
+        let stdin = child
+            .stdin
+            .as_mut()
+            .ok_or_else(|| "failed to open ffmpeg stdin".to_string())?;
+
+        for frame in &decoded.frames {
+            let active_keys = frame.keys.iter().cloned().collect::<HashSet<_>>();
+            let marker_active = marker_frames.contains(&frame.frame);
+            let (_, rgba) = render_overlay_frame(profile, &active_keys, marker_active)?;
+            stdin.write_all(&rgba).map_err(|error| error.to_string())?;
+        }
+    }
+
+    let output = child
+        .wait_with_output()
+        .map_err(|error| format!("failed to finish ffmpeg export: {error}"))?;
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("ffmpeg export failed: {}", stderr.trim()));
+    }
+
+    Ok(ExportOverlayVideoResult {
+        output_path: output_path_string,
+        frame_count: decoded.frame_count,
+        width: size.width,
+        height: size.height,
+        fps: decoded.fps,
+    })
 }
 
 fn render_profile(
@@ -319,11 +390,12 @@ impl ExportOverlayItem {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_webm_ffmpeg_args, estimate_export_overlay_size, render_overlay_frame,
-        ExportOverlayItem, ExportOverlayLayout, ExportOverlayProfile, ExportOverlayStyle,
-        ExportVideoConfig,
+        build_webm_ffmpeg_args, estimate_export_overlay_size, export_overlay_video,
+        render_overlay_frame, ExportOverlayItem, ExportOverlayLayout, ExportOverlayProfile,
+        ExportOverlayStyle, ExportVideoConfig,
     };
-    use std::collections::HashSet;
+    use crate::recording::{encode_kbdrec, RecordingEvent, RecordingSnapshot};
+    use std::{collections::HashSet, io::Write};
 
     #[test]
     fn estimates_export_overlay_size_like_frontend() {
@@ -369,6 +441,58 @@ mod tests {
         assert_eq!(args.last().unwrap(), "/tmp/out.webm");
     }
 
+    #[test]
+    fn exports_kbdrec_frames_to_ffmpeg_stdin() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-video-export-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let recording_path = root.join("input.kbdrec");
+        let output_path = root.join("out.webm");
+        let raw_video_path = root.join("raw.rgba");
+        let fake_ffmpeg_path = root.join("fake-ffmpeg.sh");
+        let profile = test_profile();
+        let frame_size = estimate_export_overlay_size(&profile);
+        let recording = encode_kbdrec(&RecordingSnapshot {
+            version: 1,
+            fps: 60,
+            timebase: "monotonic",
+            events: vec![
+                RecordingEvent::KeyDown {
+                    frame: 0,
+                    key_id: "w".to_string(),
+                },
+                RecordingEvent::Marker {
+                    frame: 1,
+                    name: "sync".to_string(),
+                },
+            ],
+        })
+        .unwrap();
+        std::fs::write(&recording_path, recording).unwrap();
+        write_fake_ffmpeg(&fake_ffmpeg_path, &raw_video_path);
+
+        let result = export_overlay_video(
+            &recording_path,
+            &output_path,
+            &fake_ffmpeg_path,
+            &profile,
+        )
+        .unwrap();
+
+        assert_eq!(result.frame_count, 2);
+        assert_eq!(result.width, frame_size.width);
+        assert_eq!(result.height, frame_size.height);
+        assert_eq!(
+            std::fs::metadata(&raw_video_path).unwrap().len(),
+            u64::from(frame_size.width) * u64::from(frame_size.height) * 4 * 2,
+        );
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
     fn test_profile() -> ExportOverlayProfile {
         ExportOverlayProfile {
             layout: ExportOverlayLayout {
@@ -403,6 +527,25 @@ mod tests {
             export: ExportVideoConfig {
                 render_markers: true,
             },
+        }
+    }
+
+    fn write_fake_ffmpeg(path: &std::path::Path, raw_video_path: &std::path::Path) {
+        let script = format!(
+            "#!/bin/sh\ncat > '{}'\nfor arg in \"$@\"; do output=\"$arg\"; done\ntouch \"$output\"\n",
+            raw_video_path.display()
+        );
+        std::fs::File::create(path)
+            .unwrap()
+            .write_all(script.as_bytes())
+            .unwrap();
+
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let mut permissions = std::fs::metadata(path).unwrap().permissions();
+            permissions.set_mode(0o755);
+            std::fs::set_permissions(path, permissions).unwrap();
         }
     }
 }

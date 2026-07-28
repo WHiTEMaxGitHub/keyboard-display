@@ -13,6 +13,11 @@ pub use clock::{monotonic_now_ms, unix_now_ms};
 pub use inspection::inspect_kbdrec;
 pub use manager::RecordingManager;
 pub use metadata::{read_recording_metadata, save_recording_metadata};
+pub(crate) use binary::decode_kbdrec;
+#[cfg(test)]
+pub(crate) use binary::encode_kbdrec;
+#[cfg(test)]
+pub(crate) use types::{RecordingEvent, RecordingSnapshot};
 pub use types::{RecordingInspection, RecordingMetadata, RecordingTreeNode, StopRecordingResult};
 
 #[cfg(test)]

@@ -33,7 +33,8 @@ pub fn run() {
             commands::save_recording_metadata,
             commands::detect_video_exporter,
             commands::install_app_managed_video_exporter,
-            commands::uninstall_app_managed_video_exporter
+            commands::uninstall_app_managed_video_exporter,
+            commands::export_overlay_video
         ])
         .setup(|app| {
             input::start_native_input_backend(app.handle().clone());

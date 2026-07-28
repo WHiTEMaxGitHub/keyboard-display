@@ -2,6 +2,7 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
+import type { AppConfig } from "../domain/defaultConfig";
 import {
   describeVideoExporter,
   normalizeVideoExporterConfig,
@@ -14,6 +15,7 @@ import BaseFieldRow from "./BaseFieldRow.vue";
 import BaseToggleRow from "./BaseToggleRow.vue";
 
 const props = defineProps<{
+  config: AppConfig;
   renderMarkers: boolean;
   videoExporterConfig: VideoExporterConfig;
   installingAppManagedExporter: boolean;
@@ -139,13 +141,37 @@ async function chooseOutputVideo() {
   }
 }
 
-function exportOverlayVideo() {
+async function exportOverlayVideo() {
   if (!exportReady.value) {
     exportStatus.value = "Choose a recording, output path, and available video exporter first.";
     return;
   }
 
-  exportStatus.value = "Export backend is ready to connect in the next step.";
+  const exporterPath = exporterStatus.value?.resolved?.path;
+  if (!exporterPath) {
+    exportStatus.value = "Choose an available video exporter first.";
+    return;
+  }
+
+  exportStatus.value = "Exporting overlay video...";
+
+  try {
+    const result = await tauriApi.exportOverlayVideo(
+      inputRecordingPath.value,
+      outputVideoPath.value,
+      exporterPath,
+      {
+        layout: props.config.layout,
+        rows: props.config.rows,
+        style: props.config.style,
+        export: props.config.export,
+      },
+    );
+    exportStatus.value =
+      `Exported ${result.frameCount} frames at ${result.width}x${result.height} @ ${result.fps}fps.`;
+  } catch (error) {
+    exportStatus.value = `Export failed: ${String(error)}`;
+  }
 }
 
 async function installAppManagedExporter() {

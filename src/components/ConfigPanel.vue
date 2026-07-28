@@ -422,6 +422,7 @@ async function uninstallAppManagedVideoExporter() {
 
       <section v-else-if="activePage === 'export'" class="page-stack">
         <ExportPanel
+          :config="config"
           :render-markers="config.export.renderMarkers"
           :video-exporter-config="videoExporterConfig"
           :installing-app-managed-exporter="videoExporterInstalling"

@@ -4,6 +4,7 @@ import type {
   RecordingMetadata,
   RecordingTreeNode,
 } from "../types/recording";
+import type { AppConfig } from "../domain/defaultConfig";
 import type { VideoExporterStatus } from "../domain/videoExporter";
 
 export type StopRecordingResult = {
@@ -12,6 +13,14 @@ export type StopRecordingResult = {
 
 export type InstallVideoExporterResult = {
   path: string;
+};
+
+export type ExportOverlayVideoResult = {
+  outputPath: string;
+  frameCount: number;
+  width: number;
+  height: number;
+  fps: number;
 };
 
 /// 集中管理 Tauri command 名称，避免组件直接散落 invoke 字符串。
@@ -100,5 +109,19 @@ export const tauriApi = {
 
   uninstallAppManagedVideoExporter() {
     return invoke<void>("uninstall_app_managed_video_exporter");
+  },
+
+  exportOverlayVideo(
+    recordingPath: string,
+    outputPath: string,
+    ffmpegPath: string,
+    profile: Pick<AppConfig, "layout" | "rows" | "style" | "export">,
+  ) {
+    return invoke<ExportOverlayVideoResult>("export_overlay_video", {
+      recordingPath,
+      outputPath,
+      ffmpegPath,
+      profile,
+    });
   },
 };

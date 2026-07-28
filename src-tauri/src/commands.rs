@@ -4,6 +4,7 @@ use crate::{
     debug_log,
     exporter::{self, InstallVideoExporterResult, VideoExporterStatus},
     recording::{self, RecordingManager},
+    video_export::{self, ExportOverlayProfile, ExportOverlayVideoResult},
 };
 
 #[tauri::command]
@@ -190,6 +191,20 @@ pub async fn uninstall_app_managed_video_exporter(app: tauri::AppHandle) -> Resu
 
     tauri::async_runtime::spawn_blocking(move || {
         exporter::uninstall_app_managed_ffmpeg(app_data_dir)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn export_overlay_video(
+    recording_path: std::path::PathBuf,
+    output_path: std::path::PathBuf,
+    ffmpeg_path: std::path::PathBuf,
+    profile: ExportOverlayProfile,
+) -> Result<ExportOverlayVideoResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        video_export::export_overlay_video(&recording_path, &output_path, &ffmpeg_path, &profile)
     })
     .await
     .map_err(|error| error.to_string())?

@@ -226,7 +226,7 @@
   - Store the option in profile export config.
   - Show it as a standalone export setting so marker rendering is not forced.
 
-- [ ] Add a user-managed video exporter setup flow.
+- [x] Add a user-managed video exporter setup flow.
   - Use `ffmpeg` as the first video export engine, but do not assume target
     users have it installed.
   - Detect only `ffmpeg` available from `PATH` automatically.
@@ -242,8 +242,10 @@
     path, user-selected path, or plain `ffmpeg` when `PATH` detection succeeds.
   - If the user already has `ffmpeg` in `PATH`, show it as available while still
     allowing installation of the isolated app-managed exporter.
+  - Current first export path renders transparent WebM overlay video from
+    `.kbdrec`; MP4 and richer export settings remain future work.
 
-- [ ] Render markers during future overlay video export.
+- [x] Render markers during future overlay video export.
   - When exporting overlay video from `.kbdrec`, optionally render visible sync
     marker feedback into the exported overlay.
   - Respect the export marker rendering option.
