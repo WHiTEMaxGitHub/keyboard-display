@@ -26,7 +26,7 @@ pub struct ExportOverlayLayout {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "lowercase", rename_all_fields = "camelCase")]
 pub enum ExportOverlayItem {
     Key {
         id: String,
@@ -446,6 +446,47 @@ mod tests {
             &rgba[marker_pixel_offset..marker_pixel_offset + 4],
             &[255, 51, 102, 255],
         );
+    }
+
+    #[test]
+    fn deserializes_frontend_camel_case_overlay_items() {
+        let profile = serde_json::from_value::<ExportOverlayProfile>(serde_json::json!({
+            "layout": {
+                "unitPx": 50.0,
+                "gapUnit": 0.1
+            },
+            "rows": [[
+                {
+                    "type": "key",
+                    "id": "w",
+                    "label": "W",
+                    "widthUnit": 1.0
+                },
+                {
+                    "type": "gap",
+                    "widthUnit": 0.5
+                }
+            ]],
+            "style": {
+                "scale": 1.0,
+                "opacity": 1.0,
+                "backgroundColor": "#00000000",
+                "backgroundOpacity": 0.72,
+                "backgroundRadius": 8.0,
+                "idleKeyVisibility": "visible",
+                "idleColor": "#121417",
+                "activeColor": "#25d366",
+                "idleTextColor": "#f5f7fa",
+                "activeTextColor": "#ffffff"
+            },
+            "export": {
+                "renderMarkers": true
+            }
+        }))
+        .unwrap();
+
+        assert_eq!(profile.rows[0][0].width_unit(), 1.0);
+        assert_eq!(profile.rows[0][1].width_unit(), 0.5);
     }
 
     #[test]
