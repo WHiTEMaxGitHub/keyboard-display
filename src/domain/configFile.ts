@@ -12,6 +12,7 @@ import {
 } from "./defaultConfig";
 import { normalizeUnit } from "./layoutUnits";
 import { normalizeRecordingConfig } from "./recordingConfig";
+import { sanitizeExportFilenameTemplate } from "./exportFilename";
 
 export type OverlayConfigFile = {
   version: number;
@@ -108,6 +109,9 @@ function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppC
     transparentFormat: exportConfig.transparentFormat ?? defaultExport.transparentFormat,
     compatibleFormat: exportConfig.compatibleFormat ?? defaultExport.compatibleFormat,
     renderMarkers: exportConfig.renderMarkers ?? true,
+    filenameTemplate: sanitizeExportFilenameTemplate(
+      exportConfig.filenameTemplate ?? defaultExport.filenameTemplate,
+    ),
   };
 }
 

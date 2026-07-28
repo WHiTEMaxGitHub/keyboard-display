@@ -3,6 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
 import type { AppConfig } from "../domain/defaultConfig";
+import { formatExportFileName } from "../domain/exportFilename";
 import {
   describeVideoExporter,
   normalizeVideoExporterConfig,
@@ -16,6 +17,7 @@ import BaseToggleRow from "./BaseToggleRow.vue";
 
 const props = defineProps<{
   config: AppConfig;
+  profileName: string;
   renderMarkers: boolean;
   videoExporterConfig: VideoExporterConfig;
   installingAppManagedExporter: boolean;
@@ -24,6 +26,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update-render-markers": [event: Event];
+  "update-export-config": [exportConfig: AppConfig["export"]];
   "update-video-exporter-config": [config: VideoExporterConfig];
   "install-app-managed-exporter": [];
   "uninstall-app-managed-exporter": [];
@@ -34,6 +37,7 @@ const exporterError = ref("");
 const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
 const outputVideoPath = ref("");
+const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
 const exportStatus = ref("");
 
 const exportReady = computed(() =>
@@ -77,6 +81,13 @@ onMounted(() => {
   void refreshExporterStatus();
 });
 
+watch(
+  () => props.config.export.filenameTemplate,
+  (filenameTemplate) => {
+    filenameTemplateDraft.value = filenameTemplate;
+  },
+);
+
 async function refreshExporterStatus() {
   exporterChecking.value = true;
   exporterError.value = "";
@@ -115,6 +126,20 @@ function clearFfmpegPath() {
   });
 }
 
+function updateFilenameTemplateDraft(event: Event) {
+  filenameTemplateDraft.value = (event.target as HTMLInputElement).value;
+}
+
+function commitFilenameTemplate() {
+  const filenameTemplate = filenameTemplateDraft.value.trim() ||
+    "${profileSlug}-${recordingName}-overlay";
+  filenameTemplateDraft.value = filenameTemplate;
+  emit("update-export-config", {
+    ...props.config.export,
+    filenameTemplate,
+  });
+}
+
 async function chooseInputRecording() {
   const selectedPath = await open({
     title: "Choose keyboard recording",
@@ -124,6 +149,7 @@ async function chooseInputRecording() {
 
   if (typeof selectedPath === "string") {
     inputRecordingPath.value = selectedPath;
+    outputVideoPath.value = defaultOutputFileName(selectedPath);
     exportStatus.value = "";
   }
 }
@@ -131,7 +157,7 @@ async function chooseInputRecording() {
 async function chooseOutputVideo() {
   const selectedPath = await save({
     title: "Save overlay video",
-    defaultPath: "keyboard-overlay.webm",
+    defaultPath: outputVideoPath.value || defaultOutputFileName(inputRecordingPath.value),
     filters: [{ name: "WebM", extensions: ["webm"] }],
   });
 
@@ -165,6 +191,7 @@ async function exportOverlayVideo() {
         rows: props.config.rows,
         style: props.config.style,
         export: props.config.export,
+        recording: props.config.recording,
       },
     );
     exportStatus.value =
@@ -191,6 +218,17 @@ async function uninstallAppManagedExporter() {
   exporterError.value = "";
   emit("uninstall-app-managed-exporter");
 }
+
+function defaultOutputFileName(recordingPath: string) {
+  return formatExportFileName({
+    template: props.config.export.filenameTemplate,
+    recordingPath,
+    profileName: props.profileName,
+    fps: props.config.recording.customFpsEnabled
+      ? props.config.recording.customFps
+      : props.config.recording.defaultFps,
+  });
+}
 </script>
 
 <template>
@@ -201,6 +239,16 @@ async function uninstallAppManagedExporter() {
     <BaseToggleRow :checked="renderMarkers" @change="emit('update-render-markers', $event)">
       Render sync markers
     </BaseToggleRow>
+    <BaseFieldRow label="Filename template">
+      <input
+        class="template-input"
+        type="text"
+        :value="filenameTemplateDraft"
+        @input="updateFilenameTemplateDraft"
+        @blur="commitFilenameTemplate"
+        @keydown.enter="commitFilenameTemplate"
+      />
+    </BaseFieldRow>
     <section class="export-job-panel">
       <div class="section-header">
         <h3>Overlay video</h3>
@@ -384,6 +432,23 @@ async function uninstallAppManagedExporter() {
   color: #ff8f8f;
   font-size: 13px;
   font-weight: 700;
+}
+
+.template-input {
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 7px;
+  background: #10141a;
+  color: #eef2f6;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+
+.template-input:focus {
+  outline: none;
+  border-color: rgba(37, 211, 102, 0.55);
 }
 
 .quiet {

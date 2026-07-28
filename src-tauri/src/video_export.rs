@@ -16,6 +16,7 @@ pub struct ExportOverlayProfile {
     pub rows: Vec<Vec<ExportOverlayItem>>,
     pub style: ExportOverlayStyle,
     pub export: ExportVideoConfig,
+    pub recording: ExportRecordingConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -26,7 +27,11 @@ pub struct ExportOverlayLayout {
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase", rename_all_fields = "camelCase")]
+#[serde(
+    tag = "type",
+    rename_all = "lowercase",
+    rename_all_fields = "camelCase"
+)]
 pub enum ExportOverlayItem {
     Key {
         id: String,
@@ -60,6 +65,12 @@ pub struct ExportOverlayStyle {
 #[serde(rename_all = "camelCase")]
 pub struct ExportVideoConfig {
     pub render_markers: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportRecordingConfig {
+    pub sync_feedback_duration_ms: u64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
@@ -153,11 +164,11 @@ pub fn export_overlay_video(
     let bytes = std::fs::read(recording_path).map_err(|error| error.to_string())?;
     let decoded = crate::recording::decode_kbdrec(&bytes)?;
     let size = estimate_export_overlay_size(profile);
-    let marker_frames = decoded
-        .markers
-        .iter()
-        .map(|marker| marker.frame)
-        .collect::<HashSet<_>>();
+    let marker_ranges = marker_frame_ranges(
+        decoded.markers.iter().map(|marker| marker.frame),
+        decoded.fps,
+        profile.recording.sync_feedback_duration_ms,
+    );
     let output_path_string = output_path.to_string_lossy().to_string();
     let args = build_webm_ffmpeg_args(&output_path_string, size, decoded.fps);
     let mut child = Command::new(ffmpeg_path)
@@ -176,7 +187,9 @@ pub fn export_overlay_video(
 
         for frame in &decoded.frames {
             let active_keys = frame.keys.iter().cloned().collect::<HashSet<_>>();
-            let marker_active = marker_frames.contains(&frame.frame);
+            let marker_active = marker_ranges
+                .iter()
+                .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
             let (_, rgba) = render_overlay_frame(profile, &active_keys, marker_active)?;
             stdin.write_all(&rgba).map_err(|error| error.to_string())?;
         }
@@ -269,6 +282,19 @@ fn render_profile(
     }
 
     Ok(())
+}
+
+fn marker_frame_ranges(
+    marker_frames: impl IntoIterator<Item = u64>,
+    fps: u16,
+    duration_ms: u64,
+) -> Vec<(u64, u64)> {
+    let duration_frames = ((duration_ms * u64::from(fps)).saturating_add(999) / 1000).max(1);
+
+    marker_frames
+        .into_iter()
+        .map(|frame| (frame, frame + duration_frames.saturating_sub(1)))
+        .collect()
 }
 
 fn draw_rect(
@@ -402,7 +428,7 @@ mod tests {
     use super::{
         build_webm_ffmpeg_args, estimate_export_overlay_size, export_overlay_video,
         render_overlay_frame, ExportOverlayItem, ExportOverlayLayout, ExportOverlayProfile,
-        ExportOverlayStyle, ExportVideoConfig,
+        ExportOverlayStyle, ExportRecordingConfig, ExportVideoConfig,
     };
     use crate::recording::{encode_kbdrec, RecordingEvent, RecordingSnapshot};
     use std::{collections::HashSet, io::Write};
@@ -481,6 +507,9 @@ mod tests {
             },
             "export": {
                 "renderMarkers": true
+            },
+            "recording": {
+                "syncFeedbackDurationMs": 420
             }
         }))
         .unwrap();
@@ -539,13 +568,9 @@ mod tests {
         std::fs::write(&recording_path, recording).unwrap();
         write_fake_ffmpeg(&fake_ffmpeg_path, &raw_video_path);
 
-        let result = export_overlay_video(
-            &recording_path,
-            &output_path,
-            &fake_ffmpeg_path,
-            &profile,
-        )
-        .unwrap();
+        let result =
+            export_overlay_video(&recording_path, &output_path, &fake_ffmpeg_path, &profile)
+                .unwrap();
 
         assert_eq!(result.frame_count, 2);
         assert_eq!(result.width, frame_size.width);
@@ -553,6 +578,65 @@ mod tests {
         assert_eq!(
             std::fs::metadata(&raw_video_path).unwrap().len(),
             u64::from(frame_size.width) * u64::from(frame_size.height) * 4 * 2,
+        );
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn exports_marker_border_for_configured_duration() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-marker-duration-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let recording_path = root.join("input.kbdrec");
+        let output_path = root.join("out.webm");
+        let raw_video_path = root.join("raw.rgba");
+        let fake_ffmpeg_path = root.join("fake-ffmpeg.sh");
+        let mut profile = test_profile();
+        profile.recording.sync_feedback_duration_ms = 500;
+        let frame_size = estimate_export_overlay_size(&profile);
+        let bytes_per_frame =
+            (u64::from(frame_size.width) * u64::from(frame_size.height) * 4) as usize;
+        let marker_pixel_offset = ((12 * frame_size.width + 12) * 4) as usize;
+        let recording = encode_kbdrec(&RecordingSnapshot {
+            version: 1,
+            fps: 10,
+            timebase: "monotonic",
+            events: vec![
+                RecordingEvent::Marker {
+                    frame: 1,
+                    name: "sync".to_string(),
+                },
+                RecordingEvent::KeyDown {
+                    frame: 6,
+                    key_id: "unused-key".to_string(),
+                },
+            ],
+        })
+        .unwrap();
+        std::fs::write(&recording_path, recording).unwrap();
+        write_fake_ffmpeg(&fake_ffmpeg_path, &raw_video_path);
+
+        export_overlay_video(&recording_path, &output_path, &fake_ffmpeg_path, &profile).unwrap();
+
+        let raw_video = std::fs::read(&raw_video_path).unwrap();
+        assert_eq!(
+            &raw_video
+                [bytes_per_frame + marker_pixel_offset..bytes_per_frame + marker_pixel_offset + 4],
+            &[37, 211, 102, 255],
+        );
+        assert_eq!(
+            &raw_video[5 * bytes_per_frame + marker_pixel_offset
+                ..5 * bytes_per_frame + marker_pixel_offset + 4],
+            &[37, 211, 102, 255],
+        );
+        assert_ne!(
+            &raw_video[6 * bytes_per_frame + marker_pixel_offset
+                ..6 * bytes_per_frame + marker_pixel_offset + 4],
+            &[37, 211, 102, 255],
         );
 
         let _ = std::fs::remove_dir_all(root);
@@ -591,6 +675,9 @@ mod tests {
             },
             export: ExportVideoConfig {
                 render_markers: true,
+            },
+            recording: ExportRecordingConfig {
+                sync_feedback_duration_ms: 420,
             },
         }
     }

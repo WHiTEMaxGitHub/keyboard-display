@@ -12,6 +12,7 @@ import {
   normalizeVideoExporterConfig,
   type VideoExporterConfig,
 } from "./videoExporter";
+import { sanitizeExportFilenameTemplate } from "./exportFilename";
 
 export type RecentProfile = {
   name: string;
@@ -208,6 +209,9 @@ function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppC
     transparentFormat: exportConfig.transparentFormat ?? defaultExport.transparentFormat,
     compatibleFormat: exportConfig.compatibleFormat ?? defaultExport.compatibleFormat,
     renderMarkers: exportConfig.renderMarkers ?? true,
+    filenameTemplate: sanitizeExportFilenameTemplate(
+      exportConfig.filenameTemplate ?? defaultExport.filenameTemplate,
+    ),
   };
 }
 

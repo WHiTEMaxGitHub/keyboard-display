@@ -208,19 +208,21 @@ profile files should prefer `gap` for clarity.
   "defaultFormat": "webm",
   "transparentFormat": "webm",
   "compatibleFormat": "mp4",
-  "renderMarkers": true
+  "renderMarkers": true,
+  "filenameTemplate": "${profileSlug}-${recordingName}-overlay"
 }
 ```
 
-These fields describe future export preferences. Video export is not the source
-recording format; `.kbdrec` is the source of truth.
+These fields describe overlay video export preferences. Video export is not the
+source recording format; `.kbdrec` is the source of truth.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `defaultFormat` | string | Default export format. Current planned value is `webm`. |
 | `transparentFormat` | string | Format for transparent overlay export. Current planned value is `webm`. |
 | `compatibleFormat` | string | Format for broad compatibility export. Current planned value is `mp4`. |
-| `renderMarkers` | boolean | Whether future overlay video export should render visible sync markers. |
+| `renderMarkers` | boolean | Whether overlay video export should render visible sync markers. |
+| `filenameTemplate` | string | Exported video filename template. Supported variables: `${recordingName}`, `${profileName}`, `${profileSlug}`, `${fps}`. |
 
 ## App config
 

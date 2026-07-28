@@ -276,6 +276,7 @@
     "defaultFormat": "webm",
     "transparentFormat": "webm",
     "compatibleFormat": "mp4",
-    "renderMarkers": true
+    "renderMarkers": true,
+    "filenameTemplate": "${profileSlug}-${recordingName}-overlay"
   }
 }

@@ -115,7 +115,7 @@ export const tauriApi = {
     recordingPath: string,
     outputPath: string,
     ffmpegPath: string,
-    profile: Pick<AppConfig, "layout" | "rows" | "style" | "export">,
+    profile: Pick<AppConfig, "layout" | "rows" | "style" | "export" | "recording">,
   ) {
     return invoke<ExportOverlayVideoResult>("export_overlay_video", {
       recordingPath,

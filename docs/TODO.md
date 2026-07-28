@@ -244,11 +244,15 @@
     allowing installation of the isolated app-managed exporter.
   - Current first export path renders transparent WebM overlay video from
     `.kbdrec`; MP4 and richer export settings remain future work.
+  - Export output names use `export.filenameTemplate` with recording/profile
+    variables instead of a fixed default file name.
 
 - [x] Render markers during future overlay video export.
   - When exporting overlay video from `.kbdrec`, optionally render visible sync
     marker feedback into the exported overlay.
   - Respect the export marker rendering option.
+  - Reuse `recording.syncFeedbackDurationMs` so exported marker flashes last as
+    long as the live sync feedback setting.
   - Use this for post-production alignment instead of exposing premature
     offset controls before export exists.
 

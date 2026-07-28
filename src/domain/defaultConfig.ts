@@ -68,6 +68,7 @@ export type ExportConfig = {
   transparentFormat: "webm";
   compatibleFormat: "mp4";
   renderMarkers: boolean;
+  filenameTemplate: string;
 };
 
 export type OverlayCustomPosition = {
@@ -261,6 +262,7 @@ export function createDefaultConfig(): AppConfig {
       transparentFormat: "webm",
       compatibleFormat: "mp4",
       renderMarkers: true,
+      filenameTemplate: "${profileSlug}-${recordingName}-overlay",
     },
   };
 }

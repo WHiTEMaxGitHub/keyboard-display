@@ -94,6 +94,24 @@ describe("parseConfigFile", () => {
     expect(config.export.renderMarkers).toBe(false);
   });
 
+  it("loads export filename template", () => {
+    const config = parseConfigFile(
+      JSON.stringify({
+        version: 1,
+        overlay: {
+          layout: createDefaultConfig().layout,
+          style: createDefaultConfig().style,
+          rows: createDefaultConfig().rows,
+        },
+        export: {
+          filenameTemplate: "${recordingName}-keys",
+        },
+      }),
+    );
+
+    expect(config.export.filenameTemplate).toBe("${recordingName}-keys");
+  });
+
   it("loads row layout with custom gaps", () => {
     const config = parseConfigFile(
       JSON.stringify({
@@ -176,5 +194,6 @@ describe("buildConfigFileJson", () => {
     expect(parsed.overlay.keyIdLabels).toEqual(config.keyIdLabels);
     expect(parsed.overlay.keys).toBeUndefined();
     expect(parsed.export.renderMarkers).toBe(true);
+    expect(parsed.export.filenameTemplate).toBe("${profileSlug}-${recordingName}-overlay");
   });
 });

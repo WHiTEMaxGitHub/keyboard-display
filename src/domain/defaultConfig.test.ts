@@ -65,6 +65,14 @@ describe("createDefaultConfig", () => {
     expect(config.recording.primaryArtifact).toBe("input-binary");
   });
 
+  it("configures overlay video export defaults", () => {
+    const config = createDefaultConfig();
+
+    expect(config.export.defaultFormat).toBe("webm");
+    expect(config.export.renderMarkers).toBe(true);
+    expect(config.export.filenameTemplate).toBe("${profileSlug}-${recordingName}-overlay");
+  });
+
   it("defaults to a transparent backplate with visible idle keys", () => {
     const config = createDefaultConfig();
 
