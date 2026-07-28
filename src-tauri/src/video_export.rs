@@ -257,7 +257,15 @@ fn render_profile(
     }
 
     if marker_active && profile.export.render_markers {
-        draw_marker_border(pixmap, bleed, bleed, cluster_width, cluster_height)?;
+        draw_marker_border(
+            pixmap,
+            bleed,
+            bleed,
+            cluster_width,
+            cluster_height,
+            &profile.style.active_color,
+            profile.style.opacity,
+        )?;
     }
 
     Ok(())
@@ -286,27 +294,29 @@ fn draw_marker_border(
     y: f32,
     width: f32,
     height: f32,
+    color: &str,
+    opacity: f32,
 ) -> Result<(), String> {
     let thickness = 2.0;
-    draw_rect(pixmap, x, y, width, thickness, "#25d366", 0.9)?;
+    draw_rect(pixmap, x, y, width, thickness, color, opacity)?;
     draw_rect(
         pixmap,
         x,
         y + height - thickness,
         width,
         thickness,
-        "#25d366",
-        0.9,
+        color,
+        opacity,
     )?;
-    draw_rect(pixmap, x, y, thickness, height, "#25d366", 0.9)?;
+    draw_rect(pixmap, x, y, thickness, height, color, opacity)?;
     draw_rect(
         pixmap,
         x + width - thickness,
         y,
         thickness,
         height,
-        "#25d366",
-        0.9,
+        color,
+        opacity,
     )
 }
 
@@ -421,6 +431,20 @@ mod tests {
         assert_ne!(
             &rgba[active_pixel_offset..active_pixel_offset + 4],
             &rgba[idle_pixel_offset..idle_pixel_offset + 4],
+        );
+    }
+
+    #[test]
+    fn renders_marker_border_with_active_key_color() {
+        let mut profile = test_profile();
+        profile.style.active_color = "#ff3366".to_string();
+
+        let (size, rgba) = render_overlay_frame(&profile, &HashSet::new(), true).unwrap();
+        let marker_pixel_offset = ((12 * size.width + 12) * 4) as usize;
+
+        assert_eq!(
+            &rgba[marker_pixel_offset..marker_pixel_offset + 4],
+            &[255, 51, 102, 255],
         );
     }
 
