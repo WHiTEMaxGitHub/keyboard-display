@@ -90,6 +90,13 @@ pub struct ExportOverlayVideoResult {
     pub fps: u16,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportOverlayProgress {
+    pub rendered_frames: u64,
+    pub total_frames: u64,
+}
+
 const BACKPLATE_PADDING: f32 = 10.0 * 2.0;
 const OVERLAY_BLEED: f32 = 12.0 * 2.0;
 const FLOAT_EPSILON: f32 = 0.000001;
@@ -161,9 +168,21 @@ pub fn export_overlay_video(
     ffmpeg_path: &Path,
     profile: &ExportOverlayProfile,
 ) -> Result<ExportOverlayVideoResult, String> {
+    export_overlay_video_with_progress(recording_path, output_path, ffmpeg_path, profile, |_| Ok(()))
+}
+
+/// 从 `.kbdrec` 帧状态流渲染透明 WebM overlay，并在渲染过程中上报帧进度。
+pub fn export_overlay_video_with_progress(
+    recording_path: &Path,
+    output_path: &Path,
+    ffmpeg_path: &Path,
+    profile: &ExportOverlayProfile,
+    mut on_progress: impl FnMut(ExportOverlayProgress) -> Result<(), String>,
+) -> Result<ExportOverlayVideoResult, String> {
     let bytes = std::fs::read(recording_path).map_err(|error| error.to_string())?;
     let decoded = crate::recording::decode_kbdrec(&bytes)?;
     let size = estimate_export_overlay_size(profile);
+    let total_frames = decoded.frames.len() as u64;
     let marker_ranges = marker_frame_ranges(
         decoded.markers.iter().map(|marker| marker.frame),
         decoded.fps,
@@ -185,13 +204,17 @@ pub fn export_overlay_video(
             .as_mut()
             .ok_or_else(|| "failed to open ffmpeg stdin".to_string())?;
 
-        for frame in &decoded.frames {
+        for (index, frame) in decoded.frames.iter().enumerate() {
             let active_keys = frame.keys.iter().cloned().collect::<HashSet<_>>();
             let marker_active = marker_ranges
                 .iter()
                 .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
             let (_, rgba) = render_overlay_frame(profile, &active_keys, marker_active)?;
             stdin.write_all(&rgba).map_err(|error| error.to_string())?;
+            on_progress(ExportOverlayProgress {
+                rendered_frames: index as u64 + 1,
+                total_frames,
+            })?;
         }
     }
 
@@ -427,8 +450,9 @@ impl ExportOverlayItem {
 mod tests {
     use super::{
         build_webm_ffmpeg_args, estimate_export_overlay_size, export_overlay_video,
-        render_overlay_frame, ExportOverlayItem, ExportOverlayLayout, ExportOverlayProfile,
-        ExportOverlayStyle, ExportRecordingConfig, ExportVideoConfig,
+        export_overlay_video_with_progress, render_overlay_frame, ExportOverlayItem,
+        ExportOverlayLayout, ExportOverlayProfile, ExportOverlayProgress, ExportOverlayStyle,
+        ExportRecordingConfig, ExportVideoConfig,
     };
     use crate::recording::{encode_kbdrec, RecordingEvent, RecordingSnapshot};
     use std::{collections::HashSet, io::Write};
@@ -637,6 +661,66 @@ mod tests {
             &raw_video[6 * bytes_per_frame + marker_pixel_offset
                 ..6 * bytes_per_frame + marker_pixel_offset + 4],
             &[37, 211, 102, 255],
+        );
+
+        let _ = std::fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn reports_rendered_frame_progress_during_export() {
+        let root = std::env::temp_dir().join(format!(
+            "keyboard-display-export-progress-test-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let recording_path = root.join("input.kbdrec");
+        let output_path = root.join("out.webm");
+        let raw_video_path = root.join("raw.rgba");
+        let fake_ffmpeg_path = root.join("fake-ffmpeg.sh");
+        let profile = test_profile();
+        let recording = encode_kbdrec(&RecordingSnapshot {
+            version: 1,
+            fps: 60,
+            timebase: "monotonic",
+            events: vec![RecordingEvent::KeyDown {
+                frame: 2,
+                key_id: "w".to_string(),
+            }],
+        })
+        .unwrap();
+        std::fs::write(&recording_path, recording).unwrap();
+        write_fake_ffmpeg(&fake_ffmpeg_path, &raw_video_path);
+        let mut progress_events = Vec::new();
+
+        export_overlay_video_with_progress(
+            &recording_path,
+            &output_path,
+            &fake_ffmpeg_path,
+            &profile,
+            |progress| {
+                progress_events.push(progress);
+                Ok(())
+            },
+        )
+        .unwrap();
+
+        assert_eq!(
+            progress_events,
+            vec![
+                ExportOverlayProgress {
+                    rendered_frames: 1,
+                    total_frames: 3,
+                },
+                ExportOverlayProgress {
+                    rendered_frames: 2,
+                    total_frames: 3,
+                },
+                ExportOverlayProgress {
+                    rendered_frames: 3,
+                    total_frames: 3,
+                },
+            ],
         );
 
         let _ = std::fs::remove_dir_all(root);

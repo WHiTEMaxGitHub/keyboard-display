@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { computed, onMounted, ref, watch } from "vue";
+import { openPath } from "@tauri-apps/plugin-opener";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
 import type { AppConfig } from "../domain/defaultConfig";
 import { formatExportFileName } from "../domain/exportFilename";
@@ -38,6 +40,9 @@ const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
 const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
 const exportStatus = ref("");
+const exportInProgress = ref(false);
+const exportProgress = ref({ renderedFrames: 0, totalFrames: 0 });
+let unlistenExportProgress: UnlistenFn | undefined;
 
 const exportReady = computed(() =>
   Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && props.videoExporterConfig.outputDirectory),
@@ -57,6 +62,17 @@ const outputVideoPath = computed(() => {
 const resolvedExporterLabel = computed(() =>
   describeVideoExporter(exporterStatus.value?.resolved ?? null),
 );
+
+const exportProgressPercent = computed(() => {
+  if (exportProgress.value.totalFrames <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    Math.round((exportProgress.value.renderedFrames / exportProgress.value.totalFrames) * 100),
+  );
+});
 
 watch(
   () => [
@@ -87,8 +103,18 @@ watch(
   },
 );
 
-onMounted(() => {
+onMounted(async () => {
   void refreshExporterStatus();
+  unlistenExportProgress = await listen<{
+    renderedFrames: number;
+    totalFrames: number;
+  }>("export-progress", (event) => {
+    exportProgress.value = event.payload;
+  });
+});
+
+onUnmounted(() => {
+  unlistenExportProgress?.();
 });
 
 watch(
@@ -180,6 +206,10 @@ async function chooseOutputDirectory() {
 }
 
 async function exportOverlayVideo() {
+  if (exportInProgress.value) {
+    return;
+  }
+
   if (!exportReady.value) {
     exportStatus.value = "Choose a recording, export folder, and available video exporter first.";
     return;
@@ -191,6 +221,8 @@ async function exportOverlayVideo() {
     return;
   }
 
+  exportInProgress.value = true;
+  exportProgress.value = { renderedFrames: 0, totalFrames: 0 };
   exportStatus.value = "Exporting overlay video...";
 
   try {
@@ -210,6 +242,21 @@ async function exportOverlayVideo() {
       `Exported ${result.frameCount} frames at ${result.width}x${result.height} @ ${result.fps}fps.`;
   } catch (error) {
     exportStatus.value = `Export failed: ${String(error)}`;
+  } finally {
+    exportInProgress.value = false;
+  }
+}
+
+async function openOutputDirectory() {
+  if (!props.videoExporterConfig.outputDirectory) {
+    exportStatus.value = "Choose an export folder first.";
+    return;
+  }
+
+  try {
+    await openPath(props.videoExporterConfig.outputDirectory);
+  } catch (error) {
+    exportStatus.value = `Failed to open export folder: ${String(error)}`;
   }
 }
 
@@ -256,8 +303,10 @@ function joinPath(directory: string, fileName: string) {
     <BaseToggleRow :checked="renderMarkers" @change="emit('update-render-markers', $event)">
       Render sync markers
     </BaseToggleRow>
-    <BaseFieldRow label="Filename template">
+    <section class="template-panel">
+      <label for="export-filename-template">Filename template</label>
       <input
+        id="export-filename-template"
         class="template-input"
         type="text"
         :value="filenameTemplateDraft"
@@ -265,16 +314,16 @@ function joinPath(directory: string, fileName: string) {
         @blur="commitFilenameTemplate"
         @keydown.enter="commitFilenameTemplate"
       />
-    </BaseFieldRow>
+    </section>
     <section class="export-job-panel">
       <div class="section-header">
         <h3>Overlay video</h3>
         <BaseButton
           variant="primary"
-          :disabled="!exportReady"
+          :disabled="!exportReady || exportInProgress"
           @click="exportOverlayVideo"
         >
-          Export overlay video
+          {{ exportInProgress ? "Exporting..." : "Export overlay video" }}
         </BaseButton>
       </div>
       <BaseFieldRow label="Recording">
@@ -290,6 +339,21 @@ function joinPath(directory: string, fileName: string) {
         <BaseButton @click="chooseOutputDirectory">
           Choose output folder
         </BaseButton>
+        <BaseButton
+          :disabled="!videoExporterConfig.outputDirectory"
+          @click="openOutputDirectory"
+        >
+          Open output folder
+        </BaseButton>
+      </div>
+      <div v-if="exportInProgress || exportProgress.totalFrames > 0" class="export-progress">
+        <div class="progress-copy">
+          <span>Rendering frames</span>
+          <strong>{{ exportProgress.renderedFrames }} / {{ exportProgress.totalFrames }}</strong>
+        </div>
+        <div class="progress-track" aria-hidden="true">
+          <div class="progress-fill" :style="{ width: `${exportProgressPercent}%` }"></div>
+        </div>
       </div>
       <p v-if="exportStatus" class="notice-text">{{ exportStatus }}</p>
     </section>
@@ -397,6 +461,50 @@ function joinPath(directory: string, fileName: string) {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.template-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.template-panel label {
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.export-progress {
+  display: grid;
+  gap: 8px;
+}
+
+.progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #9ca7b4;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.progress-copy strong {
+  color: #dfe5ec;
+}
+
+.progress-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #0d1117;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: #25d366;
+  transition: width 120ms ease;
 }
 
 .candidate-list {
