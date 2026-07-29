@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import { computed, onMounted, ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
 import type { AppConfig } from "../domain/defaultConfig";
@@ -36,13 +36,23 @@ const exporterStatus = ref<VideoExporterStatus | null>(null);
 const exporterError = ref("");
 const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
-const outputVideoPath = ref("");
 const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
 const exportStatus = ref("");
 
 const exportReady = computed(() =>
-  Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && outputVideoPath.value),
+  Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && props.videoExporterConfig.outputDirectory),
 );
+
+const outputVideoPath = computed(() => {
+  if (!props.videoExporterConfig.outputDirectory || !inputRecordingPath.value) {
+    return "";
+  }
+
+  return joinPath(
+    props.videoExporterConfig.outputDirectory,
+    defaultOutputFileName(inputRecordingPath.value),
+  );
+});
 
 const resolvedExporterLabel = computed(() =>
   describeVideoExporter(exporterStatus.value?.resolved ?? null),
@@ -149,27 +159,29 @@ async function chooseInputRecording() {
 
   if (typeof selectedPath === "string") {
     inputRecordingPath.value = selectedPath;
-    outputVideoPath.value = defaultOutputFileName(selectedPath);
     exportStatus.value = "";
   }
 }
 
-async function chooseOutputVideo() {
-  const selectedPath = await save({
-    title: "Save overlay video",
-    defaultPath: outputVideoPath.value || defaultOutputFileName(inputRecordingPath.value),
-    filters: [{ name: "WebM", extensions: ["webm"] }],
+async function chooseOutputDirectory() {
+  const selectedPath = await open({
+    title: "Choose export folder",
+    directory: true,
+    multiple: false,
   });
 
   if (typeof selectedPath === "string") {
-    outputVideoPath.value = selectedPath;
+    emit("update-video-exporter-config", normalizeVideoExporterConfig({
+      ...props.videoExporterConfig,
+      outputDirectory: selectedPath,
+    }));
     exportStatus.value = "";
   }
 }
 
 async function exportOverlayVideo() {
   if (!exportReady.value) {
-    exportStatus.value = "Choose a recording, output path, and available video exporter first.";
+    exportStatus.value = "Choose a recording, export folder, and available video exporter first.";
     return;
   }
 
@@ -229,6 +241,11 @@ function defaultOutputFileName(recordingPath: string) {
       : props.config.recording.defaultFps,
   });
 }
+
+function joinPath(directory: string, fileName: string) {
+  const separator = directory.includes("\\") ? "\\" : "/";
+  return `${directory.replace(/[\\/]+$/, "")}${separator}${fileName}`;
+}
 </script>
 
 <template>
@@ -264,14 +281,14 @@ function defaultOutputFileName(recordingPath: string) {
         {{ inputRecordingPath || "No .kbdrec selected" }}
       </BaseFieldRow>
       <BaseFieldRow label="Output">
-        {{ outputVideoPath || "No .webm output selected" }}
+        {{ outputVideoPath || "No export folder selected" }}
       </BaseFieldRow>
       <div class="exporter-actions">
         <BaseButton @click="chooseInputRecording">
           Choose .kbdrec
         </BaseButton>
-        <BaseButton @click="chooseOutputVideo">
-          Choose output .webm
+        <BaseButton @click="chooseOutputDirectory">
+          Choose output folder
         </BaseButton>
       </div>
       <p v-if="exportStatus" class="notice-text">{{ exportStatus }}</p>

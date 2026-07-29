@@ -246,6 +246,8 @@
     `.kbdrec`; MP4 and richer export settings remain future work.
   - Export output names use `export.filenameTemplate` with recording/profile
     variables instead of a fixed default file name.
+  - Export output folder is app-local state saved in
+    `exporter.video.outputDirectory`.
 
 - [x] Render markers during future overlay video export.
   - When exporting overlay video from `.kbdrec`, optionally render visible sync

@@ -9,6 +9,7 @@ export type VideoExporterCandidate = {
 
 export type VideoExporterConfig = {
   userSelectedPath: string | null;
+  outputDirectory: string | null;
 };
 
 export type VideoExporterStatus = {
@@ -21,6 +22,7 @@ export type VideoExporterStatus = {
 export function createDefaultVideoExporterConfig(): VideoExporterConfig {
   return {
     userSelectedPath: null,
+    outputDirectory: null,
   };
 }
 
@@ -29,6 +31,7 @@ export function normalizeVideoExporterConfig(
 ): VideoExporterConfig {
   return {
     userSelectedPath: cleanPath(config?.userSelectedPath),
+    outputDirectory: cleanPath(config?.outputDirectory),
   };
 }
 

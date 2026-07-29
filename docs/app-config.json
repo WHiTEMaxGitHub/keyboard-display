@@ -175,6 +175,12 @@
       ]
     }
   },
+  "exporter": {
+    "video": {
+      "userSelectedPath": null,
+      "outputDirectory": null
+    }
+  },
   "ui": {
     "language": "system"
   }

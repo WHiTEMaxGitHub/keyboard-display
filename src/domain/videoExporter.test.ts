@@ -11,12 +11,18 @@ describe("video exporter", () => {
   it("normalizes the optional user-selected path", () => {
     expect(createDefaultVideoExporterConfig()).toEqual({
       userSelectedPath: null,
+      outputDirectory: null,
     });
     expect(normalizeVideoExporterConfig({ userSelectedPath: "  /opt/ffmpeg  " })).toEqual({
       userSelectedPath: "/opt/ffmpeg",
+      outputDirectory: null,
     });
-    expect(normalizeVideoExporterConfig({ userSelectedPath: "   " })).toEqual({
+    expect(normalizeVideoExporterConfig({
+      userSelectedPath: "   ",
+      outputDirectory: "  /tmp/exports  ",
+    })).toEqual({
       userSelectedPath: null,
+      outputDirectory: "/tmp/exports",
     });
   });
 

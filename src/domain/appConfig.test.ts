@@ -38,6 +38,7 @@ describe("app config", () => {
       exporter: {
         video: {
           userSelectedPath: "/opt/ffmpeg",
+          outputDirectory: "/tmp/exports",
         },
       },
     });
@@ -58,6 +59,7 @@ describe("app config", () => {
     expect(appConfig.recording.browserDirectory).toBe("/tmp/browser-recordings");
     expect(appConfig.recording.silent).toBe(true);
     expect(appConfig.exporter.video.userSelectedPath).toBe("/opt/ffmpeg");
+    expect(appConfig.exporter.video.outputDirectory).toBe("/tmp/exports");
   });
 
   it("keeps real recent profile paths deduped and newest first", () => {
@@ -99,6 +101,7 @@ describe("app config", () => {
       exporter: {
         video: {
           userSelectedPath: null,
+          outputDirectory: null,
         },
       },
     });
@@ -148,6 +151,7 @@ describe("app config", () => {
       exporter: {
         video: {
           userSelectedPath: null,
+          outputDirectory: null,
         },
       },
     });
@@ -199,6 +203,7 @@ describe("app config", () => {
         exporter: {
           video: {
             userSelectedPath: "  /Applications/ffmpeg  ",
+            outputDirectory: "  /tmp/exports  ",
           },
         },
         ui: {
@@ -215,6 +220,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
     expect(appConfig.recording.browserDirectory).toBe("/tmp/browse-recordings");
     expect(appConfig.exporter.video.userSelectedPath).toBe("/Applications/ffmpeg");
+    expect(appConfig.exporter.video.outputDirectory).toBe("/tmp/exports");
   });
 
   it("fills profile recording config when loading older app config", () => {

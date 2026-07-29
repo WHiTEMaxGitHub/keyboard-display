@@ -249,6 +249,8 @@ source recording format; `.kbdrec` is the source of truth.
 | `recording.browserDirectory` | string or null | Folder shown in the Recording Files browser. This is independent from the save folder. |
 | `recording.silent` | boolean | Whether recording should destroy the POV overlay window while recording. |
 | `recording.hotkeys` | object | Recording hotkey settings. |
+| `exporter.video.userSelectedPath` | string or null | User-selected ffmpeg binary path for video export. |
+| `exporter.video.outputDirectory` | string or null | Folder used for exported overlay video files. |
 | `ui.language` | string | Future UI language setting. `system` means follow system/default behavior. |
 
 Users should usually edit profile config files rather than app config. App
