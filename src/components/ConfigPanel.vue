@@ -1,48 +1,23 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import { tauriApi } from "../api/tauri";
-import { normalizeHexColor } from "../domain/colorPicker";
-import {
-  isKeyBinding,
-  type AppConfig,
-  type ExportConfig,
-  type OverlayStyle,
-} from "../domain/defaultConfig";
+import { computed, provide, ref } from "vue";
+import type { AppConfig, ExportConfig, OverlayStyle } from "../domain/defaultConfig";
 import type { RecentProfile } from "../domain/appConfig";
 import type { AppNotification, NotificationTone } from "../composables/useNotifications";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import type { VideoExporterConfig } from "../domain/videoExporter";
 import type { RecordingInspection } from "../types/recording";
-import PovOverlay from "./PovOverlay.vue";
-import RecordingBrowserPanel from "./RecordingBrowserPanel.vue";
-import AppearancePanel from "./AppearancePanel.vue";
-import BaseFieldRow from "./BaseFieldRow.vue";
-import BaseSelect from "./BaseSelect.vue";
-import BaseSegmentedControl from "./BaseSegmentedControl.vue";
-import BaseToggleRow from "./BaseToggleRow.vue";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
-import ExportPanel from "./ExportPanel.vue";
-import LayoutEditor from "./LayoutEditor.vue";
 import NotificationStack from "./NotificationStack.vue";
-import RecordingPanel from "./RecordingPanel.vue";
-import WindowPanel from "./WindowPanel.vue";
+import OverviewPage from "./pages/OverviewPage.vue";
+import LayoutPage from "./pages/LayoutPage.vue";
+import AppearancePage from "./pages/AppearancePage.vue";
+import WindowPage from "./pages/WindowPage.vue";
+import RecordingPage from "./pages/RecordingPage.vue";
+import ExportPage from "./pages/ExportPage.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
-type LayoutSubPage = "summary" | "editor";
 type RecordingSubPage = "control" | "files";
-
-const activePage = ref<ConfigPage>("overview");
-const layoutSubPage = ref<LayoutSubPage>("summary");
-const recordingSubPage = ref<RecordingSubPage>("control");
-const recentColors = ref<string[]>([]);
-const sidebarCollapsed = ref(false);
-const videoExporterInstalling = ref(false);
-const videoExporterUninstalling = ref(false);
-const layoutSubPageOptions: Array<{ value: LayoutSubPage; label: string }> = [
-  { value: "summary", label: "Summary" },
-  { value: "editor", label: "Editor" },
-];
 
 const props = defineProps<{
   config: AppConfig;
@@ -70,10 +45,6 @@ const props = defineProps<{
   videoExporterConfig: VideoExporterConfig;
   notifications: AppNotification[];
 }>();
-
-const layoutRows = computed(() => {
-  return props.config.rows.map((items, index) => ({ row: index + 1, items }));
-});
 
 const emit = defineEmits<{
   "preview-overlay-style": [style: OverlayStyle];
@@ -110,39 +81,13 @@ const emit = defineEmits<{
   ];
 }>();
 
-function rememberColor(color: string) {
-  const normalizedColor = normalizeHexColor(color);
-  recentColors.value = [
-    normalizedColor,
-    ...recentColors.value.filter((recentColor) => recentColor !== normalizedColor),
-  ].slice(0, 8);
-}
+const activePage = ref<ConfigPage>("overview");
+const recordingSubPage = ref<RecordingSubPage>("control");
+const recentColors = ref<string[]>([]);
+const sidebarCollapsed = ref(false);
 
-function updateAlwaysOnTop(event: Event) {
-  const alwaysOnTop = (event.target as HTMLInputElement).checked;
-  emit("update-overlay-style", { ...props.config.style, alwaysOnTop });
-}
-
-function updateOverlayVisible(event: Event) {
-  emit("update-overlay-visible", (event.target as HTMLInputElement).checked);
-}
-
-function moveOverlay(
-  position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
-) {
-  emit("move-overlay", position);
-}
-
-function startOverlayAdjust() {
-  emit("start-overlay-adjust");
-}
-
-function saveOverlayAdjust() {
-  emit("save-overlay-adjust");
-}
-
-function cancelOverlayAdjust() {
-  emit("cancel-overlay-adjust");
+function relay(event: string, ...args: unknown[]) {
+  (emit as any)(event, ...args);
 }
 
 function selectActivePage(page: ConfigPage) {
@@ -159,72 +104,43 @@ function selectRecordingSubPage(page: RecordingSubPage) {
   recordingSubPage.value = page;
 }
 
-function loadConfigFile() {
-  emit("load-config");
-}
+provide("config", props.config);
+provide("activeKeys", props.activeKeys);
+provide("keyIdLabels", props.keyIdLabels);
+provide("overlayVisible", props.overlayVisible);
+provide("profileName", props.profileName);
+provide("profileChanged", props.profileChanged);
+provide("recentProfiles", props.recentProfiles);
+provide("recordingDirectory", props.recordingDirectory);
+provide("defaultRecordingDirectory", props.defaultRecordingDirectory);
+provide("recordingBrowserDirectory", props.recordingBrowserDirectory);
+provide("silentRecording", props.silentRecording);
+provide("isRecording", props.isRecording);
+provide("recordingCountdown", props.recordingCountdown);
+provide("lastRecordingPath", props.lastRecordingPath);
+provide("recordingStatusMessage", props.recordingStatusMessage);
+provide("currentRecordingPath", props.currentRecordingPath);
+provide("recordingInspection", props.recordingInspection);
+provide("recordingInspectionError", props.recordingInspectionError);
+provide("overlayPosition", props.overlayPosition);
+provide("overlayAdjusting", props.overlayAdjusting);
+provide("recordingHotkeys", props.recordingHotkeys);
+provide("hotkeyCaptureTarget", props.hotkeyCaptureTarget);
+provide("videoExporterConfig", props.videoExporterConfig);
+provide("recentColors", recentColors);
+provide("emit", relay);
 
-function refreshPov() {
-  emit("refresh-pov");
-}
-
-function loadRecentProfile(event: Event) {
-  const select = event.target as HTMLSelectElement;
-  const path = select.value;
-  if (path) {
-    emit("load-recent-profile", path);
-    select.value = "";
-  }
-}
-
-function exportAndApplyConfig() {
-  emit("export-and-apply-config");
-}
-
-function overwriteAndApplyConfig() {
-  emit("overwrite-and-apply-config");
-}
-
-function updateRenderMarkers(event: Event) {
-  emit("update-export-config", {
-    ...props.config.export,
-    renderMarkers: (event.target as HTMLInputElement).checked,
-  });
-}
-
-async function installAppManagedVideoExporter() {
-  if (videoExporterInstalling.value) {
-    return;
-  }
-
-  videoExporterInstalling.value = true;
-
-  try {
-    const result = await tauriApi.installAppManagedVideoExporter();
-    emit("notify", "success", `Video exporter installed: ${result.path}`);
-  } catch (error) {
-    emit("notify", "error", `Video exporter install failed: ${String(error)}`);
-  } finally {
-    videoExporterInstalling.value = false;
-  }
-}
-
-async function uninstallAppManagedVideoExporter() {
-  if (videoExporterUninstalling.value) {
-    return;
-  }
-
-  videoExporterUninstalling.value = true;
-
-  try {
-    await tauriApi.uninstallAppManagedVideoExporter();
-    emit("notify", "success", "App-managed video exporter uninstalled.");
-  } catch (error) {
-    emit("notify", "error", `Video exporter uninstall failed: ${String(error)}`);
-  } finally {
-    videoExporterUninstalling.value = false;
-  }
-}
-
+const pageComponent = computed(() => {
+  const map: Record<ConfigPage, any> = {
+    overview: OverviewPage,
+    layout: LayoutPage,
+    appearance: AppearancePage,
+    window: WindowPage,
+    recording: RecordingPage,
+    export: ExportPage,
+  };
+  return map[activePage.value];
+});
 </script>
 
 <template>
@@ -244,199 +160,13 @@ async function uninstallAppManagedVideoExporter() {
 
     <section class="workspace">
       <ConfigTopbar
-        @load-config="loadConfigFile"
-        @export-and-apply-config="exportAndApplyConfig"
-        @overwrite-and-apply-config="overwriteAndApplyConfig"
+        @load-config="emit('load-config')"
+        @export-and-apply-config="emit('export-and-apply-config')"
+        @overwrite-and-apply-config="emit('overwrite-and-apply-config')"
       />
 
       <div :key="`${activePage}-${recordingSubPage}`" class="page-container">
-      <section v-if="activePage === 'overview'" class="page-stack">
-        <section class="preview-band" aria-label="Live preview">
-          <div class="preview-copy">
-            <p>Live Preview</p>
-            <h2>{{ profileName }}</h2>
-          </div>
-          <div class="preview-viewport">
-            <PovOverlay
-              :layout="config.layout"
-              :rows="config.rows"
-              :keys="config.keys"
-              :key-id-labels="keyIdLabels"
-              :active-keys="activeKeys"
-              :overlay-style="config.style"
-            />
-          </div>
-        </section>
-
-        <section class="panel-grid">
-          <article class="panel">
-            <h2>Profile</h2>
-            <BaseFieldRow label="Name">{{ profileName }}</BaseFieldRow>
-            <BaseFieldRow label="Status">
-              {{ profileChanged ? "Unsaved changes" : "Saved" }}
-            </BaseFieldRow>
-            <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
-            <label class="recent-profile-control">
-              <span>Recent profiles</span>
-              <BaseSelect
-                class="select-control"
-                :disabled="recentProfiles.length === 0"
-                model-value=""
-                @change="loadRecentProfile"
-              >
-                <option value="">
-                  {{ recentProfiles.length ? "Choose a profile" : "No recent profiles" }}
-                </option>
-                <option
-                  v-for="profile in recentProfiles"
-                  :key="profile.path"
-                  :value="profile.path"
-                >
-                  {{ profile.name }}
-                </option>
-              </BaseSelect>
-            </label>
-          </article>
-
-          <article class="panel">
-            <h2>Quick controls</h2>
-            <BaseToggleRow :checked="overlayVisible" @change="updateOverlayVisible">
-              Show POV overlay
-            </BaseToggleRow>
-            <BaseToggleRow :checked="config.style.alwaysOnTop" @change="updateAlwaysOnTop">
-              Always on top
-            </BaseToggleRow>
-          </article>
-        </section>
-      </section>
-
-      <section v-else-if="activePage === 'layout'" class="page-stack">
-        <article class="panel">
-          <h2>Layout</h2>
-          <BaseSegmentedControl
-            v-model="layoutSubPage"
-            :options="layoutSubPageOptions"
-            aria-label="Layout view"
-          />
-          <BaseFieldRow label="Unit size">{{ config.layout.unitPx }}px</BaseFieldRow>
-          <BaseFieldRow label="Gap">{{ config.layout.gapUnit }} unit</BaseFieldRow>
-          <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
-          <div v-if="layoutSubPage === 'summary'" class="layout-line-list">
-            <div v-for="line in layoutRows" :key="line.row" class="layout-line">
-              <span class="line-label">Line {{ line.row }}:</span>
-              <span class="line-keys">
-                <span
-                  v-for="(item, index) in line.items"
-                  :key="`${line.row}-${index}`"
-                  :class="['line-key', { 'line-gap': !isKeyBinding(item) }]"
-                >
-                  {{ isKeyBinding(item) ? item.label : "Gap" }} · {{ item.widthUnit }}u
-                </span>
-              </span>
-            </div>
-          </div>
-          <div v-else class="layout-editor-stack">
-            <div class="layout-editor-preview">
-              <PovOverlay
-                :layout="config.layout"
-                :rows="config.rows"
-                :keys="config.keys"
-                :key-id-labels="keyIdLabels"
-                :active-keys="activeKeys"
-                :overlay-style="config.style"
-              />
-            </div>
-            <LayoutEditor
-              :rows="config.rows"
-              :key-id-labels="keyIdLabels"
-              @update-key-id-labels="emit('update-key-id-labels', $event)"
-              @update-rows="emit('update-overlay-rows', $event)"
-            />
-          </div>
-        </article>
-      </section>
-
-      <section v-else-if="activePage === 'appearance'" class="page-stack">
-        <AppearancePanel
-          :config="config"
-          :recent-colors="recentColors"
-          @preview-overlay-style="emit('preview-overlay-style', $event)"
-          @update-overlay-style="emit('update-overlay-style', $event)"
-          @remember-color="rememberColor"
-          @refresh-pov="refreshPov"
-        />
-      </section>
-
-      <section v-else-if="activePage === 'window'" class="page-stack">
-        <WindowPanel
-          :overlay-position="overlayPosition"
-          :overlay-visible="overlayVisible"
-          :always-on-top="config.style.alwaysOnTop"
-          :overlay-adjusting="overlayAdjusting"
-          @update-overlay-visible="updateOverlayVisible"
-          @update-always-on-top="updateAlwaysOnTop"
-          @start-overlay-adjust="startOverlayAdjust"
-          @save-overlay-adjust="saveOverlayAdjust"
-          @cancel-overlay-adjust="cancelOverlayAdjust"
-          @move-overlay="moveOverlay"
-        />
-      </section>
-
-      <section v-else-if="activePage === 'recording' && recordingSubPage === 'control'" class="page-stack">
-        <RecordingPanel
-          :config="config"
-          :recording-directory="recordingDirectory"
-          :default-recording-directory="defaultRecordingDirectory"
-          :silent-recording="silentRecording"
-          :is-recording="isRecording"
-          :recording-countdown="recordingCountdown"
-          :last-recording-path="lastRecordingPath"
-          :recording-status-message="recordingStatusMessage"
-          :recording-hotkeys="recordingHotkeys"
-          :hotkey-capture-target="hotkeyCaptureTarget"
-          @choose-recording-directory="emit('choose-recording-directory')"
-          @update-silent-recording="emit('update-silent-recording', $event)"
-          @update-recording-config="emit('update-recording-config', $event)"
-          @start-recording="emit('start-recording')"
-          @stop-recording="emit('stop-recording')"
-          @add-sync-marker="emit('add-sync-marker')"
-          @inspect-recording-file="emit('inspect-recording-file')"
-          @inspect-recording-path="emit('inspect-recording-path', $event)"
-          @update-recording-hotkey-mode="emit('update-recording-hotkey-mode', $event)"
-          @begin-hotkey-capture="emit('begin-hotkey-capture', $event)"
-        />
-      </section>
-
-      <section v-else-if="activePage === 'recording' && recordingSubPage === 'files'" class="page-stack">
-        <RecordingBrowserPanel
-          :recording-browser-directory="recordingBrowserDirectory"
-          :current-recording-path="currentRecordingPath"
-          :recording-inspection="recordingInspection"
-          :recording-inspection-error="recordingInspectionError"
-          @inspect-recording-file="emit('inspect-recording-file')"
-          @inspect-recording-path="emit('inspect-recording-path', $event)"
-          @clear-recording-inspection="emit('clear-recording-inspection')"
-          @choose-recording-browser-directory="emit('choose-recording-browser-directory')"
-        />
-      </section>
-
-      <section v-else-if="activePage === 'export'" class="page-stack">
-        <ExportPanel
-          :config="config"
-          :profile-name="profileName"
-          :render-markers="config.export.renderMarkers"
-          :video-exporter-config="videoExporterConfig"
-          :installing-app-managed-exporter="videoExporterInstalling"
-          :uninstalling-app-managed-exporter="videoExporterUninstalling"
-          @update-render-markers="updateRenderMarkers"
-          @update-export-config="emit('update-export-config', $event)"
-          @update-video-exporter-config="emit('update-video-exporter-config', $event)"
-          @notify="emit('notify', $event.tone, $event.message)"
-          @update-installing-app-managed-exporter="videoExporterInstalling = $event"
-          @install-app-managed-exporter="installAppManagedVideoExporter"
-          @uninstall-app-managed-exporter="uninstallAppManagedVideoExporter"
-        />
-      </section>
+        <component :is="pageComponent" />
       </div>
     </section>
   </main>
@@ -448,17 +178,12 @@ async function uninstallAppManagedVideoExporter() {
   height: 100vh;
   grid-template-columns: 248px minmax(0, 1fr);
   overflow: hidden;
-  background: #111316;
-  color: #eef2f6;
+  background: var(--color-surface-base);
+  color: var(--color-text-primary);
 }
 
 .config-shell.sidebar-collapsed {
   grid-template-columns: 72px minmax(0, 1fr);
-}
-
-.preview-copy p,
-.quiet {
-  color: #9ca7b4;
 }
 
 .workspace {
@@ -468,206 +193,14 @@ async function uninstallAppManagedVideoExporter() {
   padding: 24px;
 }
 
-.preview-copy p {
-  margin: 0 0 4px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-h2 {
-  margin: 0;
-  letter-spacing: 0;
-}
-
-h2 {
-  font-size: 18px;
-  line-height: 24px;
-}
-
-.preview-band {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  min-width: 0;
-  min-height: 250px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(37, 211, 102, 0.1), transparent 44%),
-    #151920;
-  padding: 24px;
-}
-
-.preview-copy {
-  flex: 0 0 180px;
-}
-
-.preview-viewport {
-  display: grid;
-  justify-content: start;
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 8px 0 10px 8px;
-}
-
-.preview-viewport :deep(.pov-shell) {
-  flex: 0 0 auto;
-}
-
-.page-stack {
-  display: grid;
-  gap: 16px;
-}
-
 .page-container {
   display: grid;
   gap: 16px;
 }
 
-.panel-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.panel {
-  box-sizing: border-box;
-  min-height: 190px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #171b22;
-  padding: 18px;
-}
-
-.panel h2 {
-  margin-bottom: 16px;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.section-header h2 {
-  margin-bottom: 0;
-}
-
-.recent-profile-control {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 7px;
-  margin-top: 14px;
-  color: #c9d1da;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.recent-profile-control select {
-  justify-self: end;
-  width: min(240px, 100%);
-}
-
-.recent-profile-control select:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-}
-
-.layout-line-list {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.layout-editor-stack {
-  display: grid;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.layout-editor-preview {
-  display: grid;
-  align-items: center;
-  min-height: 160px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #11161d;
-  padding: 14px;
-}
-
-.layout-editor-preview :deep(.pov-shell) {
-  flex: 0 0 auto;
-}
-
-.layout-line {
-  display: grid;
-  grid-template-columns: 76px minmax(0, 1fr);
-  align-items: start;
-  gap: 10px;
-}
-
-.line-label {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.line-keys {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.line-key {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  background: #202630;
-  padding: 5px 8px;
-  color: #dfe5ec;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-label {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.select-control {
-  justify-self: end;
-  width: min(240px, 100%);
-}
-
-.quiet {
-  margin: 14px 0 0;
-}
-
 @media (max-width: 920px) {
   .config-shell {
     grid-template-columns: 72px minmax(0, 1fr);
-  }
-
-  .preview-band {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .panel-grid {
-    grid-template-columns: 1fr;
   }
 }
 </style>
