@@ -297,17 +297,17 @@ function joinPath(directory: string, fileName: string) {
 
 <template>
   <BasePanel wide>
-    <h2>Export</h2>
+    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">Export</h2>
     <BaseFieldRow label="Transparent overlay">WebM</BaseFieldRow>
     <BaseFieldRow label="Compatible video">MP4</BaseFieldRow>
     <BaseToggleRow :checked="renderMarkers" @change="emit('update-render-markers', $event)">
       Render sync markers
     </BaseToggleRow>
-    <section class="template-panel">
-      <label for="export-filename-template">Filename template</label>
+    <section class="grid gap-2 mt-4">
+      <label for="export-filename-template" class="text-text-muted text-[13px] font-extrabold">Filename template</label>
       <input
         id="export-filename-template"
-        class="template-input"
+        class="box-border w-full border border-border-control rounded-radius-md bg-[#10141a] text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
         type="text"
         :value="filenameTemplateDraft"
         @input="updateFilenameTemplateDraft"
@@ -315,9 +315,9 @@ function joinPath(directory: string, fileName: string) {
         @keydown.enter="commitFilenameTemplate"
       />
     </section>
-    <section class="export-job-panel">
-      <div class="section-header">
-        <h3>Overlay video</h3>
+    <section class="grid gap-2.5 mt-4 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
+      <div class="flex items-center justify-between gap-3 mb-2">
+        <h3 class="m-0 text-text-body text-base leading-[22px] tracking-normal">Overlay video</h3>
         <BaseButton
           variant="primary"
           :disabled="!exportReady || exportInProgress"
@@ -332,7 +332,7 @@ function joinPath(directory: string, fileName: string) {
       <BaseFieldRow label="Output">
         {{ outputVideoPath || "No export folder selected" }}
       </BaseFieldRow>
-      <div class="exporter-actions">
+      <div class="flex flex-wrap gap-2">
         <BaseButton @click="chooseInputRecording">
           Choose .kbdrec
         </BaseButton>
@@ -346,20 +346,20 @@ function joinPath(directory: string, fileName: string) {
           Open output folder
         </BaseButton>
       </div>
-      <div v-if="exportInProgress || exportProgress.totalFrames > 0" class="export-progress">
-        <div class="progress-copy">
+      <div v-if="exportInProgress || exportProgress.totalFrames > 0" class="grid gap-2">
+        <div class="flex items-center justify-between gap-3 text-text-muted text-[13px] font-extrabold">
           <span>Rendering frames</span>
-          <strong>{{ exportProgress.renderedFrames }} / {{ exportProgress.totalFrames }}</strong>
+          <strong class="text-text-body">{{ exportProgress.renderedFrames }} / {{ exportProgress.totalFrames }}</strong>
         </div>
-        <div class="progress-track" aria-hidden="true">
-          <div class="progress-fill" :style="{ width: `${exportProgressPercent}%` }"></div>
+        <div class="h-2 overflow-hidden rounded-full bg-[#0d1117]">
+          <div class="h-full rounded-full bg-accent transition-[width] duration-[120ms] ease" :style="{ width: `${exportProgressPercent}%` }"></div>
         </div>
       </div>
       <p v-if="exportStatus" class="notice-text">{{ exportStatus }}</p>
     </section>
-    <div class="exporter-panel">
-      <div class="section-header">
-        <h3>Video exporter</h3>
+    <div class="grid gap-2.5 mt-4 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
+      <div class="flex items-center justify-between gap-3 mb-2">
+        <h3 class="m-0 text-text-body text-base leading-[22px] tracking-normal">Video exporter</h3>
         <BaseButton :disabled="exporterChecking" @click="refreshExporterStatus">
           {{ exporterChecking ? "Checking..." : "Check again" }}
         </BaseButton>
@@ -372,7 +372,7 @@ function joinPath(directory: string, fileName: string) {
         Video export requires ffmpeg. You can select an existing binary, use a
         PATH installation, or install an app-managed exporter later.
       </p>
-      <div class="exporter-actions">
+      <div class="flex flex-wrap gap-2">
         <BaseButton @click="chooseFfmpegPath">
           Choose ffmpeg path
         </BaseButton>
@@ -399,26 +399,26 @@ function joinPath(directory: string, fileName: string) {
           {{ installingAppManagedExporter ? "Installing..." : "Install app-managed exporter" }}
         </BaseButton>
       </div>
-      <div v-if="exporterStatus" class="candidate-list">
-        <div class="candidate-row">
-          <span>App-managed</span>
-          <strong>{{ exporterStatus.appManaged.available ? "Installed" : "Not installed" }}</strong>
-          <code>{{ exporterStatus.appManaged.path }}</code>
+      <div v-if="exporterStatus" class="grid gap-2">
+        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-default rounded-radius-md bg-[#10141a] px-2.5 py-2">
+          <span class="text-text-muted text-[13px] font-extrabold">App-managed</span>
+          <strong class="min-w-0 overflow-wrap-anywhere">{{ exporterStatus.appManaged.available ? "Installed" : "Not installed" }}</strong>
+          <code class="min-w-0 overflow-wrap-anywhere text-text-secondary font-mono text-xs">{{ exporterStatus.appManaged.path }}</code>
         </div>
-        <div class="candidate-row">
-          <span>User-selected</span>
-          <strong>{{ exporterStatus.userSelected?.available ? "Available" : "Not selected" }}</strong>
-          <code>{{ exporterStatus.userSelected?.path ?? "None" }}</code>
+        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-default rounded-radius-md bg-[#10141a] px-2.5 py-2">
+          <span class="text-text-muted text-[13px] font-extrabold">User-selected</span>
+          <strong class="min-w-0 overflow-wrap-anywhere">{{ exporterStatus.userSelected?.available ? "Available" : "Not selected" }}</strong>
+          <code class="min-w-0 overflow-wrap-anywhere text-text-secondary font-mono text-xs">{{ exporterStatus.userSelected?.path ?? "None" }}</code>
         </div>
-        <div class="candidate-row">
-          <span>PATH</span>
-          <strong>{{ exporterStatus.path.available ? "Available" : "Not found" }}</strong>
-          <code>{{ exporterStatus.path.version ?? "ffmpeg" }}</code>
+        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-default rounded-radius-md bg-[#10141a] px-2.5 py-2">
+          <span class="text-text-muted text-[13px] font-extrabold">PATH</span>
+          <strong class="min-w-0 overflow-wrap-anywhere">{{ exporterStatus.path.available ? "Available" : "Not found" }}</strong>
+          <code class="min-w-0 overflow-wrap-anywhere text-text-secondary font-mono text-xs">{{ exporterStatus.path.version ?? "ffmpeg" }}</code>
         </div>
       </div>
-      <p v-if="exporterError" class="error-text">{{ exporterError }}</p>
+      <p v-if="exporterError" class="error">{{ exporterError }}</p>
     </div>
-    <p class="quiet">
+    <p class="notice">
       Video is generated from the input timeline, so size and format can be
       tuned after recording.
     </p>
@@ -426,121 +426,6 @@ function joinPath(directory: string, fileName: string) {
 </template>
 
 <style scoped>
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.section-header h3 {
-  margin: 0;
-  color: #dfe5ec;
-  font-size: 16px;
-  letter-spacing: 0;
-  line-height: 22px;
-}
-
-.quiet {
-  color: #9ca7b4;
-}
-
-.export-job-panel,
-.exporter-panel {
-  display: grid;
-  gap: 10px;
-  margin-top: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #151a20;
-  padding: 14px;
-}
-
-.exporter-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.template-panel {
-  display: grid;
-  gap: 8px;
-}
-
-.template-panel label {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.export-progress {
-  display: grid;
-  gap: 8px;
-}
-
-.progress-copy {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.progress-copy strong {
-  color: #dfe5ec;
-}
-
-.progress-track {
-  height: 8px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: #0d1117;
-}
-
-.progress-fill {
-  height: 100%;
-  border-radius: inherit;
-  background: #25d366;
-  transition: width 120ms ease;
-}
-
-.candidate-list {
-  display: grid;
-  gap: 8px;
-}
-
-.candidate-row {
-  display: grid;
-  grid-template-columns: 120px 110px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: #10141a;
-  padding: 8px 10px;
-}
-
-.candidate-row span {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.candidate-row strong,
-.candidate-row code {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.candidate-row code {
-  color: #c9d1da;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
 .notice-text {
   margin: 0;
   border: 1px solid rgba(255, 209, 102, 0.18);
@@ -550,33 +435,5 @@ function joinPath(directory: string, fileName: string) {
   font-size: 13px;
   font-weight: 700;
   padding: 9px 10px;
-}
-
-.error-text {
-  margin: 0;
-  color: #ff8f8f;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.template-input {
-  box-sizing: border-box;
-  width: 100%;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #10141a;
-  color: #eef2f6;
-  font: inherit;
-  font-size: 13px;
-  padding: 8px 10px;
-}
-
-.template-input:focus {
-  outline: none;
-  border-color: rgba(37, 211, 102, 0.55);
-}
-
-.quiet {
-  margin: 14px 0 0;
 }
 </style>

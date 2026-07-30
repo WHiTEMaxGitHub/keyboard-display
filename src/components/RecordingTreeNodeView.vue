@@ -88,19 +88,19 @@ function padFrame(frame: number, fps: number) {
 </script>
 
 <template>
-  <div class="tree-node">
-    <div v-if="node.type === 'directory'" class="directory-branch">
+  <div class="grid gap-1.5">
+    <div v-if="node.type === 'directory'" class="grid gap-1.5 min-w-0">
       <button
-        class="directory-node"
+        class="flex items-start gap-2 min-w-0 w-full border-0 bg-transparent text-text-secondary cursor-pointer text-[13px] p-0 text-left hover:text-accent-text hover:translate-x-0.5 transition-[color,transform] duration-[140ms] ease"
         type="button"
         :aria-expanded="expanded"
         @click="toggleExpanded"
       >
-        <span class="tree-prefix">{{ expanded ? "▾" : "▸" }}</span>
+        <span class="flex-none text-text-muted font-mono">{{ expanded ? "▾" : "▸" }}</span>
         <strong>{{ node.name }}</strong>
       </button>
       <div v-if="expanded && node.children.length > 0" class="tree-children-shell expanded">
-        <div class="tree-children">
+        <div class="grid gap-1.5 ml-[18px] min-h-0 min-w-0 overflow-hidden">
           <RecordingTreeNodeView
             v-for="child in node.children"
             :key="child.path"
@@ -110,9 +110,9 @@ function padFrame(frame: number, fps: number) {
         </div>
       </div>
     </div>
-    <div v-else class="file-branch">
+    <div v-else class="grid gap-1.5 min-w-0">
       <div
-        class="file-node"
+        class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 min-w-0 border border-border-default rounded-radius-md bg-[#151a20] text-text-body cursor-pointer px-2.5 py-2 text-left transition-[background-color,border-color,transform] duration-[140ms] ease hover:border-white/14 hover:bg-[#1e252e] focus-visible:border-accent-focus-border focus-visible:outline-2 focus-visible:outline-accent-focus-ring focus-visible:outline-offset-0"
         role="button"
         tabindex="0"
         :aria-expanded="fileDetailsVisible"
@@ -120,20 +120,20 @@ function padFrame(frame: number, fps: number) {
         @keydown.enter.prevent="toggleFileDetails"
         @keydown.space.prevent="toggleFileDetails"
       >
-        <span class="tree-prefix">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
-        <span class="file-main">
-          <strong>{{ displayTitle(node) }}</strong>
-          <small v-if="node.summary?.metadata.displayName">{{ node.name }}</small>
-          <small v-if="node.summary">
+        <span class="flex-none text-text-muted font-mono">{{ fileDetailsVisible ? "▾" : "▸" }}</span>
+        <span class="grid gap-[3px] min-w-0">
+          <strong class="overflow-hidden text-ellipsis whitespace-nowrap">{{ displayTitle(node) }}</strong>
+          <small v-if="node.summary?.metadata.displayName" class="text-text-muted text-xs">{{ node.name }}</small>
+          <small v-if="node.summary" class="text-text-muted text-xs">
             {{ formatFileSize(node.summary.sizeBytes) }} · {{ node.summary.fps }}fps ·
             {{ node.summary.frameCount }} frames · {{ node.summary.markerCount }} markers
           </small>
-          <small v-if="node.summary?.metadata.tags.length">
+          <small v-if="node.summary?.metadata.tags.length" class="text-text-muted text-xs">
             tags: {{ node.summary.metadata.tags.join(", ") }}
           </small>
-          <small v-if="node.summary">{{ formatFileTimes(node.summary) }}</small>
+          <small v-if="node.summary" class="text-text-muted text-xs">{{ formatFileTimes(node.summary) }}</small>
         </span>
-        <BaseButton class="inspect-file-button" size="sm" @click.stop="inspect(node.path)">
+        <BaseButton class="justify-self-end" size="sm" @click.stop="inspect(node.path)">
           Inspect / edit
         </BaseButton>
       </div>
@@ -143,22 +143,22 @@ function padFrame(frame: number, fps: number) {
           { expanded: fileDetailsVisible && hasFileDetails(node.summary) },
         ]"
       >
-        <div v-if="node.summary && hasFileDetails(node.summary)" class="file-details">
-          <div v-if="node.summary.metadata.description" class="file-detail-block">
-            <strong>Description</strong>
-            <span>{{ node.summary.metadata.description }}</span>
+        <div v-if="node.summary && hasFileDetails(node.summary)" class="grid gap-2 ml-[18px] min-h-0 overflow-hidden border border-border-default rounded-radius-md bg-surface-preview text-text-body p-2.5">
+          <div v-if="node.summary.metadata.description" class="grid gap-[3px] min-w-0">
+            <strong class="text-text-secondary text-xs">Description</strong>
+            <span class="overflow-wrap-anywhere text-text-muted text-xs">{{ node.summary.metadata.description }}</span>
           </div>
-          <div v-if="node.summary.metadata.tags.length" class="file-detail-block">
-            <strong>Tags</strong>
-            <span>{{ node.summary.metadata.tags.join(", ") }}</span>
+          <div v-if="node.summary.metadata.tags.length" class="grid gap-[3px] min-w-0">
+            <strong class="text-text-secondary text-xs">Tags</strong>
+            <span class="overflow-wrap-anywhere text-text-muted text-xs">{{ node.summary.metadata.tags.join(", ") }}</span>
           </div>
-          <div class="marker-detail-section">
-            <div class="marker-detail-header">
-              <strong>Markers</strong>
-              <span>{{ node.summary.markerCount }} total</span>
+          <div class="grid gap-2 mt-0.5">
+            <div class="flex items-baseline justify-between gap-3">
+              <strong class="text-text-body text-[13px]">Markers</strong>
+              <span class="text-text-muted text-xs font-bold">{{ node.summary.markerCount }} total</span>
             </div>
-            <div v-if="node.summary.markers.length" class="marker-table">
-              <div class="marker-table-head" aria-hidden="true">
+            <div v-if="node.summary.markers.length" class="grid overflow-hidden border border-border-dim rounded-radius-md">
+              <div class="grid grid-cols-[minmax(110px,0.9fr)_minmax(90px,auto)_minmax(190px,auto)_minmax(120px,1fr)] gap-2.5 items-center px-2.5 py-2 bg-white/[0.035] text-text-subtle text-[11px] font-extrabold uppercase">
                 <span>Name</span>
                 <span>Frame</span>
                 <span>Timecode</span>
@@ -169,10 +169,10 @@ function padFrame(frame: number, fps: number) {
                 :key="`${marker.frame}-${marker.name}`"
                 class="marker-note-row"
               >
-                <strong>{{ marker.name || "marker" }}</strong>
-                <span>frame {{ marker.frame }}</span>
-                <span>{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
-                <span>{{ markerNoteFor(node.summary, marker)?.note || "-" }}</span>
+                <strong class="text-text-body font-mono font-extrabold text-xs">{{ marker.name || "marker" }}</strong>
+                <span class="min-w-0 overflow-wrap-anywhere">frame {{ marker.frame }}</span>
+                <span class="min-w-0 overflow-wrap-anywhere">{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
+                <span class="min-w-0 overflow-wrap-anywhere">{{ markerNoteFor(node.summary, marker)?.note || "-" }}</span>
               </div>
             </div>
           </div>
@@ -183,102 +183,6 @@ function padFrame(frame: number, fps: number) {
 </template>
 
 <style scoped>
-.tree-node {
-  display: grid;
-  gap: 6px;
-}
-
-.directory-branch {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.file-branch {
-  display: grid;
-  gap: 6px;
-  min-width: 0;
-}
-
-.directory-node {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  min-width: 0;
-}
-
-.directory-node {
-  width: 100%;
-  border: 0;
-  background: transparent;
-  color: #c9d1da;
-  cursor: pointer;
-  font-size: 13px;
-  padding: 0;
-  text-align: left;
-  transition:
-    color 140ms ease,
-    transform 140ms ease;
-}
-
-.directory-node:hover {
-  color: #eafff0;
-  transform: translateX(2px);
-}
-
-.file-node {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 8px;
-  min-width: 0;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: #151a20;
-  color: #dfe5ec;
-  cursor: pointer;
-  padding: 8px 10px;
-  text-align: left;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    transform 140ms ease;
-}
-
-.file-node:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: #1e252e;
-}
-
-.file-node:focus-visible {
-  border-color: rgba(37, 211, 102, 0.55);
-  outline: 2px solid rgba(37, 211, 102, 0.14);
-  outline-offset: 0;
-}
-
-.tree-prefix {
-  flex: 0 0 auto;
-  color: #9ca7b4;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-}
-
-.file-main {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.file-main strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.file-main small {
-  color: #9ca7b4;
-  font-size: 12px;
-}
-
 .tree-children-shell {
   display: grid;
   grid-template-rows: 0fr;
@@ -297,81 +201,6 @@ function padFrame(frame: number, fps: number) {
   transform: translateY(0);
 }
 
-.tree-children {
-  display: grid;
-  gap: 6px;
-  margin-left: 18px;
-  min-height: 0;
-  min-width: 0;
-  overflow: hidden;
-}
-
-.file-details {
-  display: grid;
-  gap: 8px;
-  margin-left: 18px;
-  min-height: 0;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: #11161d;
-  color: #dfe5ec;
-  padding: 10px;
-}
-
-.file-detail-block,
-.marker-detail-section {
-  display: grid;
-  gap: 3px;
-  min-width: 0;
-}
-
-.file-detail-block strong {
-  color: #c9d1da;
-  font-size: 12px;
-}
-
-.file-detail-block span {
-  overflow-wrap: anywhere;
-  color: #9ca7b4;
-  font-size: 12px;
-}
-
-.marker-detail-section {
-  gap: 8px;
-  margin-top: 2px;
-}
-
-.marker-detail-header {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.marker-detail-header strong {
-  color: #dfe5ec;
-  font-size: 13px;
-}
-
-.marker-detail-header span {
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.inspect-file-button {
-  justify-self: end;
-}
-
-.marker-table {
-  display: grid;
-  overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 7px;
-}
-
-.marker-table-head,
 .marker-note-row {
   display: grid;
   grid-template-columns:
@@ -382,17 +211,6 @@ function padFrame(frame: number, fps: number) {
   gap: 10px;
   align-items: center;
   padding: 8px 10px;
-}
-
-.marker-table-head {
-  background: rgba(255, 255, 255, 0.035);
-  color: #7f8b99;
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.marker-note-row {
   color: #9ca7b4;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
@@ -401,16 +219,4 @@ function padFrame(frame: number, fps: number) {
 .marker-note-row + .marker-note-row {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
-
-.marker-note-row strong {
-  color: #dfe5ec;
-  font: inherit;
-  font-weight: 800;
-}
-
-.marker-note-row span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 </style>

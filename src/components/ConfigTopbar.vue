@@ -10,12 +10,12 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="flex items-center justify-between gap-4 mb-5 max-[920px]:flex-col max-[920px]:items-start">
     <div>
-      <p>Configuration</p>
-      <h1>POV overlay control panel</h1>
+      <p class="m-0 mb-1 text-text-muted text-xs font-bold tracking-[0.08em] uppercase">Configuration</p>
+      <h1 class="m-0 text-[28px] leading-[34px] tracking-normal">POV overlay control panel</h1>
     </div>
-    <div class="topbar-actions">
+    <div class="flex flex-wrap justify-end gap-2">
       <BaseButton @click="emit('load-config')">
         <SlidersHorizontal :size="15" aria-hidden="true" />
         Load config
@@ -29,43 +29,3 @@ const emit = defineEmits<{
     </div>
   </header>
 </template>
-
-<style scoped>
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-
-.topbar-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.topbar p {
-  margin: 0 0 4px;
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-h1 {
-  margin: 0;
-  font-size: 28px;
-  line-height: 34px;
-  letter-spacing: 0;
-}
-
-@media (max-width: 920px) {
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-}
-</style>

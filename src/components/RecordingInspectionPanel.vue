@@ -55,7 +55,6 @@ function timelineMarkerPosition(percent: number) {
   return `calc(10px + ${percent / 100} * (100% - 20px))`;
 }
 
-/// 把 marker 帧号格式化成剪辑软件容易对齐的 HH:MM:SS:FF 形式。
 function formatFrameTimecode(frame: number, fps: number) {
   const totalSeconds = Math.floor(frame / fps);
   const frameInSecond = frame % fps;
@@ -76,7 +75,7 @@ function padFrame(frame: number, fps: number) {
 </script>
 
 <template>
-  <div class="inspection-grid">
+  <div class="grid grid-cols-2 gap-x-[18px] gap-y-0">
     <BaseFieldRow label="Version">{{ inspection.version }}</BaseFieldRow>
     <BaseFieldRow label="FPS">{{ inspection.fps }}</BaseFieldRow>
     <BaseFieldRow label="Keys">{{ keyIds.length }}</BaseFieldRow>
@@ -87,10 +86,10 @@ function padFrame(frame: number, fps: number) {
     </BaseFieldRow>
   </div>
 
-  <div class="marker-timeline-panel">
-    <div class="section-header">
-      <h3>Marker timeline</h3>
-      <span class="quiet">
+  <div class="grid gap-2.5 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
+    <div class="flex items-center justify-between gap-3">
+      <h3 class="m-0 text-base leading-[22px] tracking-normal">Marker timeline</h3>
+      <span class="text-text-muted">
         {{ frames.length }} frames
       </span>
     </div>
@@ -99,8 +98,7 @@ function padFrame(frame: number, fps: number) {
         v-for="(marker, index) in timelineMarkers"
         :key="`${marker.frame}-${marker.name}-${index}`"
         type="button"
-        class="timeline-marker"
-        :class="{ selected: selectedTimelineMarker === marker }"
+        :class="['timeline-marker', { selected: selectedTimelineMarker === marker }]"
         :style="{ left: timelineMarkerPosition(marker.percent) }"
         :title="`${marker.name} · frame ${marker.frame} · ${marker.timecode}`"
         @click="selectedTimelineMarker = marker"
@@ -109,36 +107,36 @@ function padFrame(frame: number, fps: number) {
         <span class="timeline-marker-label">{{ marker.name }}</span>
       </button>
     </div>
-    <p v-else class="quiet">No markers in this recording.</p>
-    <div v-if="selectedTimelineMarker" class="timeline-marker-detail">
-      <strong>{{ selectedTimelineMarker.name }}</strong>
+    <p v-else class="text-text-muted">No markers in this recording.</p>
+    <div v-if="selectedTimelineMarker" class="grid grid-cols-[minmax(120px,1fr)_minmax(90px,auto)_minmax(170px,auto)] gap-2.5 border border-border-default rounded-radius-md bg-[#10141a] text-text-body font-mono text-xs px-2.5 py-2">
+      <strong class="text-[#fff2c2] font-mono font-extrabold">{{ selectedTimelineMarker.name }}</strong>
       <span>frame {{ selectedTimelineMarker.frame }}</span>
       <span>{{ selectedTimelineMarker.timecode }}</span>
     </div>
   </div>
 
-  <div class="inspection-lists">
+  <div class="grid gap-3.5">
     <div>
-      <h4>Markers</h4>
-      <div class="marker-metadata-list">
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Markers</h4>
+      <div class="grid gap-2">
         <div
           v-for="(event, index) in markerEvents(events)"
           :key="`${event.frame}-${event.marker}-${index}`"
-          class="marker-metadata"
+          class="grid grid-cols-[minmax(120px,1.1fr)_minmax(100px,0.7fr)_minmax(180px,1.2fr)] gap-2.5 border border-border-default rounded-radius-md bg-[#151a20] text-text-body font-mono text-xs px-2.5 py-2"
         >
-          <strong>marker {{ event.marker }}</strong>
+          <strong class="text-accent-text font-mono font-extrabold">marker {{ event.marker }}</strong>
           <span>frame {{ event.frame }}</span>
           <span>time {{ formatFrameTimecode(event.frame, inspection.fps) }}</span>
         </div>
       </div>
     </div>
     <div>
-      <h4>Key table</h4>
-      <p class="quiet">{{ keyIds.join(", ") || "None" }}</p>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Key table</h4>
+      <p class="text-text-muted">{{ keyIds.join(", ") || "None" }}</p>
     </div>
     <div>
-      <h4>Events</h4>
-      <ol>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Events</h4>
+      <ol class="grid gap-1.5 m-0 pl-[18px] text-text-body font-mono text-xs">
         <li
           v-for="(event, index) in events.slice(0, 8)"
           :key="index"
@@ -148,8 +146,8 @@ function padFrame(frame: number, fps: number) {
       </ol>
     </div>
     <div>
-      <h4>Frames</h4>
-      <ol>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Frames</h4>
+      <ol class="grid gap-1.5 m-0 pl-[18px] text-text-body font-mono text-xs">
         <li
           v-for="frame in frames.slice(0, 8)"
           :key="frame.frame"
@@ -162,43 +160,6 @@ function padFrame(frame: number, fps: number) {
 </template>
 
 <style scoped>
-.quiet {
-  color: #9ca7b4;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.section-header h3,
-.inspection-lists h4 {
-  margin: 0;
-  letter-spacing: 0;
-}
-
-.section-header h3 {
-  font-size: 16px;
-  line-height: 22px;
-}
-
-.inspection-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 18px;
-}
-
-.marker-timeline-panel {
-  display: grid;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #151a20;
-  padding: 14px;
-}
-
 .marker-timeline {
   position: relative;
   height: 62px;
@@ -267,65 +228,5 @@ function padFrame(frame: number, fps: number) {
 .timeline-marker.selected .timeline-marker-label,
 .timeline-marker:focus-visible .timeline-marker-label {
   color: #fff2c2;
-}
-
-.timeline-marker-detail {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(90px, auto) minmax(170px, auto);
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: #10141a;
-  color: #dfe5ec;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  padding: 8px 10px;
-}
-
-.timeline-marker-detail strong {
-  color: #fff2c2;
-}
-
-.inspection-lists {
-  display: grid;
-  gap: 14px;
-}
-
-.marker-metadata-list {
-  display: grid;
-  gap: 8px;
-}
-
-.marker-metadata {
-  display: grid;
-  grid-template-columns: minmax(120px, 1.1fr) minmax(100px, 0.7fr) minmax(180px, 1.2fr);
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 7px;
-  background: #151a20;
-  padding: 8px 10px;
-  color: #dfe5ec;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
-.marker-metadata strong {
-  color: #eafff0;
-}
-
-.inspection-lists h4 {
-  margin-bottom: 6px;
-  color: #c9d1da;
-  font-size: 13px;
-}
-
-.inspection-lists ol {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  padding-left: 18px;
-  color: #dfe5ec;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
 }
 </style>

@@ -104,17 +104,17 @@ function setHexAlpha(color: string, alpha: number) {
 </script>
 
 <template>
-  <article class="panel wide-panel">
-    <div class="section-header">
-      <h2>Appearance</h2>
+  <article class="box-border min-h-[190px] border border-border-default rounded-radius-lg bg-surface-panel p-[18px] w-full">
+    <div class="flex items-center justify-between gap-3 mb-4">
+      <h2 class="m-0 text-lg leading-6 tracking-normal">Appearance</h2>
       <BaseButton @click="emit('refresh-pov')">
         Refresh POV
       </BaseButton>
     </div>
-    <label class="range-control">
-      <span class="range-label">
+    <label class="grid gap-2 mb-4 text-text-secondary font-bold">
+      <span class="flex items-baseline justify-between gap-3">
         <span>Scale</span>
-        <strong>{{ formatScale(config.style.scale) }} · {{ effectiveUnitPx() }}px unit</strong>
+        <strong class="text-text-muted text-xs font-extrabold">{{ formatScale(config.style.scale) }} · {{ effectiveUnitPx() }}px unit</strong>
       </span>
       <input
         :value="config.style.scale"
@@ -122,10 +122,12 @@ function setHexAlpha(color: string, alpha: number) {
         max="1.5"
         step="0.05"
         type="range"
+        class="w-full"
+        style="accent-color: var(--color-accent)"
         @input="updateScale"
       />
     </label>
-    <label>
+    <label class="grid gap-2 mb-4 text-text-secondary font-bold">
       Overlay transparency
       <input
         :value="config.style.opacity"
@@ -133,12 +135,14 @@ function setHexAlpha(color: string, alpha: number) {
         max="1"
         step="0.01"
         type="range"
+        class="w-full"
+        style="accent-color: var(--color-accent)"
         @input="updateOpacity"
       />
-      <span class="hint">Controls the whole POV overlay opacity.</span>
+      <span class="text-text-subtle text-xs font-medium">Controls the whole POV overlay opacity.</span>
     </label>
-    <div class="appearance-control-grid">
-      <label>
+    <div class="grid grid-cols-2 gap-3.5 mb-4">
+      <label class="grid gap-2 mb-4 text-text-secondary font-bold">
         Backplate radius
         <input
           :value="config.style.backgroundRadius"
@@ -146,14 +150,16 @@ function setHexAlpha(color: string, alpha: number) {
           max="24"
           step="1"
           type="range"
+          class="w-full"
+          style="accent-color: var(--color-accent)"
           @input="updateBackgroundRadius"
         />
       </label>
     </div>
-    <label class="settings-row">
-      <span>Idle keys</span>
+    <label class="grid grid-cols-[minmax(120px,1fr)_minmax(180px,240px)] items-center gap-3 mb-4 text-text-secondary font-bold">
+      <span class="min-w-0">Idle keys</span>
       <BaseSelect
-        class="select-control"
+        class="select-control justify-self-end w-[min(240px,100%)]"
         compact
         :model-value="config.style.idleKeyVisibility"
         @change="updateIdleKeyVisibility"
@@ -162,7 +168,7 @@ function setHexAlpha(color: string, alpha: number) {
         <option value="hidden">Hidden until pressed</option>
       </BaseSelect>
     </label>
-    <div class="color-grid" aria-label="Overlay colors">
+    <div class="grid grid-cols-2 gap-2.5" aria-label="Overlay colors">
       <ColorPicker
         label="Idle key"
         :value="config.style.idleColor"
@@ -208,10 +214,12 @@ function setHexAlpha(color: string, alpha: number) {
         @update:value="updateStyleColor('backgroundColor', $event)"
         @remember-color="emit('remember-color', $event)"
       />
-      <label class="backplate-transparent-toggle">
+      <label class="flex items-center gap-2.5 min-h-[38px] m-0 text-text-secondary text-[13px] font-bold">
         <input
           :checked="isBackplateTransparent()"
           type="checkbox"
+          class="w-[18px] h-[18px]"
+          style="accent-color: var(--color-accent)"
           @change="updateBackplateTransparent"
         />
         Transparent backplate
@@ -221,107 +229,8 @@ function setHexAlpha(color: string, alpha: number) {
 </template>
 
 <style scoped>
-.panel {
-  box-sizing: border-box;
-  min-height: 190px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #171b22;
-  padding: 18px;
-}
-
-.wide-panel {
-  width: 100%;
-}
-
-.section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.section-header h2 {
-  margin: 0;
-  font-size: 18px;
-  letter-spacing: 0;
-  line-height: 24px;
-}
-
-label {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.range-label {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.range-label strong {
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.settings-row {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 12px;
-}
-
-.settings-row span {
-  min-width: 0;
-}
-
-.hint {
-  color: #7f8b99;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-input[type="range"] {
-  accent-color: #25d366;
-}
-
-.appearance-control-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.backplate-transparent-toggle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 38px;
-  margin: 0;
-  color: #c9d1da;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.backplate-transparent-toggle input {
-  width: 18px;
-  height: 18px;
-  accent-color: #25d366;
-}
-
 .select-control {
   justify-self: end;
   width: min(240px, 100%);
-}
-
-.color-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
 }
 </style>

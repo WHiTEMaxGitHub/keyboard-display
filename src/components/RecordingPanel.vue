@@ -171,11 +171,11 @@ function addSyncMarker() {
 
 <template>
   <BasePanel wide>
-    <h2>Recording</h2>
+    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">Recording</h2>
     <BaseFieldRow label="Save folder">
       {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
     </BaseFieldRow>
-    <div class="recording-actions">
+    <div class="flex flex-wrap gap-2 my-4">
       <BaseButton @click="chooseRecordingDirectory">Choose folder</BaseButton>
       <BaseButton
         variant="primary"
@@ -194,7 +194,7 @@ function addSyncMarker() {
     <BaseToggleRow :checked="silentRecording" @change="updateSilentRecording">
       Silent recording
     </BaseToggleRow>
-    <div class="fps-config-row">
+    <div class="flex items-center flex-wrap gap-2.5 mb-4">
       <BaseToggleRow compact :checked="config.recording.syncFeedbackEnabled" @change="updateSyncFeedbackEnabled">
         Sync border flash
       </BaseToggleRow>
@@ -202,13 +202,13 @@ function addSyncMarker() {
         :disabled="!config.recording.syncFeedbackEnabled"
         :min="100"
         :value="syncFeedbackDurationDraft"
-        class="fps-input"
+        class="w-24 min-h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body px-2.5 disabled:opacity-45"
         type="number"
         @blur="commitSyncFeedbackDuration"
         @change="commitSyncFeedbackDuration"
         @input="updateSyncFeedbackDuration"
       />
-      <span class="write-estimate">ms</span>
+      <span class="text-text-muted text-[13px] font-extrabold">ms</span>
     </div>
     <RecordingHotkeysPanel
       :recording-hotkeys="recordingHotkeys"
@@ -216,7 +216,7 @@ function addSyncMarker() {
       @update-recording-hotkey-mode="emit('update-recording-hotkey-mode', $event)"
       @begin-hotkey-capture="emit('begin-hotkey-capture', $event)"
     />
-    <div class="fps-picker-row" aria-label="Capture frame rate">
+    <div class="flex items-center flex-wrap gap-2 mb-4">
       <BaseSegmentedControl
         :model-value="selectedDefaultFps"
         :options="fpsOptions"
@@ -231,127 +231,42 @@ function addSyncMarker() {
         :max="config.recording.maxFps"
         :min="1"
         :value="customFpsDraft"
-        class="fps-input"
+        class="w-24 min-h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body px-2.5 disabled:opacity-45"
         type="number"
         @blur="commitCustomFps"
         @change="commitCustomFps"
         @input="updateCustomFps"
       />
-      <span class="write-estimate">
+      <span class="text-text-muted text-[13px] font-extrabold">
         {{ activeRecordingFps }}fps · {{ formatBytesPerSecond(estimatedRecordingBytesPerSecond) }} raw
       </span>
     </div>
     <BaseFieldRow label="Primary artifact">{{ config.recording.formatExtension }}</BaseFieldRow>
-    <label class="filename-template-row">
+    <label class="grid gap-[7px] mt-4 mb-4 text-text-secondary text-[13px] font-bold">
       <span>Filename template</span>
       <input
         :value="filenameTemplateDraft"
         type="text"
         placeholder="${start}-${end}"
+        class="w-full min-h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-2.5 focus:border-accent-focus-border focus:outline-2 focus:outline-accent-focus-ring focus:outline-offset-0"
         @blur="commitFilenameTemplate"
         @change="commitFilenameTemplate"
         @input="updateFilenameTemplate"
       />
     </label>
-    <p class="quiet">
+    <p class="notice">
       Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime},
       ${duration}, ${profileName}, ${profileSlug}, ${fps}
     </p>
-    <p class="quiet">
+    <p class="notice">
       Input frames are stored as compact binary state, then replayed for
       rendering or export.
     </p>
-    <p v-if="lastRecordingPath" class="quiet">
+    <p v-if="lastRecordingPath" class="notice">
       Last recording: {{ lastRecordingPath }}
     </p>
-    <p v-if="recordingStatusMessage" class="status-text">
+    <p v-if="recordingStatusMessage" class="mt-2.5 text-text-secondary text-[13px] font-bold">
       {{ recordingStatusMessage }}
     </p>
   </BasePanel>
 </template>
-
-<style scoped>
-.quiet {
-  color: #9ca7b4;
-}
-
-.recording-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 16px 0;
-}
-
-.fps-config-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
-.fps-input {
-  width: 96px;
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  padding: 0 10px;
-}
-
-.filename-template-row {
-  display: grid;
-  gap: 7px;
-  margin: 16px 0 0;
-  color: #c9d1da;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.filename-template-row input {
-  width: 100%;
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  font: inherit;
-  padding: 0 10px;
-}
-
-.filename-template-row input:focus {
-  border-color: rgba(37, 211, 102, 0.55);
-  outline: 2px solid rgba(37, 211, 102, 0.14);
-  outline-offset: 0;
-}
-
-.fps-input:disabled {
-  opacity: 0.45;
-}
-
-.write-estimate {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.fps-picker-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.quiet {
-  margin: 14px 0 0;
-}
-
-.status-text {
-  margin: 10px 0 0;
-  color: #c9d1da;
-  font-size: 13px;
-  font-weight: 700;
-}
-</style>

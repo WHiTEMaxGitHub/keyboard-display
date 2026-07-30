@@ -365,22 +365,22 @@ function updateGapWidth(
 </script>
 
 <template>
-  <div class="layout-editor">
-    <div class="editor-toolbar">
+  <div class="grid gap-3.5">
+    <div class="flex justify-end">
       <BaseButton @click="appendRow">Add row</BaseButton>
     </div>
     <article
       v-for="(row, rowIndex) in rows"
       :key="rowIndex"
-      class="row-editor"
+      class="grid gap-2.5 border border-border-default rounded-radius-lg bg-[#151a20] p-3 transition-[border-color,background-color,box-shadow,transform] duration-[160ms] ease hover:border-white/14 hover:bg-[#171d24]"
     >
-      <div class="row-editor-header">
-        <button class="row-title-button" type="button" @click="toggleRow(rowIndex)">
-          <span class="row-chevron" :class="{ expanded: !collapsedRows.has(rowIndex) }">▸</span>
-          <strong>Row {{ rowIndex + 1 }}</strong>
-          <small>{{ rowSummary(row) }}</small>
+      <div class="flex items-center justify-between gap-3">
+        <button class="flex items-center gap-2 min-w-0 border-0 bg-transparent text-text-body cursor-pointer p-0 text-left hover:text-[#f4f7fb]" type="button" @click="toggleRow(rowIndex)">
+          <span :class="['inline-grid place-items-center w-3.5 text-[#8f9baa] text-xs leading-none origin-center transition-[color,transform] duration-[160ms,180ms] ease', !collapsedRows.has(rowIndex) && 'text-text-body rotate-90']">▸</span>
+          <strong class="text-sm transition-colors duration-[160ms] ease">Row {{ rowIndex + 1 }}</strong>
+          <small class="overflow-hidden text-text-muted text-xs font-bold text-ellipsis whitespace-nowrap">{{ rowSummary(row) }}</small>
         </button>
-        <div class="row-actions">
+        <div class="flex flex-wrap gap-2">
           <BaseButton size="xs" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</BaseButton>
           <BaseButton size="xs" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</BaseButton>
           <BaseButton size="xs" @click="addKey(rowIndex)">Add key</BaseButton>
@@ -390,136 +390,143 @@ function updateGapWidth(
       </div>
 
       <Transition name="row-collapse">
-        <div v-if="!collapsedRows.has(rowIndex)" class="row-item-list">
-          <TransitionGroup name="row-item" tag="div" class="row-item-list-inner">
+        <div v-if="!collapsedRows.has(rowIndex)" class="overflow-hidden">
+          <TransitionGroup name="row-item" tag="div" class="grid gap-2">
             <div
               v-for="(item, itemIndex) in row"
               :key="`${rowIndex}-${itemIndex}`"
               class="row-item-editor"
             >
-          <div class="item-summary">{{ itemSummary(item) }}</div>
-          <template v-if="isKeyBinding(item)">
-            <label>
-              ID
-              <input
-                :value="textDraft(rowIndex, itemIndex, 'id', item.id)"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-                @blur="commitKeyText(rowIndex, itemIndex, item, 'id')"
-                @change="commitKeyText(rowIndex, itemIndex, item, 'id')"
-                @input="updateTextDraft(rowIndex, itemIndex, 'id', $event)"
-              />
-              <span v-if="idErrors.get(widthDraftKey(rowIndex, itemIndex))" class="field-error">
-                {{ idErrors.get(widthDraftKey(rowIndex, itemIndex)) }}
-              </span>
-            </label>
-            <label>
-              Label
-              <input
-                :value="textDraft(rowIndex, itemIndex, 'label', item.label)"
-                autocapitalize="off"
-                autocorrect="off"
-                spellcheck="false"
-                @blur="commitKeyText(rowIndex, itemIndex, item, 'label')"
-                @change="commitKeyText(rowIndex, itemIndex, item, 'label')"
-                @input="updateTextDraft(rowIndex, itemIndex, 'label', $event)"
-              />
-            </label>
-            <label>
-              Width
-              <input
-                :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
-                min="0.1"
-                step="0.05"
-                type="number"
-                @blur="commitKeyWidth(rowIndex, itemIndex, item)"
-                @change="commitKeyWidth(rowIndex, itemIndex, item)"
-                @input="updateWidthDraft(rowIndex, itemIndex, $event)"
-              />
-            </label>
-            <BaseButton
-              size="xs"
-              @click="captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? cancelCapture() : beginCapture(rowIndex, itemIndex, item.id)"
-            >
-              {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
-            </BaseButton>
-            <BaseButton
-              size="xs"
-              @click="togglePlatformLabelEditor(rowIndex, itemIndex)"
-            >
-              {{ isPlatformLabelEditorOpen(rowIndex, itemIndex) ? "Hide platform labels" : "Platform labels" }}
-            </BaseButton>
-            <Transition name="field-reveal">
-              <div
-                v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex)"
-                class="platform-label-fields"
-              >
-                <label>
-                  macOS label
+              <div class="self-center min-w-0 overflow-hidden text-text-body text-xs font-extrabold text-ellipsis whitespace-nowrap">{{ itemSummary(item) }}</div>
+              <template v-if="isKeyBinding(item)">
+                <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                  ID
                   <input
-                    :value="platformLabelDraft(rowIndex, itemIndex, item, 'macos')"
+                    :value="textDraft(rowIndex, itemIndex, 'id', item.id)"
                     autocapitalize="off"
                     autocorrect="off"
                     spellcheck="false"
-                    @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
-                    @change="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
-                    @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'macos', $event)"
+                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    @blur="commitKeyText(rowIndex, itemIndex, item, 'id')"
+                    @change="commitKeyText(rowIndex, itemIndex, item, 'id')"
+                    @input="updateTextDraft(rowIndex, itemIndex, 'id', $event)"
                   />
+                  <span v-if="idErrors.get(widthDraftKey(rowIndex, itemIndex))" class="text-danger text-[11px] font-bold">
+                    {{ idErrors.get(widthDraftKey(rowIndex, itemIndex)) }}
+                  </span>
                 </label>
-                <label>
-                  Windows label
+                <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                  Label
                   <input
-                    :value="platformLabelDraft(rowIndex, itemIndex, item, 'windows')"
+                    :value="textDraft(rowIndex, itemIndex, 'label', item.label)"
                     autocapitalize="off"
                     autocorrect="off"
                     spellcheck="false"
-                    @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
-                    @change="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
-                    @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
+                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    @blur="commitKeyText(rowIndex, itemIndex, item, 'label')"
+                    @change="commitKeyText(rowIndex, itemIndex, item, 'label')"
+                    @input="updateTextDraft(rowIndex, itemIndex, 'label', $event)"
                   />
                 </label>
-                <label>
-                  Registered label
+                <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                  Width
                   <input
-                    :value="registryLabelDraft(rowIndex, itemIndex, item)"
-                    autocapitalize="off"
-                    autocorrect="off"
-                    spellcheck="false"
-                    @blur="commitRegistryLabel(rowIndex, itemIndex, item)"
-                    @change="commitRegistryLabel(rowIndex, itemIndex, item)"
-                    @input="updateRegistryLabelDraft(rowIndex, itemIndex, $event)"
+                    :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
+                    min="0.1"
+                    step="0.05"
+                    type="number"
+                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    @blur="commitKeyWidth(rowIndex, itemIndex, item)"
+                    @change="commitKeyWidth(rowIndex, itemIndex, item)"
+                    @input="updateWidthDraft(rowIndex, itemIndex, $event)"
                   />
                 </label>
+                <BaseButton
+                  size="xs"
+                  @click="captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? cancelCapture() : beginCapture(rowIndex, itemIndex, item.id)"
+                >
+                  {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
+                </BaseButton>
+                <BaseButton
+                  size="xs"
+                  @click="togglePlatformLabelEditor(rowIndex, itemIndex)"
+                >
+                  {{ isPlatformLabelEditorOpen(rowIndex, itemIndex) ? "Hide platform labels" : "Platform labels" }}
+                </BaseButton>
+                <Transition name="field-reveal">
+                  <div
+                    v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex)"
+                    class="grid col-span-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2 border-t border-white/6 pt-2"
+                  >
+                    <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                      macOS label
+                      <input
+                        :value="platformLabelDraft(rowIndex, itemIndex, item, 'macos')"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                        @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
+                        @change="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
+                        @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'macos', $event)"
+                      />
+                    </label>
+                    <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                      Windows label
+                      <input
+                        :value="platformLabelDraft(rowIndex, itemIndex, item, 'windows')"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                        @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
+                        @change="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
+                        @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
+                      />
+                    </label>
+                    <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                      Registered label
+                      <input
+                        :value="registryLabelDraft(rowIndex, itemIndex, item)"
+                        autocapitalize="off"
+                        autocorrect="off"
+                        spellcheck="false"
+                        class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                        @blur="commitRegistryLabel(rowIndex, itemIndex, item)"
+                        @change="commitRegistryLabel(rowIndex, itemIndex, item)"
+                        @input="updateRegistryLabelDraft(rowIndex, itemIndex, $event)"
+                      />
+                    </label>
+                  </div>
+                </Transition>
+              </template>
+              <template v-else>
+                <div class="self-center text-text-muted text-xs font-extrabold uppercase">gap</div>
+                <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
+                  Width
+                  <input
+                    :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
+                    min="0.1"
+                    step="0.05"
+                    type="number"
+                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    @blur="updateGapWidth(rowIndex, itemIndex, item)"
+                    @change="updateGapWidth(rowIndex, itemIndex, item)"
+                    @input="updateWidthDraft(rowIndex, itemIndex, $event)"
+                  />
+                </label>
+              </template>
+              <BaseButton size="xs" variant="danger" @click="removeItem(rowIndex, itemIndex)">
+                Delete
+              </BaseButton>
+              <div class="flex gap-1.5">
+                <BaseButton size="xs" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
+                  Left
+                </BaseButton>
+                <BaseButton size="xs" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
+                  Right
+                </BaseButton>
               </div>
-            </Transition>
-          </template>
-          <template v-else>
-            <div class="gap-label">{{ item.type }}</div>
-            <label>
-              Width
-              <input
-                :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
-                min="0.1"
-                step="0.05"
-                type="number"
-                @blur="updateGapWidth(rowIndex, itemIndex, item)"
-                @change="updateGapWidth(rowIndex, itemIndex, item)"
-                @input="updateWidthDraft(rowIndex, itemIndex, $event)"
-              />
-            </label>
-          </template>
-          <BaseButton size="xs" variant="danger" @click="removeItem(rowIndex, itemIndex)">
-            Delete
-          </BaseButton>
-          <div class="item-move-actions">
-            <BaseButton size="xs" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
-              Left
-            </BaseButton>
-            <BaseButton size="xs" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
-              Right
-            </BaseButton>
-          </div>
             </div>
           </TransitionGroup>
         </div>
@@ -529,106 +536,6 @@ function updateGapWidth(
 </template>
 
 <style scoped>
-.layout-editor {
-  display: grid;
-  gap: 14px;
-}
-
-.editor-toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.row-editor {
-  display: grid;
-  gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #151a20;
-  padding: 12px;
-  transition:
-    border-color 160ms ease,
-    background-color 160ms ease,
-    box-shadow 160ms ease,
-    transform 160ms ease;
-}
-
-.row-editor:hover {
-  border-color: rgba(255, 255, 255, 0.14);
-  background: #171d24;
-}
-
-.row-editor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.row-title-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  color: #dfe5ec;
-  cursor: pointer;
-  padding: 0;
-  text-align: left;
-}
-
-.row-title-button:hover strong {
-  color: #f4f7fb;
-}
-
-.row-chevron {
-  display: inline-grid;
-  place-items: center;
-  width: 14px;
-  color: #8f9baa;
-  font-size: 12px;
-  line-height: 1;
-  transform-origin: center;
-  transition:
-    color 160ms ease,
-    transform 180ms ease;
-}
-
-.row-chevron.expanded {
-  color: #dfe5ec;
-  transform: rotate(90deg);
-}
-
-.row-title-button strong {
-  font-size: 14px;
-  transition: color 160ms ease;
-}
-
-.row-title-button small {
-  overflow: hidden;
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.row-item-list {
-  overflow: hidden;
-}
-
-.row-item-list-inner {
-  display: grid;
-  gap: 8px;
-}
-
 .row-item-editor {
   position: relative;
   display: grid;
@@ -650,35 +557,6 @@ function updateGapWidth(
   border-color: rgba(255, 255, 255, 0.12);
   background: #121820;
   transform: translateY(-1px);
-}
-
-.item-summary {
-  align-self: center;
-  min-width: 0;
-  overflow: hidden;
-  color: #dfe5ec;
-  font-size: 12px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row-item-editor label {
-  display: grid;
-  gap: 5px;
-  margin: 0;
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.platform-label-fields {
-  display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 8px;
 }
 
 .row-collapse-enter-active,
@@ -734,41 +612,6 @@ function updateGapWidth(
   width: 100%;
 }
 
-.row-item-editor input,
-.row-item-editor select {
-  min-width: 0;
-  height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  font: inherit;
-  padding: 0 9px;
-}
-
-.row-item-editor select {
-  line-height: 34px;
-}
-
-.gap-label {
-  align-self: center;
-  color: #9ca7b4;
-  font-size: 12px;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.item-move-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.field-error {
-  color: #ff8f8f;
-  font-size: 11px;
-  font-weight: 700;
-}
-
 @media (max-width: 920px) {
   .row-item-editor {
     grid-template-columns: 1fr;
@@ -776,9 +619,6 @@ function updateGapWidth(
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .row-editor,
-  .row-chevron,
-  .row-title-button strong,
   .row-item-editor,
   .row-collapse-enter-active,
   .row-collapse-leave-active,

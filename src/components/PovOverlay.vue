@@ -123,7 +123,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
   position: absolute;
   inset: 0;
   z-index: 3;
-  border: 2px solid rgba(37, 211, 102, 0.78);
+  border: 2px solid var(--color-accent-focus-border);
   border-radius: inherit;
   content: "";
   pointer-events: none;
@@ -196,7 +196,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
   width: calc(var(--unit) * var(--key-width-unit, 1));
   height: var(--unit);
   border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 7px;
+  border-radius: var(--radius-md);
   background: var(--key-idle);
   color: var(--key-idle-text);
   box-shadow:
@@ -235,5 +235,4 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
 .key.hidden {
   visibility: hidden;
 }
-
 </style>

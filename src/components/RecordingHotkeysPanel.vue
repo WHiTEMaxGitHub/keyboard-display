@@ -27,11 +27,11 @@ function formatHotkey(keys: string[]) {
 </script>
 
 <template>
-  <div class="hotkey-panel">
-    <label class="settings-row">
-      <span>Hotkey mode</span>
+  <div class="grid gap-2.5 my-4">
+    <label class="grid grid-cols-[minmax(112px,1fr)_minmax(180px,240px)] items-center gap-2.5 m-0 text-text-secondary font-bold">
+      <span class="text-text-muted text-[13px] font-extrabold">Hotkey mode</span>
       <BaseSelect
-        class="select-control"
+        class="select-control justify-self-end w-[min(240px,100%)]"
         :model-value="recordingHotkeys.mode"
         @change="updateRecordingHotkeyMode"
       >
@@ -40,23 +40,23 @@ function formatHotkey(keys: string[]) {
         <option value="separate">Separate start/stop</option>
       </BaseSelect>
     </label>
-    <div v-if="recordingHotkeys.mode !== 'disabled'" class="hotkey-row">
-      <span>Start</span>
-      <strong>{{ formatHotkey(recordingHotkeys.start) }}</strong>
+    <div v-if="recordingHotkeys.mode !== 'disabled'" class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
+      <span class="text-text-muted text-[13px] font-extrabold">Start</span>
+      <strong class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{{ formatHotkey(recordingHotkeys.start) }}</strong>
       <BaseButton size="sm" @click="beginHotkeyCapture('start')">
         {{ hotkeyCaptureTarget === "start" ? "Press shortcut..." : "Set" }}
       </BaseButton>
     </div>
-    <div v-if="recordingHotkeys.mode === 'separate'" class="hotkey-row">
-      <span>Stop</span>
-      <strong>{{ formatHotkey(recordingHotkeys.stop) }}</strong>
+    <div v-if="recordingHotkeys.mode === 'separate'" class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
+      <span class="text-text-muted text-[13px] font-extrabold">Stop</span>
+      <strong class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{{ formatHotkey(recordingHotkeys.stop) }}</strong>
       <BaseButton size="sm" @click="beginHotkeyCapture('stop')">
         {{ hotkeyCaptureTarget === "stop" ? "Press shortcut..." : "Set" }}
       </BaseButton>
     </div>
-    <div class="hotkey-row">
-      <span>Sync</span>
-      <strong>{{ formatHotkey(recordingHotkeys.sync) }}</strong>
+    <div class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
+      <span class="text-text-muted text-[13px] font-extrabold">Sync</span>
+      <strong class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{{ formatHotkey(recordingHotkeys.sync) }}</strong>
       <BaseButton size="sm" @click="beginHotkeyCapture('sync')">
         {{ hotkeyCaptureTarget === "sync" ? "Press shortcut..." : "Set" }}
       </BaseButton>
@@ -65,41 +65,6 @@ function formatHotkey(keys: string[]) {
 </template>
 
 <style scoped>
-.hotkey-panel {
-  display: grid;
-  gap: 10px;
-  margin: 16px 0;
-}
-
-.settings-row {
-  display: grid;
-  grid-template-columns: minmax(112px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-}
-
-.settings-row span,
-.hotkey-row span {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.hotkey-row {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-}
-
-.hotkey-row strong {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .select-control {
   justify-self: end;
   width: min(240px, 100%);

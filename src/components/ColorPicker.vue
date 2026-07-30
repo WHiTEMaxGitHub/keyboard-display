@@ -170,7 +170,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 </script>
 
 <template>
-  <div ref="pickerRoot" class="color-picker">
+  <div ref="pickerRoot" :class="['relative min-w-0 z-1', pickerOpen && 'z-20']">
     <button
       ref="colorTrigger"
       class="color-trigger"
@@ -206,15 +206,15 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
             <span>G</span>
             <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
           </label>
-        <label>
-          <span>B</span>
-          <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
-        </label>
-        <label v-if="alphaEnabled">
-          <span>A</span>
-          <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
-        </label>
-      </div>
+          <label>
+            <span>B</span>
+            <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
+          </label>
+          <label v-if="alphaEnabled">
+            <span>A</span>
+            <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
+          </label>
+        </div>
         <div class="swatch-section">
           <span>Presets</span>
           <div class="swatch-grid">
@@ -243,7 +243,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
             />
           </div>
         </div>
-        <div class="picker-actions">
+        <div class="flex justify-end">
           <button class="apply-button" type="button" @click="applyCurrentColor">
             Apply
           </button>
@@ -254,16 +254,6 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 </template>
 
 <style scoped>
-.color-picker {
-  position: relative;
-  min-width: 0;
-  z-index: 1;
-}
-
-.color-picker:has(.picker-panel) {
-  z-index: 20;
-}
-
 .color-trigger {
   display: grid;
   grid-template-columns: 24px minmax(68px, 1fr) auto;
@@ -273,8 +263,8 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
   min-height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
+  background: var(--color-surface-control);
+  color: var(--color-text-body);
   cursor: pointer;
   padding: 7px 9px;
   text-align: left;
@@ -282,20 +272,20 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 
 .color-trigger:hover {
   border-color: rgba(255, 255, 255, 0.16);
-  background: #29313d;
+  background: var(--color-surface-control-hover);
 }
 
 .color-trigger span,
 .swatch-section span,
 .hex-row span,
 .slider-list span {
-  color: #9ca7b4;
+  color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 800;
 }
 
 .color-trigger strong {
-  color: #eafff0;
+  color: var(--color-accent-text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
 }
@@ -371,7 +361,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 7px;
   background: #10141a;
-  color: #dfe5ec;
+  color: var(--color-text-body);
   font: inherit;
   padding: 8px 10px;
 }
@@ -387,7 +377,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 }
 
 .slider-list input {
-  accent-color: #25d366;
+  accent-color: var(--color-accent);
 }
 
 .swatch-section {
@@ -411,17 +401,12 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
   outline-offset: 2px;
 }
 
-.picker-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-
 .apply-button {
   min-height: 32px;
-  border: 1px solid rgba(37, 211, 102, 0.42);
+  border: 1px solid var(--color-accent-border);
   border-radius: 7px;
   background: rgba(37, 211, 102, 0.12);
-  color: #eafff0;
+  color: var(--color-accent-text);
   cursor: pointer;
   font: inherit;
   font-size: 12px;

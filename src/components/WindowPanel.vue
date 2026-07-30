@@ -25,11 +25,11 @@ const emit = defineEmits<{
 
 <template>
   <BasePanel wide>
-    <h2>Window</h2>
+    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">Window</h2>
     <BaseFieldRow label="Position">{{ overlayPosition }}</BaseFieldRow>
-    <div class="adjust-control">
-      <span>Visual adjust</span>
-      <div class="adjust-actions">
+    <div class="grid grid-cols-[minmax(120px,1fr)_minmax(220px,1.4fr)] items-center gap-3 mb-4 text-text-secondary font-bold">
+      <span class="text-text-muted text-[13px] font-extrabold">Visual adjust</span>
+      <div class="flex flex-wrap justify-end gap-2">
         <BaseButton
           v-if="!overlayAdjusting"
           @click="emit('start-overlay-adjust')"
@@ -48,9 +48,9 @@ const emit = defineEmits<{
     <BaseToggleRow :checked="alwaysOnTop" @change="emit('update-always-on-top', $event)">
       Always on top
     </BaseToggleRow>
-    <div class="position-control">
-      <span>Position</span>
-      <div class="position-grid">
+    <div class="grid gap-2 mb-4 text-text-secondary font-bold">
+      <span class="text-text-muted text-[13px] font-extrabold">Position</span>
+      <div class="grid grid-cols-2 gap-2">
         <BaseButton block @click="emit('move-overlay', 'top-left')">Top left</BaseButton>
         <BaseButton block @click="emit('move-overlay', 'top-right')">Top right</BaseButton>
         <BaseButton block @click="emit('move-overlay', 'bottom-left')">Bottom left</BaseButton>
@@ -59,43 +59,3 @@ const emit = defineEmits<{
     </div>
   </BasePanel>
 </template>
-
-<style scoped>
-.adjust-control {
-  display: grid;
-  grid-template-columns: minmax(120px, 1fr) minmax(220px, 1.4fr);
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.adjust-control > span,
-.position-control > span {
-  color: #9ca7b4;
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.adjust-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.position-control {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.position-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-</style>
