@@ -28,3 +28,4 @@ docs/*
 !docs/logs/
 docs/logs/*
 !docs/logs/.gitkeep
+.pnpm-store/
