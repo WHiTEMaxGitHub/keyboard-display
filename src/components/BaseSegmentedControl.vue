@@ -14,11 +14,16 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="segmented-control" :aria-label="ariaLabel">
+  <div class="flex gap-2" :aria-label="ariaLabel">
     <button
       v-for="option in options"
       :key="option.value"
-      :class="{ selected: option.value === modelValue }"
+      :class="[
+        'border border-border-control rounded-radius-md bg-surface-control text-text-secondary cursor-pointer px-2.5 py-2 font-inherit font-extrabold',
+        option.value === modelValue
+          ? 'border-accent-soft-border bg-accent-soft-bg text-accent-text'
+          : '',
+      ]"
       type="button"
       @click="emit('update:modelValue', option.value)"
     >
@@ -26,28 +31,3 @@ const emit = defineEmits<{
     </button>
   </div>
 </template>
-
-<style scoped>
-.segmented-control {
-  display: flex;
-  gap: 8px;
-}
-
-.segmented-control button {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #c9d1da;
-  cursor: pointer;
-  padding: 8px 10px;
-  font: inherit;
-  font-weight: 800;
-}
-
-.segmented-control button:hover,
-.segmented-control button.selected {
-  border-color: rgba(37, 211, 102, 0.52);
-  background: rgba(37, 211, 102, 0.14);
-  color: #eafff0;
-}
-</style>

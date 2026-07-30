@@ -5,30 +5,10 @@ defineProps<{
 </script>
 
 <template>
-  <div class="field-row">
-    <span>{{ label }}</span>
-    <strong>
+  <div class="flex justify-between gap-3 py-2.5 border-b border-border-dim">
+    <span class="text-text-muted">{{ label }}</span>
+    <strong class="min-w-0 overflow-wrap-anywhere text-right">
       <slot />
     </strong>
   </div>
 </template>
-
-<style scoped>
-.field-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.field-row span {
-  color: #9ca7b4;
-}
-
-.field-row strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  text-align: right;
-}
-</style>

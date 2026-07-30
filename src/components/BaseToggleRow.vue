@@ -10,33 +10,14 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <label :class="['toggle-row', { compact }]">
+  <label :class="['flex items-center gap-2.5 text-text-secondary font-bold', compact ? 'm-0' : 'mb-4']">
     <input
       :checked="checked"
       type="checkbox"
+      class="w-[18px] h-[18px]"
+      style="accent-color: var(--color-accent)"
       @change="emit('change', $event)"
     />
     <slot />
   </label>
 </template>
-
-<style scoped>
-.toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 16px;
-  color: #c9d1da;
-  font-weight: 700;
-}
-
-.toggle-row input {
-  width: 18px;
-  height: 18px;
-  accent-color: #25d366;
-}
-
-.toggle-row.compact {
-  margin: 0;
-}
-</style>

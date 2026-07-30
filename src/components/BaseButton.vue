@@ -20,77 +20,20 @@ withDefaults(
 <template>
   <button
     :type="type"
-    :class="['base-button', variant, size, { block }]"
+    :class="[
+      'inline-flex items-center justify-center gap-[7px] font-inherit font-extrabold cursor-pointer transition-[background-color,border-color,color,opacity] duration-[140ms] ease',
+      'border border-border-control rounded-radius-md bg-surface-control text-text-body',
+      'hover:not-disabled:bg-surface-control-hover',
+      'disabled:cursor-not-allowed disabled:opacity-45',
+      size === 'md' && 'min-h-[34px] px-3',
+      size === 'sm' && 'min-h-[30px] px-2.5 text-xs',
+      size === 'xs' && 'min-h-[26px] px-2 text-xs',
+      variant === 'primary' && 'border-accent-border bg-accent-bg text-accent-text hover:not-disabled:bg-accent-bg-hover',
+      variant === 'danger' && 'border-danger-border bg-danger-bg text-danger-text hover:not-disabled:bg-danger-bg-hover',
+      block && 'w-full',
+    ]"
     :disabled="disabled"
   >
     <slot />
   </button>
 </template>
-
-<style scoped>
-.base-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 7px;
-  background: #202630;
-  color: #dfe5ec;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 800;
-  padding: 0 12px;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    opacity 140ms ease;
-}
-
-.base-button.sm {
-  min-height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
-}
-
-.base-button.xs {
-  min-height: 26px;
-  padding: 0 8px;
-  font-size: 12px;
-}
-
-.base-button.block {
-  width: 100%;
-}
-
-.base-button:hover:not(:disabled) {
-  background: #29313d;
-}
-
-.base-button.primary {
-  border-color: rgba(37, 211, 102, 0.42);
-  background: #123421;
-  color: #eafff0;
-}
-
-.base-button.primary:hover:not(:disabled) {
-  background: #18452c;
-}
-
-.base-button.danger {
-  border-color: rgba(255, 143, 143, 0.28);
-  background: #2a171a;
-  color: #ffd9d9;
-}
-
-.base-button.danger:hover:not(:disabled) {
-  background: #3a1e22;
-}
-
-.base-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-</style>
