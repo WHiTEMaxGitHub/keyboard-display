@@ -1,36 +1,21 @@
 <script setup lang="ts">
-import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { open, save } from "@tauri-apps/plugin-dialog";
-import { computed, onMounted, onUnmounted, reactive, ref, watch, type WatchStopHandle } from "vue";
+import { computed, onMounted, onUnmounted, watch, type WatchStopHandle } from "vue";
 import { tauriApi } from "./api/tauri";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
 import {
-  normalizeOverlayPosition,
   useOverlayWindow,
-  type OverlayPosition,
-  type OverlayRuntimeConfig,
   type OverlayStyleSyncMode,
+  type OverlayRuntimeConfig,
 } from "./composables/useOverlayWindow";
 import { useInputStateBridge } from "./composables/useInputStateBridge";
-import {
-  useRecordingController,
-} from "./composables/useRecordingController";
+import { useRecordingController } from "./composables/useRecordingController";
 import { useNotifications } from "./composables/useNotifications";
-import {
-  buildAppConfigFile,
-  parseAppConfigFile,
-  type RecentProfile,
-} from "./domain/appConfig";
-import { buildConfigFileJson, parseConfigFile } from "./domain/configFile";
-import {
-  createDefaultConfig,
-  flattenRowKeys,
-  type ExportConfig,
-  type OverlayCustomPosition,
-  type OverlayStyle,
-} from "./domain/defaultConfig";
+import { useAppConfig } from "./composables/useAppConfig";
+import { buildAppConfigFile } from "./domain/appConfig";
+import { type OverlayStyle } from "./domain/defaultConfig";
 import {
   OVERLAY_CONFIG_EVENT,
   OVERLAY_READY_EVENT,
@@ -41,43 +26,51 @@ import {
 } from "./domain/inputEvents";
 import type { RecordingHotkeyMode } from "./domain/recordingHotkeys";
 import type { RecordingConfig } from "./domain/defaultConfig";
-import {
-  createDefaultVideoExporterConfig,
-  type VideoExporterConfig,
-} from "./domain/videoExporter";
-
-const config = reactive(createDefaultConfig());
-const isOverlayVisible = ref(true);
-const profileName = ref("CS POV");
-const profileSourcePath = ref<string | null>(null);
-const profileChanged = ref(false);
-const recentProfiles = ref<RecentProfile[]>([]);
-const overlayPosition = ref<OverlayPosition>("bottom-right");
-const customOverlayPosition = ref<OverlayCustomPosition | null>(null);
-const syncFeedbackActive = ref(false);
-const videoExporterConfig = ref<VideoExporterConfig>(createDefaultVideoExporterConfig());
-const recordingBrowserDirectory = ref("");
-const { notifications, notify, dismissNotification } = useNotifications();
 
 const isOverlayWindow = computed(() => {
   return new URLSearchParams(window.location.search).get("surface") === "pov";
 });
 
+const { notifications, notify, dismissNotification } = useNotifications();
+
 const {
-  activeKeyIds,
-  startInputBridge,
-  stopInputBridge,
-} = useInputStateBridge({
-  isOverlayWindow,
-  onConfigInput: handleConfigInput,
-});
+  config,
+  isOverlayVisible,
+  profileName,
+  profileSourcePath,
+  profileChanged,
+  recentProfiles,
+  overlayPosition,
+  customOverlayPosition,
+  syncFeedbackActive,
+  videoExporterConfig,
+  recordingBrowserDirectory,
+  applyOverlayStyle,
+  applyOverlayRows,
+  applyKeyIdLabels,
+  markProfileChanged,
+  isBackplateVisible,
+  scheduleAppConfigSave,
+  loadConfig,
+  loadRecentProfile,
+  restoreAppConfig,
+  applyConfigToOverlay,
+  exportAndApplyConfig,
+  overwriteAndApplyConfig,
+  updateRecordingConfig,
+  updateExportConfig,
+  updateVideoExporterConfig,
+  chooseRecordingBrowserDirectory,
+  dispose,
+} = useAppConfig({ isOverlayWindow });
 
 let unlistenOverlayStyle: UnlistenFn | undefined;
 let unlistenOverlayReady: UnlistenFn | undefined;
 let unlistenCloseRequested: UnlistenFn | undefined;
 let syncFeedbackTimer: number | undefined;
-let appConfigSaveTimer: number | undefined;
 let stopAppConfigWatch: WatchStopHandle | undefined;
+
+const scheduleSave = () => scheduleAppConfigSave(saveAppConfig);
 
 const {
   overlayAdjusting,
@@ -98,7 +91,24 @@ const {
   overlayPosition,
   customOverlayPosition,
   markProfileChanged,
-  scheduleAppConfigSave,
+  scheduleAppConfigSave: scheduleSave,
+});
+
+const overlayCallbacks = {
+  resizeOverlayWindow,
+  syncOverlayStyle,
+  syncOverlayRows,
+  setOverlayVisible,
+  moveOverlay,
+};
+
+const {
+  activeKeyIds,
+  startInputBridge,
+  stopInputBridge,
+} = useInputStateBridge({
+  isOverlayWindow,
+  onConfigInput: handleConfigInput,
 });
 
 const {
@@ -140,7 +150,7 @@ const {
   destroyOverlayWindow,
   setOverlayVisible,
   moveOverlay,
-  scheduleAppConfigSave,
+  scheduleAppConfigSave: scheduleSave,
 });
 
 function handleConfigInput(payload: InputStatePayload) {
@@ -161,42 +171,15 @@ function handleConfigInput(payload: InputStatePayload) {
   })();
 }
 
-function applyOverlayStyle(style: OverlayStyle) {
-  config.style = { ...style };
-}
-
-function isBackplateVisible(style: OverlayStyle) {
-  return !/^#[0-9a-fA-F]{8}$/.test(style.backgroundColor) ||
-    !style.backgroundColor.endsWith("00");
-}
-
-function overlayStyleSyncMode(previousStyle: OverlayStyle, nextStyle: OverlayStyle): OverlayStyleSyncMode {
+function overlayStyleSyncMode(
+  previousStyle: OverlayStyle,
+  nextStyle: OverlayStyle,
+): OverlayStyleSyncMode {
   return previousStyle.scale !== nextStyle.scale ||
     previousStyle.alwaysOnTop !== nextStyle.alwaysOnTop ||
     isBackplateVisible(previousStyle) !== isBackplateVisible(nextStyle)
     ? "window"
     : "css";
-}
-
-function applyOverlayLayout(layout: typeof config.layout) {
-  config.layout = { ...layout };
-}
-
-function applyOverlayRows(rows: typeof config.rows) {
-  config.rows = rows.map((row) => row.map((item) => ({ ...item })));
-  config.keys = flattenRowKeys(config.rows);
-}
-
-function applyKeyIdLabels(keyIdLabels: typeof config.keyIdLabels) {
-  config.keyIdLabels = { ...keyIdLabels };
-}
-
-function applyRecordingConfig(recording: RecordingConfig) {
-  config.recording = { ...recording };
-}
-
-function applyExportConfig(exportConfig: ExportConfig) {
-  config.export = { ...exportConfig };
 }
 
 function previewOverlayStyle(style: OverlayStyle) {
@@ -221,116 +204,6 @@ async function updateKeyIdLabels(keyIdLabels: typeof config.keyIdLabels) {
   applyKeyIdLabels(keyIdLabels);
   markProfileChanged();
   await syncOverlayRows();
-}
-
-function markProfileChanged() {
-  profileChanged.value = true;
-}
-
-async function applyLoadedConfig(text: string, fileName: string, sourcePath: string | null) {
-  const loadedConfig = parseConfigFile(text);
-  profileName.value = loadedConfig.name || profileNameFromFileName(fileName);
-  profileSourcePath.value = sourcePath;
-  profileChanged.value = false;
-  overlayPosition.value = normalizeOverlayPosition(loadedConfig.overlay.position);
-  customOverlayPosition.value = loadedConfig.overlay.customPosition ?? null;
-
-  applyOverlayLayout(loadedConfig.overlay.layout);
-  applyOverlayRows(loadedConfig.overlay.rows);
-  applyKeyIdLabels(loadedConfig.overlay.keyIdLabels ?? {});
-  applyOverlayStyle(loadedConfig.overlay.style);
-  applyRecordingConfig(loadedConfig.recording);
-  applyExportConfig(loadedConfig.export);
-  await resizeOverlayWindow();
-
-  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
-    layout: loadedConfig.overlay.layout,
-    rows: loadedConfig.overlay.rows,
-    keys: loadedConfig.overlay.keys,
-    keyIdLabels: loadedConfig.overlay.keyIdLabels ?? {},
-    style: loadedConfig.overlay.style,
-  });
-  const visible = loadedConfig.overlay.visible ?? true;
-  await setOverlayVisible(visible, false);
-  if (visible) {
-    await moveOverlay(overlayPosition.value, false);
-  }
-  scheduleAppConfigSave();
-}
-
-async function loadConfig() {
-  const selectedPath = await open({
-    title: "Load keyboard display config",
-    filters: [{ name: "JSON", extensions: ["json"] }],
-    multiple: false,
-  });
-
-  if (typeof selectedPath !== "string") {
-    return;
-  }
-
-  const text = await tauriApi.readConfigFile(selectedPath);
-  await applyLoadedConfig(text, selectedPath.split(/[\\/]/).pop() ?? selectedPath, selectedPath);
-}
-
-async function loadRecentProfile(path: string) {
-  const text = await tauriApi.readConfigFile(path);
-  await applyLoadedConfig(text, path.split(/[\\/]/).pop() ?? path, path);
-}
-
-async function restoreAppConfig() {
-  await initializeDefaultRecordingDirectory();
-  const savedConfig = await tauriApi.loadAppConfig();
-  if (!savedConfig) {
-    return;
-  }
-
-  const appConfig = parseAppConfigFile(savedConfig);
-  profileName.value = appConfig.currentProfile.name;
-  profileSourcePath.value = appConfig.currentProfile.sourcePath;
-  profileChanged.value = appConfig.currentProfile.changed;
-  recentProfiles.value = appConfig.profiles.recentProfiles;
-  overlayPosition.value = normalizeOverlayPosition(appConfig.currentProfile.overlay.position);
-  customOverlayPosition.value = appConfig.currentProfile.overlay.customPosition ?? null;
-  recordingDirectory.value = appConfig.recording.outputDirectory ?? "";
-  recordingBrowserDirectory.value = appConfig.recording.browserDirectory ?? "";
-  silentRecording.value = appConfig.recording.silent ?? false;
-  recordingHotkeys.value = appConfig.recording.hotkeys;
-  videoExporterConfig.value = appConfig.exporter.video;
-
-  applyOverlayLayout(appConfig.currentProfile.overlay.layout);
-  applyOverlayRows(appConfig.currentProfile.overlay.rows);
-  applyKeyIdLabels(appConfig.currentProfile.overlay.keyIdLabels);
-  applyOverlayStyle(appConfig.currentProfile.overlay.style);
-  applyRecordingConfig(appConfig.currentProfile.recording);
-  applyExportConfig(appConfig.currentProfile.export);
-
-  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
-    layout: appConfig.currentProfile.overlay.layout,
-    rows: appConfig.currentProfile.overlay.rows,
-    keys: appConfig.currentProfile.overlay.keys,
-    keyIdLabels: appConfig.currentProfile.overlay.keyIdLabels,
-    style: appConfig.currentProfile.overlay.style,
-  });
-
-  await setOverlayVisible(appConfig.currentProfile.overlay.visible, false);
-  if (appConfig.currentProfile.overlay.visible) {
-    await moveOverlay(overlayPosition.value, false);
-  }
-}
-
-function scheduleAppConfigSave() {
-  if (isOverlayWindow.value) {
-    return;
-  }
-
-  if (appConfigSaveTimer !== undefined) {
-    window.clearTimeout(appConfigSaveTimer);
-  }
-
-  appConfigSaveTimer = window.setTimeout(() => {
-    void saveAppConfig();
-  }, 300);
 }
 
 async function saveAppConfig() {
@@ -369,105 +242,22 @@ async function saveAppConfig() {
   await tauriApi.saveAppConfig(`${JSON.stringify(appConfig, null, 2)}\n`);
 }
 
-async function applyConfigToOverlay() {
-  await resizeOverlayWindow();
-  await emitTo<OverlayRuntimeConfig>("pov", OVERLAY_CONFIG_EVENT, {
-    layout: config.layout,
-    rows: config.rows,
-    keys: config.keys,
-    keyIdLabels: config.keyIdLabels,
-    style: config.style,
-  });
-  await setOverlayVisible(isOverlayVisible.value);
-}
-
-async function exportAndApplyConfig() {
-  await applyConfigToOverlay();
-
-  const json = buildConfigFileJson({
-    name: profileName.value,
-    config,
-    visible: isOverlayVisible.value,
-    position: overlayPosition.value,
-    customPosition: customOverlayPosition.value,
-  });
-  const path = await save({
-    title: "Save keyboard display config",
-    defaultPath: `${profileName.value || "keyboard-display"}.json`,
-    filters: [{ name: "JSON", extensions: ["json"] }],
-  });
-
-  if (!path) {
-    return;
-  }
-
-  await tauriApi.saveConfigFile(path, json);
-  profileSourcePath.value = path;
-  profileChanged.value = false;
-  scheduleAppConfigSave();
-}
-
-async function overwriteAndApplyConfig() {
-  await applyConfigToOverlay();
-
-  if (!profileSourcePath.value) {
-    await exportAndApplyConfig();
-    return;
-  }
-
-  const json = buildConfigFileJson({
-    name: profileName.value,
-    config,
-    visible: isOverlayVisible.value,
-    position: overlayPosition.value,
-    customPosition: customOverlayPosition.value,
-  });
-  await tauriApi.saveConfigFile(profileSourcePath.value, json);
-  profileChanged.value = false;
-  scheduleAppConfigSave();
-}
-
 function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
   setRecordingHotkeyMode(mode);
 }
 
-function updateRecordingConfig(recording: RecordingConfig) {
-  applyRecordingConfig(recording);
-  markProfileChanged();
-  scheduleAppConfigSave();
-}
-
-function updateExportConfig(exportConfig: ExportConfig) {
-  applyExportConfig(exportConfig);
-  markProfileChanged();
-  scheduleAppConfigSave();
-}
-
-function updateVideoExporterConfig(exporterConfig: VideoExporterConfig) {
-  videoExporterConfig.value = exporterConfig;
-  scheduleAppConfigSave();
-}
-
-async function chooseRecordingBrowserDirectory() {
-  const selectedPath = await open({
-    title: "Choose recording files folder",
-    directory: true,
-    multiple: false,
-  });
-
-  if (typeof selectedPath === "string") {
-    recordingBrowserDirectory.value = selectedPath;
-    scheduleAppConfigSave();
-  }
-}
-
-function profileNameFromFileName(fileName: string): string {
-  return fileName.replace(/\.json$/i, "");
-}
-
 onMounted(async () => {
   if (!isOverlayWindow.value) {
-    await restoreAppConfig();
+    await restoreAppConfig(
+      overlayCallbacks,
+      initializeDefaultRecordingDirectory,
+      (recording) => {
+        recordingDirectory.value = recording.directory;
+        recordingBrowserDirectory.value = recording.browserDirectory;
+        silentRecording.value = recording.silent;
+        recordingHotkeys.value = recording.hotkeys;
+      },
+    );
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async () => {
       await destroyOverlayWindow();
     });
@@ -485,7 +275,7 @@ onMounted(async () => {
     const unlistenOverlayConfig = await listen<OverlayRuntimeConfig>(
       OVERLAY_CONFIG_EVENT,
       (event) => {
-        applyOverlayLayout(event.payload.layout);
+        config.layout = { ...event.payload.layout };
         applyOverlayRows(event.payload.rows);
         applyOverlayStyle(event.payload.style);
       },
@@ -527,18 +317,14 @@ onMounted(async () => {
   if (!isOverlayWindow.value) {
     stopAppConfigWatch = watch(
       [config, isOverlayVisible, profileName, profileSourcePath, profileChanged, overlayPosition],
-      // profileChanged is separate from config because it tracks whether the
-      // current profile differs from sourcePath rather than the profile data.
-      scheduleAppConfigSave,
+      scheduleSave,
       { deep: true },
     );
   }
 });
 
 onUnmounted(() => {
-  if (appConfigSaveTimer !== undefined) {
-    window.clearTimeout(appConfigSaveTimer);
-  }
+  dispose();
   if (syncFeedbackTimer !== undefined) {
     window.clearTimeout(syncFeedbackTimer);
   }
@@ -595,17 +381,17 @@ onUnmounted(() => {
       @update-overlay-style="updateOverlayStyle"
       @update-overlay-rows="updateOverlayRows"
       @update-overlay-visible="setOverlayVisible"
-      @load-config="loadConfig"
-      @refresh-pov="applyConfigToOverlay"
-      @load-recent-profile="loadRecentProfile"
-      @export-and-apply-config="exportAndApplyConfig"
-      @overwrite-and-apply-config="overwriteAndApplyConfig"
+      @load-config="loadConfig(overlayCallbacks, scheduleSave)"
+      @refresh-pov="applyConfigToOverlay(overlayCallbacks)"
+      @load-recent-profile="(path: string) => loadRecentProfile(path, overlayCallbacks, scheduleSave)"
+      @export-and-apply-config="exportAndApplyConfig(overlayCallbacks, scheduleSave)"
+      @overwrite-and-apply-config="overwriteAndApplyConfig(overlayCallbacks, scheduleSave)"
       @choose-recording-directory="chooseRecordingDirectory"
-      @choose-recording-browser-directory="chooseRecordingBrowserDirectory"
+      @choose-recording-browser-directory="(async () => { await chooseRecordingBrowserDirectory(); scheduleSave(); })()"
       @update-silent-recording="updateSilentRecording"
-      @update-recording-config="updateRecordingConfig"
-      @update-export-config="updateExportConfig"
-      @update-video-exporter-config="updateVideoExporterConfig"
+      @update-recording-config="(r: RecordingConfig) => { updateRecordingConfig(r); scheduleSave(); }"
+      @update-export-config="(e: any) => { updateExportConfig(e); scheduleSave(); }"
+      @update-video-exporter-config="(v: any) => { updateVideoExporterConfig(v); scheduleSave(); }"
       @notify="notify"
       @dismiss-notification="dismissNotification"
       @start-recording="startRecordingWithCountdown"
