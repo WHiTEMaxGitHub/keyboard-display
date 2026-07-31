@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { inject, ref } from "vue";
+import { computed, inject, ref, type ComputedRef } from "vue";
 import type { AppConfig } from "../../domain/defaultConfig";
 import type { VideoExporterConfig } from "../../domain/videoExporter";
 import { tauriApi } from "../../api/tauri";
 import ExportPanel from "../ExportPanel.vue";
 
 const config = inject<AppConfig>("config")!;
-const profileName = inject<string>("profileName")!;
+const profileNameRef = inject<ComputedRef<string>>("profileName")!;
+const profileName = computed(() => profileNameRef.value);
 const videoExporterConfig = inject<VideoExporterConfig>("videoExporterConfig")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 

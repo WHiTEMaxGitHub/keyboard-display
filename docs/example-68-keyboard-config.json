@@ -24,11 +24,11 @@
       "opacity": 1,
       "backgroundColor": "#0a0c0e00",
       "backgroundOpacity": 0.72,
-      "backgroundRadius": 8,
+      "backgroundRadius": 5,
       "idleKeyVisibility": "visible",
       "alwaysOnTop": true,
-      "idleColor": "#121417a8",
-      "activeColor": "#4dabf7c8",
+      "idleColor": "#10141aa7",
+      "activeColor": "#4dabf7c3",
       "idleTextColor": "#f5f7fa",
       "activeTextColor": "#dfe5ec"
     },
@@ -531,7 +531,8 @@
           "widthUnit": 1
         }
       ]
-    ]
+    ],
+    "keyIdLabels": {}
   },
   "recording": {
     "defaultFps": 120,

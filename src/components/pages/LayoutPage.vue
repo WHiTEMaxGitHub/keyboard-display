@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, computed, ref } from "vue";
+import { inject, computed, ref, type ComputedRef } from "vue";
 import type { AppConfig } from "../../domain/defaultConfig";
 import { isKeyBinding } from "../../domain/defaultConfig";
 import BaseFieldRow from "../BaseFieldRow.vue";
@@ -10,8 +10,9 @@ import LayoutEditor from "../LayoutEditor.vue";
 type LayoutSubPage = "summary" | "editor";
 
 const config = inject<AppConfig>("config")!;
-const activeKeys = inject<Set<string>>("activeKeys")!;
-const keyIdLabels = inject<AppConfig["keyIdLabels"]>("keyIdLabels")!;
+const activeKeysRef = inject<ComputedRef<Set<string>>>("activeKeys")!;
+const activeKeys = computed(() => activeKeysRef.value);
+const keyIdLabels = inject<ComputedRef<AppConfig["keyIdLabels"]>>("keyIdLabels")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 
 const layoutSubPage = ref<LayoutSubPage>("summary");
@@ -60,6 +61,7 @@ const layoutRows = computed(() => {
             :key-id-labels="keyIdLabels"
             :active-keys="activeKeys"
             :overlay-style="config.style"
+            fit-to-container
           />
         </div>
         <LayoutEditor
@@ -82,10 +84,18 @@ const layoutRows = computed(() => {
 .panel {
   box-sizing: border-box;
   min-height: 190px;
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-panel);
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  background: linear-gradient(145deg, var(--glass-from), var(--glass-to));
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow: var(--glass-shadow);
   padding: 18px;
+  transition: border-color 300ms, box-shadow 300ms;
+}
+.panel:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow-hover);
 }
 
 .panel h2 {
@@ -93,6 +103,7 @@ const layoutRows = computed(() => {
   font-size: 18px;
   line-height: 24px;
   letter-spacing: 0;
+  color: var(--color-text-primary);
 }
 
 .layout-line-list {
@@ -108,11 +119,14 @@ const layoutRows = computed(() => {
 }
 
 .layout-editor-preview {
+  --preview-available-width: calc(100vw - 160px);
+
   display: grid;
   align-items: center;
+  justify-items: center;
   min-height: 160px;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: hidden;
+  scrollbar-gutter: stable both-edges;
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-lg);
   background: var(--color-surface-preview);
@@ -120,7 +134,7 @@ const layoutRows = computed(() => {
 }
 
 .layout-editor-preview :deep(.pov-shell) {
-  flex: 0 0 auto;
+  min-width: 0;
 }
 
 .layout-line {

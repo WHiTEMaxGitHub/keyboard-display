@@ -6,15 +6,19 @@ import type { AppNotification, NotificationTone } from "../composables/useNotifi
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import type { VideoExporterConfig } from "../domain/videoExporter";
 import type { RecordingInspection } from "../types/recording";
+import type { ThemeId } from "../domain/theme";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import NotificationStack from "./NotificationStack.vue";
-import OverviewPage from "./pages/OverviewPage.vue";
 import LayoutPage from "./pages/LayoutPage.vue";
 import AppearancePage from "./pages/AppearancePage.vue";
 import WindowPage from "./pages/WindowPage.vue";
 import RecordingPage from "./pages/RecordingPage.vue";
 import ExportPage from "./pages/ExportPage.vue";
+import PovOverlay from "./PovOverlay.vue";
+import BaseFieldRow from "./BaseFieldRow.vue";
+import BaseSelect from "./BaseSelect.vue";
+import BaseToggleRow from "./BaseToggleRow.vue";
 
 type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
 type RecordingSubPage = "control" | "files";
@@ -44,6 +48,7 @@ const props = defineProps<{
   hotkeyCaptureTarget: "start" | "stop" | "sync" | null;
   videoExporterConfig: VideoExporterConfig;
   notifications: AppNotification[];
+  themeId: ThemeId;
 }>();
 
 const emit = defineEmits<{
@@ -79,12 +84,12 @@ const emit = defineEmits<{
   "move-overlay": [
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
   ];
+  "set-theme": [id: ThemeId];
 }>();
 
 const activePage = ref<ConfigPage>("overview");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
-const sidebarCollapsed = ref(false);
 
 function relay(event: string, ...args: unknown[]) {
   (emit as any)(event, ...args);
@@ -104,13 +109,33 @@ function selectRecordingSubPage(page: RecordingSubPage) {
   recordingSubPage.value = page;
 }
 
+function updateOverlayVisible(event: Event) {
+  emit("update-overlay-visible", (event.target as HTMLInputElement).checked);
+}
+
+function updateAlwaysOnTop(event: Event) {
+  emit("update-overlay-style", {
+    ...props.config.style,
+    alwaysOnTop: (event.target as HTMLInputElement).checked,
+  });
+}
+
+function loadRecentProfile(event: Event) {
+  const select = event.target as HTMLSelectElement;
+  const path = select.value;
+  if (path) {
+    emit("load-recent-profile", path);
+    select.value = "";
+  }
+}
+
 provide("config", props.config);
-provide("activeKeys", props.activeKeys);
-provide("keyIdLabels", props.keyIdLabels);
-provide("overlayVisible", props.overlayVisible);
-provide("profileName", props.profileName);
-provide("profileChanged", props.profileChanged);
-provide("recentProfiles", props.recentProfiles);
+provide("activeKeys", computed(() => props.activeKeys));
+provide("keyIdLabels", computed(() => props.keyIdLabels));
+provide("overlayVisible", computed(() => props.overlayVisible));
+provide("profileName", computed(() => props.profileName));
+provide("profileChanged", computed(() => props.profileChanged));
+provide("recentProfiles", computed(() => props.recentProfiles));
 provide("recordingDirectory", props.recordingDirectory);
 provide("defaultRecordingDirectory", props.defaultRecordingDirectory);
 provide("recordingBrowserDirectory", props.recordingBrowserDirectory);
@@ -128,23 +153,23 @@ provide("recordingHotkeys", props.recordingHotkeys);
 provide("hotkeyCaptureTarget", props.hotkeyCaptureTarget);
 provide("videoExporterConfig", props.videoExporterConfig);
 provide("recentColors", recentColors);
+provide("themeId", props.themeId);
 provide("emit", relay);
 
 const pageComponent = computed(() => {
-  const map: Record<ConfigPage, any> = {
-    overview: OverviewPage,
+  const map: Record<Exclude<ConfigPage, "overview">, any> = {
     layout: LayoutPage,
     appearance: AppearancePage,
     window: WindowPage,
     recording: RecordingPage,
     export: ExportPage,
   };
-  return map[activePage.value];
+  return activePage.value === "overview" ? null : map[activePage.value];
 });
 </script>
 
 <template>
-  <main :class="['config-shell', { 'sidebar-collapsed': sidebarCollapsed }]">
+  <main class="config-shell">
     <NotificationStack
       :notifications="notifications"
       @dismiss="emit('dismiss-notification', $event)"
@@ -152,21 +177,84 @@ const pageComponent = computed(() => {
     <ConfigSidebar
       :active-page="activePage"
       :recording-sub-page="recordingSubPage"
-      :collapsed="sidebarCollapsed"
-      @toggle-collapse="sidebarCollapsed = !sidebarCollapsed"
       @update-active-page="selectActivePage"
       @update-recording-sub-page="selectRecordingSubPage"
     />
 
+    <div class="sidebar-spacer" aria-hidden="true" />
+
     <section class="workspace">
       <ConfigTopbar
+        :profile-name="profileName"
+        :theme-id="themeId"
         @load-config="emit('load-config')"
         @export-and-apply-config="emit('export-and-apply-config')"
         @overwrite-and-apply-config="emit('overwrite-and-apply-config')"
+        @set-theme="(id: ThemeId) => emit('set-theme', id)"
       />
 
-      <div :key="`${activePage}-${recordingSubPage}`" class="page-container">
-        <component :is="pageComponent" />
+      <div :key="`${activePage}-${recordingSubPage}`" class="page-container animate-[page-enter_300ms_ease-out]">
+        <section v-if="activePage === 'overview'" class="page-stack">
+          <section class="preview-band" aria-label="Live preview">
+            <div class="preview-copy">
+              <p>Live Preview</p>
+              <h2 class="m-0">{{ profileName }}</h2>
+            </div>
+            <div class="preview-viewport">
+              <PovOverlay
+                :layout="config.layout"
+                :rows="config.rows"
+                :keys="config.keys"
+                :key-id-labels="keyIdLabels"
+                :active-keys="activeKeys"
+                :overlay-style="config.style"
+                fit-to-container
+              />
+            </div>
+          </section>
+
+          <section class="panel-grid">
+            <article class="panel">
+              <h2 class="m-0">Profile</h2>
+              <BaseFieldRow label="Name">{{ profileName }}</BaseFieldRow>
+              <BaseFieldRow label="Status">
+                {{ profileChanged ? "Unsaved changes" : "Saved" }}
+              </BaseFieldRow>
+              <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
+              <label class="recent-profile-control">
+                <span>Recent profiles</span>
+                <BaseSelect
+                  class="select-control"
+                  :disabled="recentProfiles.length === 0"
+                  model-value=""
+                  @change="loadRecentProfile"
+                >
+                  <option value="">
+                    {{ recentProfiles.length ? "Choose a profile" : "No recent profiles" }}
+                  </option>
+                  <option
+                    v-for="profile in recentProfiles"
+                    :key="profile.path"
+                    :value="profile.path"
+                  >
+                    {{ profile.name }}
+                  </option>
+                </BaseSelect>
+              </label>
+            </article>
+
+            <article class="panel">
+              <h2 class="m-0">Quick controls</h2>
+              <BaseToggleRow :checked="overlayVisible" @change="updateOverlayVisible">
+                Show POV overlay
+              </BaseToggleRow>
+              <BaseToggleRow :checked="config.style.alwaysOnTop" @change="updateAlwaysOnTop">
+                Always on top
+              </BaseToggleRow>
+            </article>
+          </section>
+        </section>
+        <component v-else :is="pageComponent" />
       </div>
     </section>
   </main>
@@ -174,23 +262,25 @@ const pageComponent = computed(() => {
 
 <style scoped>
 .config-shell {
-  display: grid;
+  position: relative;
   height: 100vh;
-  grid-template-columns: 248px minmax(0, 1fr);
   overflow: hidden;
-  background: var(--color-surface-base);
+  background: transparent;
   color: var(--color-text-primary);
 }
 
-.config-shell.sidebar-collapsed {
-  grid-template-columns: 72px minmax(0, 1fr);
+.sidebar-spacer {
+  width: 48px;
+  height: 0;
+  flex-shrink: 0;
 }
 
 .workspace {
   height: 100vh;
   min-width: 0;
   overflow-y: auto;
-  padding: 24px;
+  padding: 0 24px 24px;
+  padding-left: calc(48px + 24px);
 }
 
 .page-container {
@@ -198,9 +288,131 @@ const pageComponent = computed(() => {
   gap: 16px;
 }
 
+.page-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.preview-band {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-width: 0;
+  min-height: 250px;
+  margin-bottom: 20px;
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  background: linear-gradient(145deg, var(--glass-from), var(--glass-to));
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow: var(--glass-shadow);
+  padding: 24px 28px 24px;
+}
+
+.preview-copy {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  z-index: 2;
+  width: 132px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.preview-copy p {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--color-text-muted);
+}
+
+.preview-viewport {
+  --preview-available-width: calc(100vw - 220px);
+
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+  scrollbar-gutter: stable both-edges;
+  padding: 8px 12px 10px 148px;
+}
+
+.preview-viewport :deep(.pov-shell) {
+  min-width: 0;
+}
+
+.panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.panel {
+  box-sizing: border-box;
+  min-height: 190px;
+  border: 1px solid var(--glass-border);
+  border-radius: 28px;
+  background: linear-gradient(145deg, var(--glass-from), var(--glass-to));
+  backdrop-filter: blur(24px) saturate(170%);
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  box-shadow: var(--glass-shadow);
+  padding: 18px;
+  transition: border-color 300ms, box-shadow 300ms;
+}
+
+.panel:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+.panel h2 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  line-height: 24px;
+  letter-spacing: 0;
+  color: var(--color-text-primary);
+}
+
+.recent-profile-control {
+  display: grid;
+  grid-template-columns: minmax(110px, 1fr) minmax(180px, 240px);
+  align-items: center;
+  gap: 7px;
+  margin-top: 14px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.select-control {
+  justify-self: end;
+  width: min(240px, 100%);
+}
+
 @media (max-width: 920px) {
-  .config-shell {
-    grid-template-columns: 72px minmax(0, 1fr);
+  .preview-band {
+    min-height: 280px;
+  }
+
+  .preview-copy {
+    top: 22px;
+    transform: none;
+  }
+
+  .preview-viewport {
+    --preview-available-width: calc(100vw - 150px);
+
+    width: 100%;
+    padding: 58px 8px 8px;
+  }
+
+  .panel-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

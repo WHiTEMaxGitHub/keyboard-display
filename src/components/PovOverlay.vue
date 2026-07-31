@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import {
   isKeyBinding,
   type KeyBinding,
@@ -20,6 +20,7 @@ const props = defineProps<{
   overlayStyle: OverlayStyle;
   syncFeedbackActive?: boolean;
   adjusting?: boolean;
+  fitToContainer?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -27,6 +28,11 @@ const emit = defineEmits<{
 }>();
 
 const platformKey = computed(() => detectPlatformKey());
+const shellRef = ref<HTMLElement | null>(null);
+const clusterRef = ref<HTMLElement | null>(null);
+const fitScale = ref(1);
+const fitHeight = ref(160);
+let resizeObserver: ResizeObserver | undefined;
 
 function isKeyVisible(keyId: string, activeKeys: Set<string>, overlayStyle: OverlayStyle) {
   return overlayStyle.idleKeyVisibility !== "hidden" || activeKeys.has(keyId);
@@ -42,14 +48,61 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
   return !/^#[0-9a-fA-F]{8}$/.test(overlayStyle.backgroundColor) ||
     !overlayStyle.backgroundColor.endsWith("00");
 }
+
+function updateFitScale() {
+  if (!props.fitToContainer) {
+    fitScale.value = 1;
+    return;
+  }
+
+  const shell = shellRef.value;
+  const cluster = clusterRef.value;
+  if (!shell || !cluster) {
+    return;
+  }
+
+  const style = getComputedStyle(shell);
+  const declaredWidth = Number.parseFloat(
+    style.getPropertyValue("--preview-available-width"),
+  );
+  const parent = shell.parentElement;
+  const availableWidth = Math.max(
+    1,
+    Number.isFinite(declaredWidth) && declaredWidth > 0
+      ? declaredWidth
+      : parent?.clientWidth ?? shell.clientWidth,
+  );
+  const contentWidth = Math.max(1, cluster.scrollWidth);
+  fitScale.value = Math.min(1, availableWidth / contentWidth);
+  fitHeight.value = Math.ceil(cluster.scrollHeight * fitScale.value);
+}
+
+onMounted(() => {
+  updateFitScale();
+  resizeObserver = new ResizeObserver(updateFitScale);
+  if (shellRef.value) resizeObserver.observe(shellRef.value);
+});
+
+onUnmounted(() => {
+  resizeObserver?.disconnect();
+});
+
+watch(
+  () => [props.layout, props.rows, props.overlayStyle, props.fitToContainer],
+  () => requestAnimationFrame(updateFitScale),
+  { deep: true },
+);
 </script>
 
 <template>
   <section
+    ref="shellRef"
     class="pov-shell"
-    :class="[`idle-${overlayStyle.idleKeyVisibility}`]"
+    :class="[`idle-${overlayStyle.idleKeyVisibility}`, { 'fit-to-container': fitToContainer }]"
     :style="{
       '--overlay-scale': overlayStyle.scale,
+      '--preview-fit-scale': fitScale,
+      '--preview-fit-height': `${fitHeight}px`,
       '--unit-px': `${layout.unitPx}px`,
       '--gap-unit': normalizeUnit(layout.gapUnit),
       '--overlay-opacity': overlayStyle.opacity,
@@ -64,6 +117,7 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
     aria-label="POV key overlay"
   >
     <div
+      ref="clusterRef"
       :data-tauri-drag-region="adjusting ? true : undefined"
       :class="[
         'key-cluster',
@@ -109,10 +163,25 @@ function isBackplateVisible(overlayStyle: OverlayStyle) {
   user-select: none;
 }
 
+.pov-shell.fit-to-container {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-width: 0;
+  height: var(--preview-fit-height);
+  overflow: hidden;
+}
+
 .key-cluster {
   position: relative;
   width: max-content;
   border-radius: var(--overlay-bg-radius);
+  transform-origin: left center;
+}
+
+.pov-shell.fit-to-container .key-cluster {
+  transform-origin: center center;
+  transform: scale(var(--preview-fit-scale));
 }
 
 .key-cluster.adjusting {
