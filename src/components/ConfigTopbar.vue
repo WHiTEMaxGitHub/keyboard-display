@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import { SlidersHorizontal } from "@lucide/vue";
-import type { ThemeId } from "../domain/theme";
-import { THEMES } from "../domain/theme";
 import BaseButton from "./BaseButton.vue";
 
 defineProps<{
   profileName: string;
-  themeId: ThemeId;
 }>();
 
 const emit = defineEmits<{
   "load-config": [];
   "export-and-apply-config": [];
   "overwrite-and-apply-config": [];
-  "set-theme": [id: ThemeId];
 }>();
-
-const themeOptions = Object.values(THEMES);
 </script>
 
 <template>
@@ -26,19 +20,6 @@ const themeOptions = Object.values(THEMES);
       <h1 class="m-0 text-[28px] leading-[34px] tracking-normal">{{ profileName }}</h1>
     </div>
     <div class="flex flex-wrap justify-end gap-2 items-center">
-      <select
-        :value="themeId"
-        class="text-xs font-bold px-3 py-1.5 rounded-md border border-border-control bg-surface-control text-text-body cursor-pointer"
-        @change="emit('set-theme', ($event.target as HTMLSelectElement).value as ThemeId)"
-      >
-        <option
-          v-for="t in themeOptions"
-          :key="t.id"
-          :value="t.id"
-        >
-          {{ t.label }}
-        </option>
-      </select>
       <BaseButton @click="emit('load-config')">
         <SlidersHorizontal :size="15" aria-hidden="true" />
         Load config

@@ -7,10 +7,18 @@ import {
   MonitorCog,
   MonitorUp,
   Palette,
+  Settings,
   Video,
 } from "@lucide/vue";
 
-type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
+type ConfigPage =
+  | "overview"
+  | "layout"
+  | "appearance"
+  | "window"
+  | "recording"
+  | "export"
+  | "settings";
 type RecordingSubPage = "control" | "files";
 
 const navItems: Array<{
@@ -24,6 +32,7 @@ const navItems: Array<{
   { id: "window", label: "Window", icon: MonitorCog },
   { id: "recording", label: "Recording", icon: Clapperboard },
   { id: "export", label: "Export", icon: Video },
+  { id: "settings", label: "App Config", icon: Settings },
 ];
 
 const recordingNavItems: Array<{ id: RecordingSubPage; label: string }> = [

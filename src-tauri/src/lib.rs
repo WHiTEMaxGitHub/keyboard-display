@@ -19,6 +19,7 @@ pub fn run() {
             commands::write_debug_log,
             commands::read_config_file,
             commands::load_app_config,
+            commands::app_config_path_string,
             commands::save_app_config,
             commands::default_recording_dir,
             commands::start_recording,

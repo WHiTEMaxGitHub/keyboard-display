@@ -36,6 +36,11 @@ pub fn load_app_config(app: tauri::AppHandle) -> Result<Option<String>, String> 
 }
 
 #[tauri::command]
+pub fn app_config_path_string(app: tauri::AppHandle) -> Result<String, String> {
+    app_config_path(&app).map(|path| path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
 pub fn save_app_config(app: tauri::AppHandle, contents: String) -> Result<(), String> {
     let path = app_config_path(&app)?;
     if let Some(parent) = path.parent() {

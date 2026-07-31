@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { computed, onMounted, onUnmounted, watch, type WatchStopHandle } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch, type WatchStopHandle } from "vue";
 import { tauriApi } from "./api/tauri";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
@@ -36,6 +36,7 @@ const isOverlayWindow = computed(() => {
 const { notifications, notify, dismissNotification } = useNotifications();
 
 const { themeId, loadTheme, setTheme } = useTheme();
+const appConfigPath = ref("");
 
 const {
   config,
@@ -253,6 +254,11 @@ function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
 onMounted(async () => {
   loadTheme();
   if (!isOverlayWindow.value) {
+    try {
+      appConfigPath.value = await tauriApi.appConfigPath();
+    } catch (error) {
+      console.warn("Failed to resolve app config path", error);
+    }
     await restoreAppConfig(
       overlayCallbacks,
       initializeDefaultRecordingDirectory,
@@ -383,6 +389,7 @@ onUnmounted(() => {
       :video-exporter-config="videoExporterConfig"
       :notifications="notifications"
       :theme-id="themeId"
+      :app-config-path="appConfigPath"
       @preview-overlay-style="previewOverlayStyle"
       @update-key-id-labels="updateKeyIdLabels"
       @update-overlay-style="updateOverlayStyle"

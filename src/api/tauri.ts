@@ -41,6 +41,10 @@ export const tauriApi = {
     return invoke<string | null>("load_app_config");
   },
 
+  appConfigPath() {
+    return invoke<string>("app_config_path_string");
+  },
+
   saveAppConfig(contents: string) {
     return invoke<void>("save_app_config", { contents });
   },

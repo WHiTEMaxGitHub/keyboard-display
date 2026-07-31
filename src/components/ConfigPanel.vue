@@ -15,12 +15,20 @@ import AppearancePage from "./pages/AppearancePage.vue";
 import WindowPage from "./pages/WindowPage.vue";
 import RecordingPage from "./pages/RecordingPage.vue";
 import ExportPage from "./pages/ExportPage.vue";
+import SettingsPage from "./pages/SettingsPage.vue";
 import PovOverlay from "./PovOverlay.vue";
 import BaseFieldRow from "./BaseFieldRow.vue";
 import BaseSelect from "./BaseSelect.vue";
 import BaseToggleRow from "./BaseToggleRow.vue";
 
-type ConfigPage = "overview" | "layout" | "appearance" | "window" | "recording" | "export";
+type ConfigPage =
+  | "overview"
+  | "layout"
+  | "appearance"
+  | "window"
+  | "recording"
+  | "export"
+  | "settings";
 type RecordingSubPage = "control" | "files";
 
 const props = defineProps<{
@@ -49,6 +57,7 @@ const props = defineProps<{
   videoExporterConfig: VideoExporterConfig;
   notifications: AppNotification[];
   themeId: ThemeId;
+  appConfigPath: string;
 }>();
 
 const emit = defineEmits<{
@@ -153,7 +162,8 @@ provide("recordingHotkeys", props.recordingHotkeys);
 provide("hotkeyCaptureTarget", props.hotkeyCaptureTarget);
 provide("videoExporterConfig", props.videoExporterConfig);
 provide("recentColors", recentColors);
-provide("themeId", props.themeId);
+provide("themeId", computed(() => props.themeId));
+provide("appConfigPath", computed(() => props.appConfigPath));
 provide("emit", relay);
 
 const pageComponent = computed(() => {
@@ -163,6 +173,7 @@ const pageComponent = computed(() => {
     window: WindowPage,
     recording: RecordingPage,
     export: ExportPage,
+    settings: SettingsPage,
   };
   return activePage.value === "overview" ? null : map[activePage.value];
 });
@@ -186,11 +197,9 @@ const pageComponent = computed(() => {
     <section class="workspace">
       <ConfigTopbar
         :profile-name="profileName"
-        :theme-id="themeId"
         @load-config="emit('load-config')"
         @export-and-apply-config="emit('export-and-apply-config')"
         @overwrite-and-apply-config="emit('overwrite-and-apply-config')"
-        @set-theme="(id: ThemeId) => emit('set-theme', id)"
       />
 
       <div :key="`${activePage}-${recordingSubPage}`" class="page-container animate-[page-enter_300ms_ease-out]">
