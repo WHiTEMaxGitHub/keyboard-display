@@ -17,8 +17,8 @@
         "title": "Keyboard Display",
         "width": 1120,
         "height": 760,
-        "minWidth": 1040,
-        "minHeight": 700
+        "minWidth": 900,
+        "minHeight": 640
       },
       {
         "label": "pov",

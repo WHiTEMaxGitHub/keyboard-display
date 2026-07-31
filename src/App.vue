@@ -14,7 +14,6 @@ import { useInputStateBridge } from "./composables/useInputStateBridge";
 import { useRecordingController } from "./composables/useRecordingController";
 import { useNotifications } from "./composables/useNotifications";
 import { useAppConfig } from "./composables/useAppConfig";
-import { applyPreferredConfigWindowSize } from "./composables/useConfigWindowSizing";
 import { useTheme } from "./composables/useTheme";
 import AmbientBackground from "./components/AmbientBackground.vue";
 import { buildAppConfigFile } from "./domain/appConfig";
@@ -254,9 +253,6 @@ function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
 onMounted(async () => {
   loadTheme();
   if (!isOverlayWindow.value) {
-    void applyPreferredConfigWindowSize().catch((error) => {
-      console.warn("Failed to apply preferred config window size", error);
-    });
     await restoreAppConfig(
       overlayCallbacks,
       initializeDefaultRecordingDirectory,
