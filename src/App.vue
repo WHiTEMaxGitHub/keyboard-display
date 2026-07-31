@@ -14,6 +14,9 @@ import { useInputStateBridge } from "./composables/useInputStateBridge";
 import { useRecordingController } from "./composables/useRecordingController";
 import { useNotifications } from "./composables/useNotifications";
 import { useAppConfig } from "./composables/useAppConfig";
+import { applyPreferredConfigWindowSize } from "./composables/useConfigWindowSizing";
+import { useTheme } from "./composables/useTheme";
+import AmbientBackground from "./components/AmbientBackground.vue";
 import { buildAppConfigFile } from "./domain/appConfig";
 import { type OverlayStyle } from "./domain/defaultConfig";
 import {
@@ -32,6 +35,8 @@ const isOverlayWindow = computed(() => {
 });
 
 const { notifications, notify, dismissNotification } = useNotifications();
+
+const { themeId, loadTheme, setTheme } = useTheme();
 
 const {
   config,
@@ -247,7 +252,11 @@ function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
 }
 
 onMounted(async () => {
+  loadTheme();
   if (!isOverlayWindow.value) {
+    void applyPreferredConfigWindowSize().catch((error) => {
+      console.warn("Failed to apply preferred config window size", error);
+    });
     await restoreAppConfig(
       overlayCallbacks,
       initializeDefaultRecordingDirectory,
@@ -339,6 +348,7 @@ onUnmounted(() => {
 
 <template>
   <div :class="['app-surface', { 'overlay-surface': isOverlayWindow }]">
+    <AmbientBackground v-if="!isOverlayWindow" />
     <div v-if="isOverlayWindow" class="overlay-window">
       <OverlayWindow
         :layout="config.layout"
@@ -376,6 +386,7 @@ onUnmounted(() => {
       :hotkey-capture-target="hotkeyCaptureTarget"
       :video-exporter-config="videoExporterConfig"
       :notifications="notifications"
+      :theme-id="themeId"
       @preview-overlay-style="previewOverlayStyle"
       @update-key-id-labels="updateKeyIdLabels"
       @update-overlay-style="updateOverlayStyle"
@@ -394,6 +405,7 @@ onUnmounted(() => {
       @update-video-exporter-config="(v: any) => { updateVideoExporterConfig(v); scheduleSave(); }"
       @notify="notify"
       @dismiss-notification="dismissNotification"
+      @set-theme="(id: any) => setTheme(id)"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
       @add-sync-marker="addSyncMarker"
