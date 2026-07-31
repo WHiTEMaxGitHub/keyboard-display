@@ -27,7 +27,7 @@ const emit = defineEmits<{
     :placeholder="placeholder"
     :disabled="disabled"
     :class="[
-      'min-h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit text-sm font-bold leading-none px-2.5 py-0',
+      'min-h-[34px] border border-border-dim rounded-lg bg-surface-control text-text-body font-inherit text-sm font-bold leading-none px-2.5 py-0',
       'focus:border-accent-focus-border focus:outline-2 focus:outline-accent-focus-ring focus:outline-offset-0',
       'disabled:cursor-not-allowed disabled:opacity-55',
       block ? 'w-full' : '',

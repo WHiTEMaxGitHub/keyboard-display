@@ -112,7 +112,7 @@ function padFrame(frame: number, fps: number) {
     </div>
     <div v-else class="grid gap-1.5 min-w-0">
       <div
-        class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 min-w-0 border border-border-default rounded-radius-md bg-[#151a20] text-text-body cursor-pointer px-2.5 py-2 text-left transition-[background-color,border-color,transform] duration-[140ms] ease hover:border-white/14 hover:bg-[#1e252e] focus-visible:border-accent-focus-border focus-visible:outline-2 focus-visible:outline-accent-focus-ring focus-visible:outline-offset-0"
+        class="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-2 min-w-0 border border-border-control rounded-md bg-surface-control text-text-body cursor-pointer px-2.5 py-2 text-left transition-[background-color,border-color,transform] duration-[140ms] ease hover:border-border-default hover:bg-surface-control-hover focus-visible:border-accent-focus-border focus-visible:outline-2 focus-visible:outline-accent-focus-ring focus-visible:outline-offset-0"
         role="button"
         tabindex="0"
         :aria-expanded="fileDetailsVisible"
@@ -143,7 +143,7 @@ function padFrame(frame: number, fps: number) {
           { expanded: fileDetailsVisible && hasFileDetails(node.summary) },
         ]"
       >
-        <div v-if="node.summary && hasFileDetails(node.summary)" class="grid gap-2 ml-[18px] min-h-0 overflow-hidden border border-border-default rounded-radius-md bg-surface-preview text-text-body p-2.5">
+        <div v-if="node.summary && hasFileDetails(node.summary)" class="grid gap-2 ml-[18px] min-h-0 overflow-hidden border border-border-control rounded-md bg-surface-control text-text-body p-2.5">
           <div v-if="node.summary.metadata.description" class="grid gap-[3px] min-w-0">
             <strong class="text-text-secondary text-xs">Description</strong>
             <span class="overflow-wrap-anywhere text-text-muted text-xs">{{ node.summary.metadata.description }}</span>
@@ -157,7 +157,7 @@ function padFrame(frame: number, fps: number) {
               <strong class="text-text-body text-[13px]">Markers</strong>
               <span class="text-text-muted text-xs font-bold">{{ node.summary.markerCount }} total</span>
             </div>
-            <div v-if="node.summary.markers.length" class="grid overflow-hidden border border-border-dim rounded-radius-md">
+            <div v-if="node.summary.markers.length" class="grid overflow-hidden border border-border-dim rounded-md">
               <div class="grid grid-cols-[minmax(110px,0.9fr)_minmax(90px,auto)_minmax(190px,auto)_minmax(120px,1fr)] gap-2.5 items-center px-2.5 py-2 bg-white/[0.035] text-text-subtle text-[11px] font-extrabold uppercase">
                 <span>Name</span>
                 <span>Frame</span>

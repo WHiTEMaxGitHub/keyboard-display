@@ -86,7 +86,7 @@ function padFrame(frame: number, fps: number) {
     </BaseFieldRow>
   </div>
 
-  <div class="grid gap-2.5 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
+  <div class="grid gap-2.5 border border-border-control rounded-lg bg-surface-control p-3.5">
     <div class="flex items-center justify-between gap-3">
       <h3 class="m-0 text-base leading-[22px] tracking-normal">Marker timeline</h3>
       <span class="text-text-muted">
@@ -108,7 +108,7 @@ function padFrame(frame: number, fps: number) {
       </button>
     </div>
     <p v-else class="text-text-muted">No markers in this recording.</p>
-    <div v-if="selectedTimelineMarker" class="grid grid-cols-[minmax(120px,1fr)_minmax(90px,auto)_minmax(170px,auto)] gap-2.5 border border-border-default rounded-radius-md bg-[#10141a] text-text-body font-mono text-xs px-2.5 py-2">
+    <div v-if="selectedTimelineMarker" class="grid grid-cols-[minmax(120px,1fr)_minmax(90px,auto)_minmax(170px,auto)] gap-2.5 border border-border-control rounded-md bg-surface-control text-text-body font-mono text-xs px-2.5 py-2">
       <strong class="text-[#fff2c2] font-mono font-extrabold">{{ selectedTimelineMarker.name }}</strong>
       <span>frame {{ selectedTimelineMarker.frame }}</span>
       <span>{{ selectedTimelineMarker.timecode }}</span>
@@ -122,7 +122,7 @@ function padFrame(frame: number, fps: number) {
         <div
           v-for="(event, index) in markerEvents(events)"
           :key="`${event.frame}-${event.marker}-${index}`"
-          class="grid grid-cols-[minmax(120px,1.1fr)_minmax(100px,0.7fr)_minmax(180px,1.2fr)] gap-2.5 border border-border-default rounded-radius-md bg-[#151a20] text-text-body font-mono text-xs px-2.5 py-2"
+          class="grid grid-cols-[minmax(120px,1.1fr)_minmax(100px,0.7fr)_minmax(180px,1.2fr)] gap-2.5 border border-border-control rounded-md bg-surface-control text-text-body font-mono text-xs px-2.5 py-2"
         >
           <strong class="text-accent-text font-mono font-extrabold">marker {{ event.marker }}</strong>
           <span>frame {{ event.frame }}</span>
@@ -163,12 +163,12 @@ function padFrame(frame: number, fps: number) {
 .marker-timeline {
   position: relative;
   height: 62px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(120, 140, 170, 0.08);
   border-radius: 7px;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+    linear-gradient(90deg, rgba(120, 140, 170, 0.06) 1px, transparent 1px)
       0 0 / 25% 100%,
-    #10141a;
+    rgba(9, 14, 22, 0.18);
 }
 
 .marker-timeline::before {

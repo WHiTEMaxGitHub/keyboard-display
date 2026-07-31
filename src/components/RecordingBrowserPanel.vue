@@ -138,7 +138,7 @@ function saveAndCloseRecordingMetadata() {
     <p class="notice">
       {{ recordingBrowserDirectory || "Choose a folder to browse .kbdrec files." }}
     </p>
-    <form v-if="folderEditorVisible" class="grid gap-2.5 border border-border-default rounded-radius-lg bg-[#151a20] p-3 my-4" @submit.prevent="createRecordingFolder">
+    <form v-if="folderEditorVisible" class="grid gap-2.5 border border-border-control rounded-lg bg-surface-control p-3 my-4" @submit.prevent="createRecordingFolder">
       <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
         <span>Folder name</span>
         <input
@@ -146,7 +146,7 @@ function saveAndCloseRecordingMetadata() {
           type="text"
           placeholder="Match 01"
           :disabled="folderCreating"
-          class="w-full box-border border border-border-control rounded-radius-md bg-[#10141a] text-text-body font-inherit px-2.5 py-[9px]"
+          class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]"
         />
       </label>
       <div class="flex flex-wrap justify-end gap-2">
@@ -170,7 +170,7 @@ function saveAndCloseRecordingMetadata() {
       />
     </div>
 
-    <div class="grid gap-3.5 mt-5 border-t border-border-default pt-4">
+    <div class="grid gap-3.5 mt-5 border-t border-border-dim pt-4">
       <div class="flex items-center justify-between gap-3">
         <h3 class="m-0 text-base leading-[22px] tracking-normal">Recording inspection</h3>
         <BaseButton @click="inspectRecordingFile">
@@ -196,10 +196,10 @@ function saveAndCloseRecordingMetadata() {
 <style scoped>
 .notice-text {
   margin: 0;
-  border: 1px solid rgba(255, 209, 102, 0.18);
+  border: 1px solid rgba(255, 209, 102, 0.14);
   border-radius: 7px;
-  background: rgba(255, 209, 102, 0.08);
-  color: #e8cf88;
+  background: rgba(255, 209, 102, 0.06);
+  color: #d4c070;
   font-size: 13px;
   font-weight: 700;
   padding: 9px 10px;

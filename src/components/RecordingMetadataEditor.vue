@@ -108,8 +108,8 @@ function createEmptyMetadata(): RecordingMetadata {
 </script>
 
 <template>
-  <section class="grid gap-3 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
-    <div class="flex items-start justify-between gap-3 mb-1 border-b border-border-default pb-3 max-[520px]:flex-col max-[520px]:items-stretch">
+  <section class="grid gap-3 border border-border-control rounded-lg bg-surface-control p-3.5">
+    <div class="flex items-start justify-between gap-3 mb-1 border-b border-border-dim pb-3 max-[520px]:flex-col max-[520px]:items-stretch">
       <div>
         <p class="m-0 text-text-muted text-[11px] font-extrabold tracking-[0.08em] uppercase">Recording metadata</p>
         <h3 class="m-0 mt-0.5 text-base leading-[22px] tracking-normal">Sidecar metadata</h3>
@@ -129,15 +129,15 @@ function createEmptyMetadata(): RecordingMetadata {
     <p class="m-0 overflow-wrap-anywhere text-text-muted font-mono text-xs">{{ path }}</p>
     <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
       <span>Display name</span>
-      <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" class="w-full box-border border border-border-control rounded-radius-md bg-[#10141a] text-text-body font-inherit px-2.5 py-[9px]" />
+      <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]" />
     </label>
     <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
       <span>Description</span>
-      <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" class="w-full box-border border border-border-control rounded-radius-md bg-[#10141a] text-text-body font-inherit px-2.5 py-[9px] resize-y" />
+      <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px] resize-y" />
     </label>
     <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
       <span>Tags</span>
-      <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" class="w-full box-border border border-border-control rounded-radius-md bg-[#10141a] text-text-body font-inherit px-2.5 py-[9px]" />
+      <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]" />
     </label>
     <p v-if="metadataStatus" class="m-0 text-[#9ff0b9] text-[13px] font-bold">{{ metadataStatus }}</p>
     <p v-if="metadataError" class="error">{{ metadataError }}</p>

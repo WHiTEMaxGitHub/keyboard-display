@@ -21,7 +21,7 @@ const emit = defineEmits<{
       v-for="notification in notifications"
       :key="notification.id"
       :class="[
-        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border border-border-control rounded-radius-lg bg-surface-panel text-text-body text-[13px] font-extrabold px-3 py-2.5 pointer-events-auto shadow-[0_10px_24px_rgba(0,0,0,0.22)]',
+        'grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border border-border-dim rounded-lg bg-surface-panel text-text-body text-[13px] font-extrabold px-3 py-2.5 pointer-events-auto shadow-[0_10px_24px_rgba(0,0,0,0.22)]',
         notification.tone === 'success' && 'border-success-border bg-success-bg text-success-text',
         notification.tone === 'error' && 'border-danger-border bg-danger-dark-bg text-danger-text',
         notification.tone === 'info' && 'border-info-border bg-info-bg text-info-text',

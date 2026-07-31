@@ -104,7 +104,7 @@ function setHexAlpha(color: string, alpha: number) {
 </script>
 
 <template>
-  <article class="box-border min-h-[190px] border border-border-default rounded-radius-lg bg-surface-panel p-[18px] w-full">
+  <article class="box-border min-h-[190px] border border-[var(--glass-border)] rounded-[28px] bg-gradient-to-br from-[var(--glass-from)] to-[var(--glass-to)] backdrop-blur-2xl backdrop-saturate-[170%] shadow-[var(--glass-shadow)] p-[18px] w-full">
     <div class="flex items-center justify-between gap-3 mb-4">
       <h2 class="m-0 text-lg leading-6 tracking-normal">Appearance</h2>
       <BaseButton @click="emit('refresh-pov')">

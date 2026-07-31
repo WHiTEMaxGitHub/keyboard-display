@@ -307,7 +307,7 @@ function joinPath(directory: string, fileName: string) {
       <label for="export-filename-template" class="text-text-muted text-[13px] font-extrabold">Filename template</label>
       <input
         id="export-filename-template"
-        class="box-border w-full border border-border-control rounded-radius-md bg-[#10141a] text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
+        class="box-border w-full border border-border-control rounded-md bg-surface-control text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
         type="text"
         :value="filenameTemplateDraft"
         @input="updateFilenameTemplateDraft"
@@ -315,7 +315,7 @@ function joinPath(directory: string, fileName: string) {
         @keydown.enter="commitFilenameTemplate"
       />
     </section>
-    <section class="grid gap-2.5 mt-4 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
+    <section class="grid gap-2.5 mt-4 border border-border-control rounded-lg bg-surface-control p-3.5">
       <div class="flex items-center justify-between gap-3 mb-2">
         <h3 class="m-0 text-text-body text-base leading-[22px] tracking-normal">Overlay video</h3>
         <BaseButton
@@ -357,7 +357,7 @@ function joinPath(directory: string, fileName: string) {
       </div>
       <p v-if="exportStatus" class="notice-text">{{ exportStatus }}</p>
     </section>
-    <div class="grid gap-2.5 mt-4 border border-border-default rounded-radius-lg bg-[#151a20] p-3.5">
+    <div class="grid gap-2.5 mt-4 border border-border-control rounded-lg bg-surface-control p-3.5">
       <div class="flex items-center justify-between gap-3 mb-2">
         <h3 class="m-0 text-text-body text-base leading-[22px] tracking-normal">Video exporter</h3>
         <BaseButton :disabled="exporterChecking" @click="refreshExporterStatus">
@@ -400,17 +400,17 @@ function joinPath(directory: string, fileName: string) {
         </BaseButton>
       </div>
       <div v-if="exporterStatus" class="grid gap-2">
-        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-default rounded-radius-md bg-[#10141a] px-2.5 py-2">
+        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-control rounded-md bg-surface-control px-2.5 py-2">
           <span class="text-text-muted text-[13px] font-extrabold">App-managed</span>
           <strong class="min-w-0 overflow-wrap-anywhere">{{ exporterStatus.appManaged.available ? "Installed" : "Not installed" }}</strong>
           <code class="min-w-0 overflow-wrap-anywhere text-text-secondary font-mono text-xs">{{ exporterStatus.appManaged.path }}</code>
         </div>
-        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-default rounded-radius-md bg-[#10141a] px-2.5 py-2">
+        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-control rounded-md bg-surface-control px-2.5 py-2">
           <span class="text-text-muted text-[13px] font-extrabold">User-selected</span>
           <strong class="min-w-0 overflow-wrap-anywhere">{{ exporterStatus.userSelected?.available ? "Available" : "Not selected" }}</strong>
           <code class="min-w-0 overflow-wrap-anywhere text-text-secondary font-mono text-xs">{{ exporterStatus.userSelected?.path ?? "None" }}</code>
         </div>
-        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-default rounded-radius-md bg-[#10141a] px-2.5 py-2">
+        <div class="grid grid-cols-[120px_110px_minmax(0,1fr)] gap-2.5 items-center border border-border-control rounded-md bg-surface-control px-2.5 py-2">
           <span class="text-text-muted text-[13px] font-extrabold">PATH</span>
           <strong class="min-w-0 overflow-wrap-anywhere">{{ exporterStatus.path.available ? "Available" : "Not found" }}</strong>
           <code class="min-w-0 overflow-wrap-anywhere text-text-secondary font-mono text-xs">{{ exporterStatus.path.version ?? "ffmpeg" }}</code>
@@ -428,10 +428,10 @@ function joinPath(directory: string, fileName: string) {
 <style scoped>
 .notice-text {
   margin: 0;
-  border: 1px solid rgba(255, 209, 102, 0.18);
+  border: 1px solid rgba(255, 209, 102, 0.14);
   border-radius: 7px;
-  background: rgba(255, 209, 102, 0.08);
-  color: #e8cf88;
+  background: rgba(255, 209, 102, 0.06);
+  color: #d4c070;
   font-size: 13px;
   font-weight: 700;
   padding: 9px 10px;

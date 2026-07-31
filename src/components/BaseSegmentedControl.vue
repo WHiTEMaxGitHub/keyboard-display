@@ -19,7 +19,7 @@ const emit = defineEmits<{
       v-for="option in options"
       :key="option.value"
       :class="[
-        'border border-border-control rounded-radius-md bg-surface-control text-text-secondary cursor-pointer px-2.5 py-2 font-inherit font-extrabold',
+        'border border-border-dim rounded-md bg-surface-control text-text-secondary cursor-pointer px-2.5 py-2 font-inherit font-extrabold btn-press',
         option.value === modelValue
           ? 'border-accent-soft-border bg-accent-soft-bg text-accent-text'
           : '',

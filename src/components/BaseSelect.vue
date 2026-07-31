@@ -32,7 +32,7 @@ function handleChange(event: Event) {
 .base-select {
   min-height: 34px;
   border: 1px solid var(--color-border-control);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   appearance: none;
   background: var(--color-surface-control);
   background-image:

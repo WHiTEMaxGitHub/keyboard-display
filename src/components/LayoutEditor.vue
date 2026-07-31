@@ -372,7 +372,7 @@ function updateGapWidth(
     <article
       v-for="(row, rowIndex) in rows"
       :key="rowIndex"
-      class="grid gap-2.5 border border-border-default rounded-radius-lg bg-[#151a20] p-3 transition-[border-color,background-color,box-shadow,transform] duration-[160ms] ease hover:border-white/14 hover:bg-[#171d24]"
+      class="grid gap-2.5 border border-border-control rounded-lg bg-surface-control p-3 transition-[border-color,background-color,box-shadow,transform] duration-[160ms] ease hover:border-border-default hover:bg-surface-control-hover"
     >
       <div class="flex items-center justify-between gap-3">
         <button class="flex items-center gap-2 min-w-0 border-0 bg-transparent text-text-body cursor-pointer p-0 text-left hover:text-[#f4f7fb]" type="button" @click="toggleRow(rowIndex)">
@@ -406,7 +406,7 @@ function updateGapWidth(
                     autocapitalize="off"
                     autocorrect="off"
                     spellcheck="false"
-                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                     @blur="commitKeyText(rowIndex, itemIndex, item, 'id')"
                     @change="commitKeyText(rowIndex, itemIndex, item, 'id')"
                     @input="updateTextDraft(rowIndex, itemIndex, 'id', $event)"
@@ -422,7 +422,7 @@ function updateGapWidth(
                     autocapitalize="off"
                     autocorrect="off"
                     spellcheck="false"
-                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                     @blur="commitKeyText(rowIndex, itemIndex, item, 'label')"
                     @change="commitKeyText(rowIndex, itemIndex, item, 'label')"
                     @input="updateTextDraft(rowIndex, itemIndex, 'label', $event)"
@@ -435,7 +435,7 @@ function updateGapWidth(
                     min="0.1"
                     step="0.05"
                     type="number"
-                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                     @blur="commitKeyWidth(rowIndex, itemIndex, item)"
                     @change="commitKeyWidth(rowIndex, itemIndex, item)"
                     @input="updateWidthDraft(rowIndex, itemIndex, $event)"
@@ -456,7 +456,7 @@ function updateGapWidth(
                 <Transition name="field-reveal">
                   <div
                     v-if="isPlatformLabelEditorOpen(rowIndex, itemIndex)"
-                    class="grid col-span-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2 border-t border-white/6 pt-2"
+                    class="grid col-span-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2 border-t border-border-control pt-2"
                   >
                     <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
                       macOS label
@@ -465,7 +465,7 @@ function updateGapWidth(
                         autocapitalize="off"
                         autocorrect="off"
                         spellcheck="false"
-                        class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                        class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                         @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
                         @change="commitPlatformLabel(rowIndex, itemIndex, item, 'macos')"
                         @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'macos', $event)"
@@ -478,7 +478,7 @@ function updateGapWidth(
                         autocapitalize="off"
                         autocorrect="off"
                         spellcheck="false"
-                        class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                        class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                         @blur="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
                         @change="commitPlatformLabel(rowIndex, itemIndex, item, 'windows')"
                         @input="updatePlatformLabelDraft(rowIndex, itemIndex, 'windows', $event)"
@@ -491,7 +491,7 @@ function updateGapWidth(
                         autocapitalize="off"
                         autocorrect="off"
                         spellcheck="false"
-                        class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                        class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                         @blur="commitRegistryLabel(rowIndex, itemIndex, item)"
                         @change="commitRegistryLabel(rowIndex, itemIndex, item)"
                         @input="updateRegistryLabelDraft(rowIndex, itemIndex, $event)"
@@ -509,7 +509,7 @@ function updateGapWidth(
                     min="0.1"
                     step="0.05"
                     type="number"
-                    class="min-w-0 h-[34px] border border-border-control rounded-radius-md bg-surface-control text-text-body font-inherit px-[9px]"
+                    class="min-w-0 h-[34px] border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-[9px]"
                     @blur="updateGapWidth(rowIndex, itemIndex, item)"
                     @change="updateGapWidth(rowIndex, itemIndex, item)"
                     @input="updateWidthDraft(rowIndex, itemIndex, $event)"
@@ -542,9 +542,9 @@ function updateGapWidth(
   grid-template-columns: minmax(130px, 0.9fr) repeat(3, minmax(0, 1fr)) auto auto auto;
   align-items: end;
   gap: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(120, 140, 170, 0.08);
   border-radius: 7px;
-  background: #10141a;
+  background: rgba(9, 14, 22, 0.18);
   padding: 10px;
   transition:
     border-color 160ms ease,
@@ -554,8 +554,8 @@ function updateGapWidth(
 }
 
 .row-item-editor:hover {
-  border-color: rgba(255, 255, 255, 0.12);
-  background: #121820;
+  border-color: rgba(120, 140, 170, 0.12);
+  background: rgba(12, 18, 28, 0.24);
   transform: translateY(-1px);
 }
 
