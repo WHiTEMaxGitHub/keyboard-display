@@ -8,7 +8,8 @@ import ExportPanel from "../ExportPanel.vue";
 const config = inject<AppConfig>("config")!;
 const profileNameRef = inject<ComputedRef<string>>("profileName")!;
 const profileName = computed(() => profileNameRef.value);
-const videoExporterConfig = inject<VideoExporterConfig>("videoExporterConfig")!;
+const videoExporterConfigRef = inject<ComputedRef<VideoExporterConfig>>("videoExporterConfig")!;
+const videoExporterConfig = computed(() => videoExporterConfigRef.value);
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 
 const videoExporterInstalling = ref(false);

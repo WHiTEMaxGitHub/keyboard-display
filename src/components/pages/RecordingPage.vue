@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { inject, ref } from "vue";
+import { computed, inject, ref, type ComputedRef } from "vue";
 import type { AppConfig } from "../../domain/defaultConfig";
 import type { RecordingHotkeyConfig } from "../../domain/recordingHotkeys";
 import type { RecordingInspection } from "../../types/recording";
@@ -9,22 +9,35 @@ import RecordingBrowserPanel from "../RecordingBrowserPanel.vue";
 type RecordingSubPage = "control" | "files";
 
 const config = inject<AppConfig>("config")!;
-const recordingDirectory = inject<string>("recordingDirectory")!;
-const defaultRecordingDirectory = inject<string>("defaultRecordingDirectory")!;
-const recordingBrowserDirectory = inject<string>("recordingBrowserDirectory")!;
-const silentRecording = inject<boolean>("silentRecording")!;
-const isRecording = inject<boolean>("isRecording")!;
-const recordingCountdown = inject<number>("recordingCountdown")!;
-const lastRecordingPath = inject<string>("lastRecordingPath")!;
-const recordingStatusMessage = inject<string>("recordingStatusMessage")!;
-const currentRecordingPath = inject<string>("currentRecordingPath")!;
-const recordingInspection = inject<RecordingInspection | null>("recordingInspection")!;
-const recordingInspectionError = inject<string>("recordingInspectionError")!;
-const recordingHotkeys = inject<RecordingHotkeyConfig>("recordingHotkeys")!;
-const hotkeyCaptureTarget = inject<"start" | "stop" | "sync" | null>("hotkeyCaptureTarget")!;
+const recordingDirectoryRef = inject<ComputedRef<string>>("recordingDirectory")!;
+const defaultRecordingDirectoryRef = inject<ComputedRef<string>>("defaultRecordingDirectory")!;
+const recordingBrowserDirectoryRef = inject<ComputedRef<string>>("recordingBrowserDirectory")!;
+const silentRecordingRef = inject<ComputedRef<boolean>>("silentRecording")!;
+const isRecordingRef = inject<ComputedRef<boolean>>("isRecording")!;
+const recordingCountdownRef = inject<ComputedRef<number>>("recordingCountdown")!;
+const lastRecordingPathRef = inject<ComputedRef<string>>("lastRecordingPath")!;
+const recordingStatusMessageRef = inject<ComputedRef<string>>("recordingStatusMessage")!;
+const currentRecordingPathRef = inject<ComputedRef<string>>("currentRecordingPath")!;
+const recordingInspectionRef = inject<ComputedRef<RecordingInspection | null>>("recordingInspection")!;
+const recordingInspectionErrorRef = inject<ComputedRef<string>>("recordingInspectionError")!;
+const recordingHotkeysRef = inject<ComputedRef<RecordingHotkeyConfig>>("recordingHotkeys")!;
+const hotkeyCaptureTargetRef = inject<ComputedRef<"start" | "stop" | "sync" | null>>("hotkeyCaptureTarget")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 
 const recordingSubPage = ref<RecordingSubPage>("control");
+const recordingDirectory = computed(() => recordingDirectoryRef.value);
+const defaultRecordingDirectory = computed(() => defaultRecordingDirectoryRef.value);
+const recordingBrowserDirectory = computed(() => recordingBrowserDirectoryRef.value);
+const silentRecording = computed(() => silentRecordingRef.value);
+const isRecording = computed(() => isRecordingRef.value);
+const recordingCountdown = computed(() => recordingCountdownRef.value);
+const lastRecordingPath = computed(() => lastRecordingPathRef.value);
+const recordingStatusMessage = computed(() => recordingStatusMessageRef.value);
+const currentRecordingPath = computed(() => currentRecordingPathRef.value);
+const recordingInspection = computed(() => recordingInspectionRef.value);
+const recordingInspectionError = computed(() => recordingInspectionErrorRef.value);
+const recordingHotkeys = computed(() => recordingHotkeysRef.value);
+const hotkeyCaptureTarget = computed(() => hotkeyCaptureTargetRef.value);
 </script>
 
 <template>

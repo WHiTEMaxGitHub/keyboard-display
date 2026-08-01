@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { inject } from "vue";
+import { computed, inject, type ComputedRef } from "vue";
 import type { AppConfig } from "../../domain/defaultConfig";
 import WindowPanel from "../WindowPanel.vue";
 
 const config = inject<AppConfig>("config")!;
-const overlayPosition = inject<string>("overlayPosition")!;
-const overlayVisible = inject<boolean>("overlayVisible")!;
-const overlayAdjusting = inject<boolean>("overlayAdjusting")!;
+const overlayPositionRef = inject<ComputedRef<string>>("overlayPosition")!;
+const overlayVisibleRef = inject<ComputedRef<boolean>>("overlayVisible")!;
+const overlayAdjustingRef = inject<ComputedRef<boolean>>("overlayAdjusting")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
+const overlayPosition = computed(() => overlayPositionRef.value);
+const overlayVisible = computed(() => overlayVisibleRef.value);
+const overlayAdjusting = computed(() => overlayAdjustingRef.value);
 </script>
 
 <template>
