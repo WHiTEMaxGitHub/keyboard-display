@@ -1,7 +1,7 @@
 use core_foundation::runloop::CFRunLoop;
 use core_graphics::event::{
-    CGEvent, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
-    CallbackResult, EventField,
+    CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions,
+    CGEventTapPlacement, CGEventType, CallbackResult, EventField,
 };
 use std::{
     collections::HashSet,
@@ -80,17 +80,9 @@ fn handle_event(
                 return;
             }
 
-            let Ok(mut state) = modifier_state.lock() else {
-                return;
-            };
-
-            let pressed = if state.contains(&keycode) {
-                state.remove(&keycode);
-                false
-            } else {
-                state.insert(keycode);
-                true
-            };
+            let flags = event.get_flags();
+            let pressed = is_modifier_pressed(keycode, flags);
+            update_modifier_state(modifier_state, keycode, pressed);
 
             emit_input_state(app_handle, key_id, pressed);
         }
@@ -128,6 +120,29 @@ fn handle_event(
 
 fn is_macos_modifier_keycode(keycode: u16) -> bool {
     matches!(keycode, 56 | 60 | 59 | 62 | 55 | 54 | 58 | 61 | 57 | 63)
+}
+
+fn is_modifier_pressed(keycode: u16, flags: CGEventFlags) -> bool {
+    match keycode {
+        56 | 60 => flags.contains(CGEventFlags::CGEventFlagShift),
+        59 | 62 => flags.contains(CGEventFlags::CGEventFlagControl),
+        55 | 54 => flags.contains(CGEventFlags::CGEventFlagCommand),
+        58 | 61 => flags.contains(CGEventFlags::CGEventFlagAlternate),
+        63 => flags.contains(CGEventFlags::CGEventFlagSecondaryFn),
+        _ => false,
+    }
+}
+
+fn update_modifier_state(modifier_state: &Mutex<HashSet<u16>>, keycode: u16, pressed: bool) {
+    let Ok(mut state) = modifier_state.lock() else {
+        return;
+    };
+
+    if pressed {
+        state.insert(keycode);
+    } else {
+        state.remove(&keycode);
+    }
 }
 
 fn emit_pulse(app_handle: &AppHandle, key_id: String) {
