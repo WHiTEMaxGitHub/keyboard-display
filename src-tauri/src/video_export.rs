@@ -330,6 +330,7 @@ fn render_profile(
             cluster_height,
             &profile.style.active_color,
             profile.style.opacity,
+            profile.style.background_radius,
         )?;
     }
 
@@ -378,6 +379,187 @@ fn draw_rect(
     Ok(())
 }
 
+fn draw_blurred_rect(
+    pixmap: &mut Pixmap,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    color: &str,
+    opacity: f32,
+    radius: f32,
+    blur_radius: f32,
+) -> Result<(), String> {
+    let blur_px = blur_radius.ceil() as u32;
+    if blur_px == 0 {
+        return draw_rect(pixmap, x, y, width, height, color, opacity, radius);
+    }
+
+    let spread = blur_px * 3 + 4;
+    let pad = spread as f32 / 2.0;
+    let buf_w = (width + spread as f32).ceil() as u32;
+    let buf_h = (height + spread as f32).ceil() as u32;
+
+    let mut temp = Pixmap::new(buf_w.max(1), buf_h.max(1))
+        .ok_or_else(|| "failed to allocate blur buffer".to_string())?;
+
+    draw_rect(&mut temp, pad, pad, width, height, color, opacity, radius)?;
+    box_blur_alpha(temp.data_mut(), buf_w as usize, buf_h as usize, blur_px, 3);
+
+    let dst_x = (x - pad).round() as i32;
+    let dst_y = (y - pad).round() as i32;
+    let main_w = pixmap.width() as i32;
+    let main_h = pixmap.height() as i32;
+    let temp_w = buf_w as i32;
+    let temp_h = buf_h as i32;
+    let temp_data = temp.take();
+    let main_data = pixmap.data_mut();
+
+    for sy in 0..temp_h {
+        let ty = dst_y + sy;
+        if ty < 0 || ty >= main_h {
+            continue;
+        }
+        for sx in 0..temp_w {
+            let tx = dst_x + sx;
+            if tx < 0 || tx >= main_w {
+                continue;
+            }
+            let ti = (sy * temp_w + sx) as usize * 4;
+            let src_alpha = temp_data[ti + 3] as f32 / 255.0;
+            if src_alpha <= 0.0 {
+                continue;
+            }
+            let mi = (ty * main_w + tx) as usize * 4;
+            alpha_blend_pixel(&mut main_data[mi..mi + 4], temp_data[ti], temp_data[ti + 1], temp_data[ti + 2], src_alpha);
+        }
+    }
+
+    Ok(())
+}
+
+fn box_blur_alpha(data: &mut [u8], width: usize, height: usize, radius: u32, passes: u32) {
+    if radius == 0 || width < 2 || height < 2 {
+        return;
+    }
+    let mut temp = vec![0u8; width * height * 4];
+    for _ in 0..passes {
+        box_blur_alpha_horizontal(data, &mut temp, width, height, radius);
+        box_blur_alpha_vertical(data, &mut temp, width, height, radius);
+    }
+}
+
+fn box_blur_alpha_horizontal(data: &mut [u8], temp: &mut [u8], width: usize, height: usize, radius: u32) {
+    let r = radius as usize;
+    let div = (r * 2 + 1) as f32;
+    for y in 0..height {
+        let src_row = y * width * 4;
+        let dst_row = y * width * 4;
+        let mut acc = [0u32; 4];
+        for x in 0..r.min(width) {
+            let i = src_row + x * 4;
+            acc[0] += data[i] as u32;
+            acc[1] += data[i + 1] as u32;
+            acc[2] += data[i + 2] as u32;
+            acc[3] += data[i + 3] as u32;
+        }
+        for x in 0..width {
+            if x + r < width {
+                let i = src_row + (x + r) * 4;
+                acc[0] += data[i] as u32;
+                acc[1] += data[i + 1] as u32;
+                acc[2] += data[i + 2] as u32;
+                acc[3] += data[i + 3] as u32;
+            }
+            let o = dst_row + x * 4;
+            temp[o] = (acc[0] as f32 / div).round().min(255.0) as u8;
+            temp[o + 1] = (acc[1] as f32 / div).round().min(255.0) as u8;
+            temp[o + 2] = (acc[2] as f32 / div).round().min(255.0) as u8;
+            temp[o + 3] = (acc[3] as f32 / div).round().min(255.0) as u8;
+            if x >= r {
+                let i = src_row + (x - r) * 4;
+                acc[0] = acc[0].saturating_sub(data[i] as u32);
+                acc[1] = acc[1].saturating_sub(data[i + 1] as u32);
+                acc[2] = acc[2].saturating_sub(data[i + 2] as u32);
+                acc[3] = acc[3].saturating_sub(data[i + 3] as u32);
+            }
+        }
+    }
+    data.copy_from_slice(temp);
+}
+
+fn box_blur_alpha_vertical(data: &mut [u8], temp: &mut [u8], width: usize, height: usize, radius: u32) {
+    let r = radius as usize;
+    let div = (r * 2 + 1) as f32;
+    for x in 0..width {
+        let mut acc = [0u32; 4];
+        for y in 0..r.min(height) {
+            let i = (y * width + x) * 4;
+            acc[0] += data[i] as u32;
+            acc[1] += data[i + 1] as u32;
+            acc[2] += data[i + 2] as u32;
+            acc[3] += data[i + 3] as u32;
+        }
+        for y in 0..height {
+            if y + r < height {
+                let i = ((y + r) * width + x) * 4;
+                acc[0] += data[i] as u32;
+                acc[1] += data[i + 1] as u32;
+                acc[2] += data[i + 2] as u32;
+                acc[3] += data[i + 3] as u32;
+            }
+            let o = (y * width + x) * 4;
+            temp[o] = (acc[0] as f32 / div).round().min(255.0) as u8;
+            temp[o + 1] = (acc[1] as f32 / div).round().min(255.0) as u8;
+            temp[o + 2] = (acc[2] as f32 / div).round().min(255.0) as u8;
+            temp[o + 3] = (acc[3] as f32 / div).round().min(255.0) as u8;
+            if y >= r {
+                let i = ((y - r) * width + x) * 4;
+                acc[0] = acc[0].saturating_sub(data[i] as u32);
+                acc[1] = acc[1].saturating_sub(data[i + 1] as u32);
+                acc[2] = acc[2].saturating_sub(data[i + 2] as u32);
+                acc[3] = acc[3].saturating_sub(data[i + 3] as u32);
+            }
+        }
+    }
+    data.copy_from_slice(temp);
+}
+
+fn draw_rounded_stroke(
+    pixmap: &mut Pixmap,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    color: &str,
+    opacity: f32,
+    radius: f32,
+    stroke_width: f32,
+) -> Result<(), String> {
+    let half = stroke_width / 2.0;
+    let rect = Rect::from_xywh(
+        x + half,
+        y + half,
+        (width - stroke_width).max(0.0),
+        (height - stroke_width).max(0.0),
+    )
+    .ok_or_else(|| "invalid stroke rectangle".to_string())?;
+    let mut paint = Paint::default();
+    paint.set_color(parse_color(color, opacity)?);
+    let mut stroke = Stroke::default();
+    stroke.width = stroke_width;
+    stroke.line_cap = LineCap::Butt;
+    stroke.line_join = LineJoin::Round;
+    pixmap.stroke_path(
+        &rounded_rect_path(rect, (radius - half).max(0.0)),
+        &paint,
+        &stroke,
+        Transform::identity(),
+        None,
+    );
+    Ok(())
+}
+
 fn draw_key(
     pixmap: &mut Pixmap,
     x: f32,
@@ -389,7 +571,7 @@ fn draw_key(
     opacity: f32,
 ) -> Result<(), String> {
     if active {
-        draw_rect(
+        draw_blurred_rect(
             pixmap,
             x - 4.0,
             y - 4.0,
@@ -398,9 +580,10 @@ fn draw_key(
             color,
             opacity * 0.18,
             10.0,
+            9.0,
         )?;
     }
-    draw_rect(
+    draw_blurred_rect(
         pixmap,
         x,
         y + 6.0,
@@ -409,6 +592,7 @@ fn draw_key(
         "#000000",
         opacity * 0.24,
         8.0,
+        9.0,
     )?;
     draw_rect(pixmap, x, y, width, height, color, opacity, 8.0)?;
     draw_rect(
@@ -454,41 +638,21 @@ fn draw_marker_border(
     height: f32,
     color: &str,
     opacity: f32,
+    radius: f32,
 ) -> Result<(), String> {
-    let thickness = 2.0;
-    let glow_opacity = opacity * 0.42;
-    draw_rect(
+    let glow_color = brighten_color(color, 16.0);
+    draw_blurred_rect(
         pixmap,
-        x - 2.0,
-        y - 2.0,
-        width + 4.0,
-        2.0,
-        color,
-        glow_opacity,
-        0.0,
+        x - 4.0,
+        y - 4.0,
+        width + 8.0,
+        height + 8.0,
+        &glow_color,
+        opacity * 0.18,
+        radius,
+        11.0,
     )?;
-    draw_rect(pixmap, x, y, width, thickness, color, opacity, 0.0)?;
-    draw_rect(
-        pixmap,
-        x,
-        y + height - thickness,
-        width,
-        thickness,
-        color,
-        opacity,
-        0.0,
-    )?;
-    draw_rect(pixmap, x, y, thickness, height, color, opacity, 0.0)?;
-    draw_rect(
-        pixmap,
-        x + width - thickness,
-        y,
-        thickness,
-        height,
-        color,
-        opacity,
-        0.0,
-    )
+    draw_rounded_stroke(pixmap, x, y, width, height, &glow_color, opacity, radius, 2.0)
 }
 
 fn rounded_rect_path(rect: Rect, radius: f32) -> tiny_skia::Path {
@@ -710,6 +874,21 @@ fn scaled_alpha(alpha: u8, opacity: f32) -> u8 {
     ((alpha as f32 * opacity.clamp(0.0, 1.0)).round()).clamp(0.0, 255.0) as u8
 }
 
+fn brighten_color(hex: &str, percent: f32) -> String {
+    let stripped = hex.strip_prefix('#').unwrap_or(hex);
+    if stripped.len() < 6 {
+        return hex.to_string();
+    }
+    let r = u8::from_str_radix(&stripped[0..2], 16).unwrap_or(0);
+    let g = u8::from_str_radix(&stripped[2..4], 16).unwrap_or(0);
+    let b = u8::from_str_radix(&stripped[4..6], 16).unwrap_or(0);
+    let mix = percent / 100.0;
+    let nr = ((r as f32 * (1.0 - mix) + 255.0 * mix).round().min(255.0)) as u8;
+    let ng = ((g as f32 * (1.0 - mix) + 255.0 * mix).round().min(255.0)) as u8;
+    let nb = ((b as f32 * (1.0 - mix) + 255.0 * mix).round().min(255.0)) as u8;
+    format!("#{nr:02x}{ng:02x}{nb:02x}")
+}
+
 fn backplate_opacity(profile: &ExportOverlayProfile) -> f32 {
     if is_hex_alpha_color(&profile.style.background_color) {
         1.0
@@ -805,11 +984,13 @@ mod tests {
         profile.style.active_color = "#ff3366".to_string();
 
         let (size, rgba) = render_overlay_frame(&profile, &HashSet::new(), true).unwrap();
-        let marker_pixel_offset = ((12 * size.width + 12) * 4) as usize;
+        // Brightened #ff3366 with 16% white: (255, 84, 126)
+        // Sample a pixel on the flat top edge of the rounded stroke (x=50, y=13)
+        let marker_pixel_offset = ((13 * size.width + 50) * 4) as usize;
 
         assert_eq!(
             &rgba[marker_pixel_offset..marker_pixel_offset + 4],
-            &[255, 51, 102, 255],
+            &[255, 84, 126, 255],
         );
     }
 
@@ -818,9 +999,10 @@ mod tests {
         let mut profile = test_profile();
         profile.style.background_color = "#102030".to_string();
         profile.style.background_opacity = 0.5;
+        profile.rows = vec![];
 
         let (size, rgba) = render_overlay_frame(&profile, &HashSet::new(), false).unwrap();
-        let backplate_pixel_offset = ((16 * size.width + 80) * 4) as usize;
+        let backplate_pixel_offset = ((30 * size.width + 80) * 4) as usize;
 
         assert_eq!(
             &rgba[backplate_pixel_offset..backplate_pixel_offset + 4],
@@ -971,7 +1153,7 @@ mod tests {
         let frame_size = estimate_export_overlay_size(&profile);
         let bytes_per_frame =
             (u64::from(frame_size.width) * u64::from(frame_size.height) * 4) as usize;
-        let marker_pixel_offset = ((12 * frame_size.width + 12) * 4) as usize;
+        let marker_pixel_offset = ((13 * frame_size.width + 50) * 4) as usize;
         let recording = encode_kbdrec(&RecordingSnapshot {
             version: 1,
             fps: 10,
@@ -994,20 +1176,21 @@ mod tests {
         export_overlay_video(&recording_path, &output_path, &fake_ffmpeg_path, &profile).unwrap();
 
         let raw_video = std::fs::read(&raw_video_path).unwrap();
+        // #25d366 brightened with 16% white = (72, 218, 126)
         assert_eq!(
             &raw_video
                 [bytes_per_frame + marker_pixel_offset..bytes_per_frame + marker_pixel_offset + 4],
-            &[37, 211, 102, 255],
+            &[72, 218, 126, 255],
         );
         assert_eq!(
             &raw_video[5 * bytes_per_frame + marker_pixel_offset
                 ..5 * bytes_per_frame + marker_pixel_offset + 4],
-            &[37, 211, 102, 255],
+            &[72, 218, 126, 255],
         );
         assert_ne!(
             &raw_video[6 * bytes_per_frame + marker_pixel_offset
                 ..6 * bytes_per_frame + marker_pixel_offset + 4],
-            &[37, 211, 102, 255],
+            &[72, 218, 126, 255],
         );
 
         let _ = std::fs::remove_dir_all(root);
