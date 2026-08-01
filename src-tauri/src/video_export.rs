@@ -6,8 +6,9 @@ use std::{
     io::Write,
     path::Path,
     process::{Command, Stdio},
+    sync::OnceLock,
 };
-use tiny_skia::{Color, Paint, Pixmap, Rect, Transform};
+use tiny_skia::{Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Rect, Stroke, Transform};
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -90,16 +91,21 @@ pub struct ExportOverlayVideoResult {
     pub fps: u16,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportOverlayProgress {
     pub rendered_frames: u64,
     pub total_frames: u64,
+    pub current_frame: u64,
+    pub active_key_ids: Vec<String>,
 }
 
 const BACKPLATE_PADDING: f32 = 10.0 * 2.0;
 const OVERLAY_BLEED: f32 = 12.0 * 2.0;
 const FLOAT_EPSILON: f32 = 0.000001;
+const KEY_BORDER_RGBA: (u8, u8, u8, u8) = (255, 255, 255, 41);
+const KEY_ACTIVE_BORDER_RGBA: (u8, u8, u8, u8) = (255, 255, 255, 128);
+const TEXT_FONT_SIZE_FACTOR: f32 = 15.0;
 
 pub fn estimate_export_overlay_size(profile: &ExportOverlayProfile) -> ExportOverlaySize {
     let unit = profile.layout.unit_px * profile.style.scale;
@@ -134,7 +140,7 @@ pub fn render_overlay_frame(
 
     render_profile(&mut pixmap, profile, active_keys, marker_active)?;
 
-    Ok((size, pixmap.take()))
+    Ok((size, premultiplied_to_straight_rgba(pixmap.take())))
 }
 
 pub fn build_webm_ffmpeg_args(output_path: &str, size: ExportOverlaySize, fps: u16) -> Vec<String> {
@@ -211,10 +217,14 @@ pub fn export_overlay_video_with_progress(
                 .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
             let (_, rgba) = render_overlay_frame(profile, &active_keys, marker_active)?;
             stdin.write_all(&rgba).map_err(|error| error.to_string())?;
-            on_progress(ExportOverlayProgress {
-                rendered_frames: index as u64 + 1,
-                total_frames,
-            })?;
+            if should_emit_export_progress(index, decoded.frames.len()) {
+                on_progress(ExportOverlayProgress {
+                    rendered_frames: index as u64 + 1,
+                    total_frames,
+                    current_frame: frame.frame,
+                    active_key_ids: sorted_active_key_ids(&active_keys),
+                })?;
+            }
         }
     }
 
@@ -263,6 +273,7 @@ fn render_profile(
             cluster_height,
             &profile.style.background_color,
             backplate_opacity(profile),
+            profile.style.background_radius,
         )?;
     }
 
@@ -276,15 +287,33 @@ fn render_profile(
             }
 
             let width = item.width_unit() * unit;
-            if let ExportOverlayItem::Key { id, .. } = item {
+            if let ExportOverlayItem::Key { id, label, .. } = item {
                 let active = active_keys.contains(id);
                 if active || profile.style.idle_key_visibility != "hidden" {
+                    let key_y = y + if active { 2.0 * profile.style.scale } else { 0.0 };
                     let color = if active {
                         &profile.style.active_color
                     } else {
                         &profile.style.idle_color
                     };
-                    draw_rect(pixmap, x, y, width, unit, color, profile.style.opacity)?;
+                    let text_color = if active {
+                        &profile.style.active_text_color
+                    } else {
+                        &profile.style.idle_text_color
+                    };
+
+                    draw_key(pixmap, x, key_y, width, unit, color, active, profile.style.opacity)?;
+                    draw_key_label(
+                        pixmap,
+                        label,
+                        x,
+                        key_y,
+                        width,
+                        unit,
+                        text_color,
+                        profile.style.opacity,
+                        profile.style.scale,
+                    )?;
                 }
             }
 
@@ -320,6 +349,16 @@ fn marker_frame_ranges(
         .collect()
 }
 
+fn should_emit_export_progress(_index: usize, _frame_count: usize) -> bool {
+    true
+}
+
+fn sorted_active_key_ids(active_keys: &HashSet<String>) -> Vec<String> {
+    let mut key_ids = active_keys.iter().cloned().collect::<Vec<_>>();
+    key_ids.sort();
+    key_ids
+}
+
 fn draw_rect(
     pixmap: &mut Pixmap,
     x: f32,
@@ -328,12 +367,82 @@ fn draw_rect(
     height: f32,
     color: &str,
     opacity: f32,
+    radius: f32,
 ) -> Result<(), String> {
     let rect = Rect::from_xywh(x, y, width.max(0.0), height.max(0.0))
         .ok_or_else(|| "invalid export rectangle".to_string())?;
     let mut paint = Paint::default();
     paint.set_color(parse_color(color, opacity)?);
-    pixmap.fill_rect(rect, &paint, Transform::identity(), None);
+    let path = rounded_rect_path(rect, radius.max(0.0));
+    pixmap.fill_path(&path, &paint, FillRule::Winding, Transform::identity(), None);
+    Ok(())
+}
+
+fn draw_key(
+    pixmap: &mut Pixmap,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    color: &str,
+    active: bool,
+    opacity: f32,
+) -> Result<(), String> {
+    if active {
+        draw_rect(
+            pixmap,
+            x - 4.0,
+            y - 4.0,
+            width + 8.0,
+            height + 8.0,
+            color,
+            opacity * 0.18,
+            10.0,
+        )?;
+    }
+    draw_rect(
+        pixmap,
+        x,
+        y + 6.0,
+        width,
+        height,
+        "#000000",
+        opacity * 0.24,
+        8.0,
+    )?;
+    draw_rect(pixmap, x, y, width, height, color, opacity, 8.0)?;
+    draw_rect(
+        pixmap,
+        x + 1.0,
+        y + height - if active { 1.0 } else { 3.0 },
+        (width - 2.0).max(0.0),
+        if active { 1.0 } else { 3.0 },
+        "#000000",
+        opacity * if active { 0.28 } else { 0.35 },
+        2.0,
+    )?;
+
+    let rect = Rect::from_xywh(x + 0.5, y + 0.5, (width - 1.0).max(0.0), (height - 1.0).max(0.0))
+        .ok_or_else(|| "invalid key border rectangle".to_string())?;
+    let mut paint = Paint::default();
+    let (r, g, b, a) = if active {
+        KEY_ACTIVE_BORDER_RGBA
+    } else {
+        KEY_BORDER_RGBA
+    };
+    paint.set_color(Color::from_rgba8(r, g, b, scaled_alpha(a, opacity)));
+    let mut stroke = Stroke::default();
+    stroke.width = 1.0;
+    stroke.line_cap = LineCap::Butt;
+    stroke.line_join = LineJoin::Round;
+    pixmap.stroke_path(
+        &rounded_rect_path(rect, 8.0),
+        &paint,
+        &stroke,
+        Transform::identity(),
+        None,
+    );
+
     Ok(())
 }
 
@@ -347,7 +456,18 @@ fn draw_marker_border(
     opacity: f32,
 ) -> Result<(), String> {
     let thickness = 2.0;
-    draw_rect(pixmap, x, y, width, thickness, color, opacity)?;
+    let glow_opacity = opacity * 0.42;
+    draw_rect(
+        pixmap,
+        x - 2.0,
+        y - 2.0,
+        width + 4.0,
+        2.0,
+        color,
+        glow_opacity,
+        0.0,
+    )?;
+    draw_rect(pixmap, x, y, width, thickness, color, opacity, 0.0)?;
     draw_rect(
         pixmap,
         x,
@@ -356,8 +476,9 @@ fn draw_marker_border(
         thickness,
         color,
         opacity,
+        0.0,
     )?;
-    draw_rect(pixmap, x, y, thickness, height, color, opacity)?;
+    draw_rect(pixmap, x, y, thickness, height, color, opacity, 0.0)?;
     draw_rect(
         pixmap,
         x + width - thickness,
@@ -366,10 +487,200 @@ fn draw_marker_border(
         height,
         color,
         opacity,
+        0.0,
     )
 }
 
+fn rounded_rect_path(rect: Rect, radius: f32) -> tiny_skia::Path {
+    let radius = radius.min(rect.width() / 2.0).min(rect.height() / 2.0);
+    if radius <= 0.0 {
+        return PathBuilder::from_rect(rect);
+    }
+
+    let x0 = rect.left();
+    let y0 = rect.top();
+    let x1 = rect.right();
+    let y1 = rect.bottom();
+    let c = radius * 0.55228475;
+    let mut path = PathBuilder::new();
+    path.move_to(x0 + radius, y0);
+    path.line_to(x1 - radius, y0);
+    path.cubic_to(x1 - radius + c, y0, x1, y0 + radius - c, x1, y0 + radius);
+    path.line_to(x1, y1 - radius);
+    path.cubic_to(x1, y1 - radius + c, x1 - radius + c, y1, x1 - radius, y1);
+    path.line_to(x0 + radius, y1);
+    path.cubic_to(x0 + radius - c, y1, x0, y1 - radius + c, x0, y1 - radius);
+    path.line_to(x0, y0 + radius);
+    path.cubic_to(x0, y0 + radius - c, x0 + radius - c, y0, x0 + radius, y0);
+    path.close();
+    path.finish().unwrap_or_else(|| PathBuilder::from_rect(rect))
+}
+
+fn draw_key_label(
+    pixmap: &mut Pixmap,
+    label: &str,
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+    color: &str,
+    opacity: f32,
+    scale: f32,
+) -> Result<(), String> {
+    let Some(font) = overlay_font() else {
+        return Ok(());
+    };
+    let text = label.trim();
+    if text.is_empty() {
+        return Ok(());
+    }
+
+    let font_size = TEXT_FONT_SIZE_FACTOR * scale;
+    let text_color = parse_color_rgba8(color, opacity)?;
+    let glyphs = text
+        .chars()
+        .map(|character| {
+            let (metrics, bitmap) = font.rasterize(character, font_size);
+            (character, metrics, bitmap)
+        })
+        .collect::<Vec<_>>();
+    let advance_width = glyphs
+        .iter()
+        .map(|(_, metrics, _)| metrics.advance_width)
+        .sum::<f32>();
+    let text_height = glyphs
+        .iter()
+        .map(|(_, metrics, _)| metrics.height as f32)
+        .fold(0.0_f32, f32::max);
+    let baseline_y = y + (height + text_height) / 2.0 - 1.0 * scale;
+    let mut cursor_x = x + (width - advance_width).max(0.0) / 2.0;
+
+    for (_, metrics, bitmap) in glyphs {
+        let glyph_x = (cursor_x + metrics.xmin as f32).round() as i32;
+        let glyph_y = (baseline_y - metrics.height as f32 - metrics.ymin as f32).round() as i32;
+        blend_glyph_bitmap(
+            pixmap,
+            glyph_x,
+            glyph_y,
+            metrics.width,
+            metrics.height,
+            &bitmap,
+            text_color,
+        );
+        cursor_x += metrics.advance_width;
+    }
+
+    Ok(())
+}
+
+fn overlay_font() -> Option<&'static fontdue::Font> {
+    static FONT: OnceLock<Option<fontdue::Font>> = OnceLock::new();
+    FONT.get_or_init(load_overlay_font).as_ref()
+}
+
+fn load_overlay_font() -> Option<fontdue::Font> {
+    const FONT_PATHS: &[&str] = &[
+        "/Library/Fonts/SF-Pro-Text-Bold.otf",
+        "/Library/Fonts/SF-Pro-Display-Bold.otf",
+        "/System/Library/Fonts/SFNS.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "C:\\Windows\\Fonts\\segoeuib.ttf",
+        "C:\\Windows\\Fonts\\segoeui.ttf",
+    ];
+
+    for path in FONT_PATHS {
+        let Ok(bytes) = std::fs::read(path) else {
+            continue;
+        };
+        if let Ok(font) = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()) {
+            return Some(font);
+        }
+    }
+
+    None
+}
+
+fn blend_glyph_bitmap(
+    pixmap: &mut Pixmap,
+    x: i32,
+    y: i32,
+    width: usize,
+    height: usize,
+    bitmap: &[u8],
+    color: (u8, u8, u8, u8),
+) {
+    let pixmap_width = pixmap.width() as i32;
+    let pixmap_height = pixmap.height() as i32;
+    let data = pixmap.data_mut();
+
+    for glyph_y in 0..height {
+        let target_y = y + glyph_y as i32;
+        if target_y < 0 || target_y >= pixmap_height {
+            continue;
+        }
+
+        for glyph_x in 0..width {
+            let target_x = x + glyph_x as i32;
+            if target_x < 0 || target_x >= pixmap_width {
+                continue;
+            }
+
+            let coverage = bitmap[glyph_y * width + glyph_x] as f32 / 255.0;
+            if coverage <= 0.0 {
+                continue;
+            }
+
+            let src_alpha = (color.3 as f32 / 255.0) * coverage;
+            let offset = ((target_y as usize * pixmap_width as usize + target_x as usize) * 4) as usize;
+            alpha_blend_pixel(&mut data[offset..offset + 4], color.0, color.1, color.2, src_alpha);
+        }
+    }
+}
+
+fn alpha_blend_pixel(pixel: &mut [u8], r: u8, g: u8, b: u8, src_alpha: f32) {
+    let dst_alpha = pixel[3] as f32 / 255.0;
+    let out_alpha = src_alpha + dst_alpha * (1.0 - src_alpha);
+    let blend_premultiplied_channel = |src: u8, dst: u8| -> u8 {
+        let src_premultiplied = src as f32 * src_alpha;
+        let dst_premultiplied = dst as f32;
+        (src_premultiplied + dst_premultiplied * (1.0 - src_alpha))
+            .round()
+            .clamp(0.0, 255.0) as u8
+    };
+
+    pixel[0] = blend_premultiplied_channel(r, pixel[0]);
+    pixel[1] = blend_premultiplied_channel(g, pixel[1]);
+    pixel[2] = blend_premultiplied_channel(b, pixel[2]);
+    pixel[3] = (out_alpha * 255.0).round().clamp(0.0, 255.0) as u8;
+}
+
+fn premultiplied_to_straight_rgba(mut rgba: Vec<u8>) -> Vec<u8> {
+    for pixel in rgba.chunks_exact_mut(4) {
+        let alpha = pixel[3];
+        if alpha == 0 {
+            pixel[0] = 0;
+            pixel[1] = 0;
+            pixel[2] = 0;
+            continue;
+        }
+
+        let alpha_f = alpha as f32 / 255.0;
+        pixel[0] = (pixel[0] as f32 / alpha_f).round().clamp(0.0, 255.0) as u8;
+        pixel[1] = (pixel[1] as f32 / alpha_f).round().clamp(0.0, 255.0) as u8;
+        pixel[2] = (pixel[2] as f32 / alpha_f).round().clamp(0.0, 255.0) as u8;
+    }
+
+    rgba
+}
+
 fn parse_color(value: &str, opacity: f32) -> Result<Color, String> {
+    let (r, g, b, a) = parse_color_rgba8(value, opacity)?;
+    Ok(Color::from_rgba8(r, g, b, a))
+}
+
+fn parse_color_rgba8(value: &str, opacity: f32) -> Result<(u8, u8, u8, u8), String> {
     let hex = value.strip_prefix('#').unwrap_or(value);
     let (r, g, b, a) = match hex.len() {
         6 => (
@@ -388,11 +699,15 @@ fn parse_color(value: &str, opacity: f32) -> Result<Color, String> {
     };
 
     let alpha = (a as f32 / 255.0) * opacity.clamp(0.0, 1.0);
-    Ok(Color::from_rgba8(r, g, b, (alpha * 255.0).round() as u8))
+    Ok((r, g, b, (alpha * 255.0).round() as u8))
 }
 
 fn parse_hex_byte(value: &str) -> Result<u8, String> {
     u8::from_str_radix(value, 16).map_err(|error| error.to_string())
+}
+
+fn scaled_alpha(alpha: u8, opacity: f32) -> u8 {
+    ((alpha as f32 * opacity.clamp(0.0, 1.0)).round()).clamp(0.0, 255.0) as u8
 }
 
 fn backplate_opacity(profile: &ExportOverlayProfile) -> f32 {
@@ -496,6 +811,38 @@ mod tests {
             &rgba[marker_pixel_offset..marker_pixel_offset + 4],
             &[255, 51, 102, 255],
         );
+    }
+
+    #[test]
+    fn renders_backplate_with_configured_alpha_channel() {
+        let mut profile = test_profile();
+        profile.style.background_color = "#102030".to_string();
+        profile.style.background_opacity = 0.5;
+
+        let (size, rgba) = render_overlay_frame(&profile, &HashSet::new(), false).unwrap();
+        let backplate_pixel_offset = ((16 * size.width + 80) * 4) as usize;
+
+        assert_eq!(
+            &rgba[backplate_pixel_offset..backplate_pixel_offset + 4],
+            &[16, 32, 48, 128],
+        );
+    }
+
+    #[test]
+    fn renders_key_labels_when_system_font_is_available() {
+        let profile = test_profile();
+        let (size, rgba) = render_overlay_frame(&profile, &HashSet::new(), false).unwrap();
+        let key_center_x = 12 + 25;
+        let key_center_y = 12 + 25;
+        let has_text_pixel = (key_center_y - 10..=key_center_y + 10).any(|y| {
+            (key_center_x - 10..=key_center_x + 10).any(|x| {
+                let offset = ((y * size.width + x) * 4) as usize;
+                let pixel = &rgba[offset..offset + 4];
+                pixel[3] > 0 && pixel != [18, 20, 23, 255]
+            })
+        });
+
+        assert!(has_text_pixel);
     }
 
     #[test]
@@ -705,23 +1052,12 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(
-            progress_events,
-            vec![
-                ExportOverlayProgress {
-                    rendered_frames: 1,
-                    total_frames: 3,
-                },
-                ExportOverlayProgress {
-                    rendered_frames: 2,
-                    total_frames: 3,
-                },
-                ExportOverlayProgress {
-                    rendered_frames: 3,
-                    total_frames: 3,
-                },
-            ],
-        );
+        assert_eq!(progress_events.len(), 3);
+        assert_eq!(progress_events[0].rendered_frames, 1);
+        assert_eq!(progress_events[0].total_frames, 3);
+        assert_eq!(progress_events[2].rendered_frames, 3);
+        assert_eq!(progress_events[2].total_frames, 3);
+        assert_eq!(progress_events[2].active_key_ids, vec!["w".to_string()]);
 
         let _ = std::fs::remove_dir_all(root);
     }
