@@ -41,7 +41,12 @@ const inputRecordingPath = ref("");
 const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
 const exportStatus = ref("");
 const exportInProgress = ref(false);
-const exportProgress = ref({ renderedFrames: 0, totalFrames: 0 });
+const exportProgress = ref({
+  renderedFrames: 0,
+  totalFrames: 0,
+  currentFrame: 0,
+  activeKeyIds: [] as string[],
+});
 let unlistenExportProgress: UnlistenFn | undefined;
 
 const exportReady = computed(() =>
@@ -72,6 +77,19 @@ const exportProgressPercent = computed(() => {
     100,
     Math.round((exportProgress.value.renderedFrames / exportProgress.value.totalFrames) * 100),
   );
+});
+
+const currentFrameKeyStatus = computed(() => {
+  if (exportProgress.value.totalFrames <= 0) {
+    return "Waiting for frame data.";
+  }
+
+  const keys = exportProgress.value.activeKeyIds;
+  if (!keys.length) {
+    return `Frame ${exportProgress.value.currentFrame}: no active keys`;
+  }
+
+  return `Frame ${exportProgress.value.currentFrame}: ${keys.join(" + ")}`;
 });
 
 watch(
@@ -108,6 +126,8 @@ onMounted(async () => {
   unlistenExportProgress = await listen<{
     renderedFrames: number;
     totalFrames: number;
+    currentFrame: number;
+    activeKeyIds: string[];
   }>("export-progress", (event) => {
     exportProgress.value = event.payload;
   });
@@ -222,11 +242,16 @@ async function exportOverlayVideo() {
   }
 
   exportInProgress.value = true;
-  exportProgress.value = { renderedFrames: 0, totalFrames: 0 };
+  exportProgress.value = {
+    renderedFrames: 0,
+    totalFrames: 0,
+    currentFrame: 0,
+    activeKeyIds: [],
+  };
   exportStatus.value = "Exporting overlay video...";
 
   try {
-    const result = await tauriApi.exportOverlayVideo(
+      await tauriApi.exportOverlayVideo(
       inputRecordingPath.value,
       outputVideoPath.value,
       exporterPath,
@@ -238,8 +263,7 @@ async function exportOverlayVideo() {
         recording: props.config.recording,
       },
     );
-    exportStatus.value =
-      `Exported ${result.frameCount} frames at ${result.width}x${result.height} @ ${result.fps}fps.`;
+    exportStatus.value = "";
   } catch (error) {
     exportStatus.value = `Export failed: ${String(error)}`;
   } finally {
@@ -346,14 +370,16 @@ function joinPath(directory: string, fileName: string) {
           Open output folder
         </BaseButton>
       </div>
-      <div v-if="exportInProgress || exportProgress.totalFrames > 0" class="grid gap-2">
+      <div v-if="exportInProgress" class="export-progress-stack">
         <div class="flex items-center justify-between gap-3 text-text-muted text-[13px] font-extrabold">
           <span>Rendering frames</span>
           <strong class="text-text-body">{{ exportProgress.renderedFrames }} / {{ exportProgress.totalFrames }}</strong>
         </div>
-        <div class="h-2 overflow-hidden rounded-full bg-[#0d1117]">
-          <div class="h-full rounded-full bg-accent transition-[width] duration-[120ms] ease" :style="{ width: `${exportProgressPercent}%` }"></div>
+        <div class="glass-progress" aria-label="Export progress">
+          <div class="glass-progress-fill" :style="{ width: `${exportProgressPercent}%` }"></div>
+          <div class="glass-progress-shine" aria-hidden="true"></div>
         </div>
+        <p class="frame-status">{{ currentFrameKeyStatus }}</p>
       </div>
       <p v-if="exportStatus" class="notice-text">{{ exportStatus }}</p>
     </section>
@@ -426,6 +452,61 @@ function joinPath(directory: string, fileName: string) {
 </template>
 
 <style scoped>
+.export-progress-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.glass-progress {
+  position: relative;
+  height: 14px;
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.035)),
+    color-mix(in srgb, var(--color-surface-control) 78%, black 22%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.22),
+    0 8px 28px rgba(0, 0, 0, 0.20);
+}
+
+.glass-progress-fill {
+  position: absolute;
+  inset: 2px auto 2px 2px;
+  min-width: 8px;
+  border-radius: inherit;
+  background:
+    linear-gradient(90deg, var(--color-accent), var(--color-accent-blue), var(--color-accent-violet));
+  box-shadow:
+    0 0 18px var(--color-accent-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+  transition: width 160ms ease-out;
+}
+
+.glass-progress-shine {
+  position: absolute;
+  inset: 2px 8px auto;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.30);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.frame-status {
+  min-height: 18px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .notice-text {
   margin: 0;
   border: 1px solid rgba(255, 209, 102, 0.14);
@@ -435,5 +516,25 @@ function joinPath(directory: string, fileName: string) {
   font-size: 13px;
   font-weight: 700;
   padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dismiss-btn {
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #d4c070;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+
+.dismiss-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
 }
 </style>
