@@ -39,6 +39,7 @@ const exporterError = ref("");
 const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
 const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
+const fontPathDraft = ref(props.config.export.fontPath);
 const exportStatus = ref("");
 const exportInProgress = ref(false);
 const exportProgress = ref({
@@ -144,6 +145,13 @@ watch(
   },
 );
 
+watch(
+  () => props.config.export.fontPath,
+  (fontPath) => {
+    fontPathDraft.value = fontPath;
+  },
+);
+
 async function refreshExporterStatus() {
   exporterChecking.value = true;
   exporterError.value = "";
@@ -207,6 +215,37 @@ async function chooseInputRecording() {
     inputRecordingPath.value = selectedPath;
     exportStatus.value = "";
   }
+}
+
+async function chooseFontFile() {
+  const selectedPath = await open({
+    title: "Choose font file",
+    filters: [
+      { name: "Font files", extensions: ["ttf", "otf", "ttc"] },
+    ],
+    multiple: false,
+  });
+
+  if (typeof selectedPath === "string") {
+    try {
+      const copiedPath = await tauriApi.copyFontFile(selectedPath);
+      fontPathDraft.value = copiedPath;
+      emit("update-export-config", {
+        ...props.config.export,
+        fontPath: copiedPath,
+      });
+    } catch (error) {
+      exportStatus.value = `Failed to copy font: ${String(error)}`;
+    }
+  }
+}
+
+function clearFontFile() {
+  fontPathDraft.value = null;
+  emit("update-export-config", {
+    ...props.config.export,
+    fontPath: null,
+  });
 }
 
 async function chooseOutputDirectory() {
@@ -338,6 +377,16 @@ function joinPath(directory: string, fileName: string) {
         @blur="commitFilenameTemplate"
         @keydown.enter="commitFilenameTemplate"
       />
+    </section>
+    <section class="grid gap-2 mt-4">
+      <label class="text-text-muted text-[13px] font-extrabold">Font</label>
+      <div class="flex items-center gap-2">
+        <span class="text-text-secondary text-[13px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap flex-1">
+          {{ fontPathDraft || "System default" }}
+        </span>
+        <BaseButton @click="chooseFontFile">Choose font</BaseButton>
+        <BaseButton v-if="fontPathDraft" @click="clearFontFile">Reset</BaseButton>
+      </div>
     </section>
     <section class="grid gap-2.5 mt-4 border border-border-control rounded-lg bg-surface-control p-3.5">
       <div class="flex items-center justify-between gap-3 mb-2">

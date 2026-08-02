@@ -35,7 +35,8 @@ pub fn run() {
             commands::detect_video_exporter,
             commands::install_app_managed_video_exporter,
             commands::uninstall_app_managed_video_exporter,
-            commands::export_overlay_video
+            commands::export_overlay_video,
+            commands::copy_font_file
         ])
         .setup(|app| {
             input::start_native_input_backend(app.handle().clone());

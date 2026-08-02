@@ -224,3 +224,20 @@ pub async fn export_overlay_video(
     .await
     .map_err(|error| error.to_string())?
 }
+
+#[tauri::command]
+pub fn copy_font_file(app: tauri::AppHandle, source_path: std::path::PathBuf) -> Result<String, String> {
+    let fonts_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("fonts");
+    std::fs::create_dir_all(&fonts_dir).map_err(|error| error.to_string())?;
+
+    let file_name = source_path
+        .file_name()
+        .ok_or_else(|| "invalid font file path".to_string())?;
+    let dest = fonts_dir.join(file_name);
+    std::fs::copy(&source_path, &dest).map_err(|error| error.to_string())?;
+    Ok(dest.to_string_lossy().to_string())
+}

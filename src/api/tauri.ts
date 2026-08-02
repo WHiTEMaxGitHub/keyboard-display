@@ -128,4 +128,8 @@ export const tauriApi = {
       profile,
     });
   },
+
+  copyFontFile(sourcePath: string) {
+    return invoke<string>("copy_font_file", { sourcePath });
+  },
 };

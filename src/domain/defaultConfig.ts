@@ -69,6 +69,7 @@ export type ExportConfig = {
   compatibleFormat: "mp4";
   renderMarkers: boolean;
   filenameTemplate: string;
+  fontPath: string | null;
 };
 
 export type OverlayCustomPosition = {
@@ -263,6 +264,7 @@ export function createDefaultConfig(): AppConfig {
       compatibleFormat: "mp4",
       renderMarkers: true,
       filenameTemplate: "${profileSlug}-${recordingName}-overlay",
+      fontPath: null,
     },
   };
 }

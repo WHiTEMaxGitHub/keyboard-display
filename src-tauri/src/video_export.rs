@@ -6,7 +6,6 @@ use std::{
     io::Write,
     path::Path,
     process::{Command, Stdio},
-    sync::OnceLock,
 };
 use tiny_skia::{Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Rect, Stroke, Transform};
 
@@ -66,6 +65,7 @@ pub struct ExportOverlayStyle {
 #[serde(rename_all = "camelCase")]
 pub struct ExportVideoConfig {
     pub render_markers: bool,
+    pub font_path: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -128,7 +128,7 @@ pub fn estimate_export_overlay_size(profile: &ExportOverlayProfile) -> ExportOve
     }
 }
 
-/// 渲染单帧 RGBA overlay。第一版先画透明背景、backplate、按键矩形和 marker 边框。
+/// 渲染单帧 RGBA overlay。
 pub fn render_overlay_frame(
     profile: &ExportOverlayProfile,
     active_keys: &HashSet<String>,
@@ -137,8 +137,24 @@ pub fn render_overlay_frame(
     let size = estimate_export_overlay_size(profile);
     let mut pixmap = Pixmap::new(size.width, size.height)
         .ok_or_else(|| "failed to allocate export frame".to_string())?;
+    let font = load_font(profile.export.font_path.as_deref());
 
-    render_profile(&mut pixmap, profile, active_keys, marker_active)?;
+    render_profile(&mut pixmap, profile, active_keys, marker_active, font.as_ref())?;
+
+    Ok((size, premultiplied_to_straight_rgba(pixmap.take())))
+}
+
+pub fn render_overlay_frame_with_font(
+    profile: &ExportOverlayProfile,
+    active_keys: &HashSet<String>,
+    marker_active: bool,
+    font: Option<&fontdue::Font>,
+) -> Result<(ExportOverlaySize, Vec<u8>), String> {
+    let size = estimate_export_overlay_size(profile);
+    let mut pixmap = Pixmap::new(size.width, size.height)
+        .ok_or_else(|| "failed to allocate export frame".to_string())?;
+
+    render_profile(&mut pixmap, profile, active_keys, marker_active, font)?;
 
     Ok((size, premultiplied_to_straight_rgba(pixmap.take())))
 }
@@ -196,6 +212,7 @@ pub fn export_overlay_video_with_progress(
     );
     let output_path_string = output_path.to_string_lossy().to_string();
     let args = build_webm_ffmpeg_args(&output_path_string, size, decoded.fps);
+    let font = load_font(profile.export.font_path.as_deref());
     let mut child = Command::new(ffmpeg_path)
         .args(&args)
         .stdin(Stdio::piped())
@@ -215,7 +232,7 @@ pub fn export_overlay_video_with_progress(
             let marker_active = marker_ranges
                 .iter()
                 .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
-            let (_, rgba) = render_overlay_frame(profile, &active_keys, marker_active)?;
+            let (_, rgba) = render_overlay_frame_with_font(profile, &active_keys, marker_active, font.as_ref())?;
             stdin.write_all(&rgba).map_err(|error| error.to_string())?;
             if should_emit_export_progress(index, decoded.frames.len()) {
                 on_progress(ExportOverlayProgress {
@@ -250,6 +267,7 @@ fn render_profile(
     profile: &ExportOverlayProfile,
     active_keys: &HashSet<String>,
     marker_active: bool,
+    font: Option<&fontdue::Font>,
 ) -> Result<(), String> {
     let unit = profile.layout.unit_px * profile.style.scale;
     let gap = unit * normalize_unit(profile.layout.gap_unit);
@@ -313,6 +331,7 @@ fn render_profile(
                         text_color,
                         profile.style.opacity,
                         profile.style.scale,
+                        font,
                     )?;
                 }
             }
@@ -690,8 +709,9 @@ fn draw_key_label(
     color: &str,
     opacity: f32,
     scale: f32,
+    font: Option<&fontdue::Font>,
 ) -> Result<(), String> {
-    let Some(font) = overlay_font() else {
+    let Some(font) = font else {
         return Ok(());
     };
     let text = label.trim();
@@ -737,24 +757,16 @@ fn draw_key_label(
     Ok(())
 }
 
-fn overlay_font() -> Option<&'static fontdue::Font> {
-    static FONT: OnceLock<Option<fontdue::Font>> = OnceLock::new();
-    FONT.get_or_init(load_overlay_font).as_ref()
-}
+fn load_font(custom_path: Option<&str>) -> Option<fontdue::Font> {
+    if let Some(path) = custom_path {
+        if let Ok(bytes) = std::fs::read(path) {
+            if let Ok(font) = fontdue::Font::from_bytes(bytes, fontdue::FontSettings::default()) {
+                return Some(font);
+            }
+        }
+    }
 
-fn load_overlay_font() -> Option<fontdue::Font> {
-    const FONT_PATHS: &[&str] = &[
-        "/Library/Fonts/SF-Pro-Text-Bold.otf",
-        "/Library/Fonts/SF-Pro-Display-Bold.otf",
-        "/System/Library/Fonts/SFNS.ttf",
-        "/System/Library/Fonts/Helvetica.ttc",
-        "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "C:\\Windows\\Fonts\\segoeuib.ttf",
-        "C:\\Windows\\Fonts\\segoeui.ttf",
-    ];
-
-    for path in FONT_PATHS {
+    for path in DEFAULT_FONT_PATHS {
         let Ok(bytes) = std::fs::read(path) else {
             continue;
         };
@@ -765,6 +777,19 @@ fn load_overlay_font() -> Option<fontdue::Font> {
 
     None
 }
+
+const DEFAULT_FONT_PATHS: &[&str] = &[
+    // macOS: SF Pro
+    "/Library/Fonts/SF-Pro-Text-Bold.otf",
+    "/Library/Fonts/SF-Pro-Display-Bold.otf",
+    "/System/Library/Fonts/SFNS.ttf",
+    "/System/Library/Fonts/Helvetica.ttc",
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+    // Windows: Segoe UI
+    "C:\\Windows\\Fonts\\segoeuib.ttf",
+    "C:\\Windows\\Fonts\\segoeui.ttf",
+];
 
 fn blend_glyph_bitmap(
     pixmap: &mut Pixmap,
@@ -1278,6 +1303,7 @@ mod tests {
             },
             export: ExportVideoConfig {
                 render_markers: true,
+                font_path: None,
             },
             recording: ExportRecordingConfig {
                 sync_feedback_duration_ms: 420,
