@@ -70,6 +70,7 @@ export type ExportConfig = {
   renderMarkers: boolean;
   filenameTemplate: string;
   fontPath: string | null;
+  renderThreads: number | null;
 };
 
 export type OverlayCustomPosition = {
@@ -265,6 +266,7 @@ export function createDefaultConfig(): AppConfig {
       renderMarkers: true,
       filenameTemplate: "${profileSlug}-${recordingName}-overlay",
       fontPath: null,
+      renderThreads: null,
     },
   };
 }

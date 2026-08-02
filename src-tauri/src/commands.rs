@@ -241,3 +241,33 @@ pub fn copy_font_file(app: tauri::AppHandle, source_path: std::path::PathBuf) ->
     std::fs::copy(&source_path, &dest).map_err(|error| error.to_string())?;
     Ok(dest.to_string_lossy().to_string())
 }
+
+#[tauri::command]
+pub fn open_directory(path: String) -> Result<(), String> {
+    let path = std::path::Path::new(&path);
+    if !path.exists() {
+        return Err(format!("path does not exist: {}", path.display()));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(path)
+            .spawn()
+            .map_err(|error| format!("failed to open directory: {error}"))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(path)
+            .spawn()
+            .map_err(|error| format!("failed to open directory: {error}"))?;
+    }
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(path)
+            .spawn()
+            .map_err(|error| format!("failed to open directory: {error}"))?;
+    }
+    Ok(())
+}

@@ -132,4 +132,8 @@ export const tauriApi = {
   copyFontFile(sourcePath: string) {
     return invoke<string>("copy_font_file", { sourcePath });
   },
+
+  openDirectory(path: string) {
+    return invoke<void>("open_directory", { path });
+  },
 };

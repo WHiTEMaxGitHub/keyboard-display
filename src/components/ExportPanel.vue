@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { openPath } from "@tauri-apps/plugin-opener";
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { tauriApi } from "../api/tauri";
 import type { AppConfig } from "../domain/defaultConfig";
@@ -40,6 +39,7 @@ const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
 const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
 const fontPathDraft = ref(props.config.export.fontPath);
+const renderThreadsDraft = ref(props.config.export.renderThreads);
 const exportStatus = ref("");
 const exportInProgress = ref(false);
 const exportProgress = ref({
@@ -152,6 +152,13 @@ watch(
   },
 );
 
+watch(
+  () => props.config.export.renderThreads,
+  (renderThreads) => {
+    renderThreadsDraft.value = renderThreads;
+  },
+);
+
 async function refreshExporterStatus() {
   exporterChecking.value = true;
   exporterError.value = "";
@@ -248,6 +255,22 @@ function clearFontFile() {
   });
 }
 
+function onRenderThreadsInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value;
+  renderThreadsDraft.value = value === "" ? null : Math.max(0, parseInt(value, 10) || 0);
+}
+
+function commitRenderThreads() {
+  const renderThreads = renderThreadsDraft.value === null || renderThreadsDraft.value <= 0
+    ? null
+    : renderThreadsDraft.value;
+  renderThreadsDraft.value = renderThreads;
+  emit("update-export-config", {
+    ...props.config.export,
+    renderThreads,
+  });
+}
+
 async function chooseOutputDirectory() {
   const selectedPath = await open({
     title: "Choose export folder",
@@ -317,7 +340,7 @@ async function openOutputDirectory() {
   }
 
   try {
-    await openPath(props.videoExporterConfig.outputDirectory);
+    await tauriApi.openDirectory(props.videoExporterConfig.outputDirectory);
   } catch (error) {
     exportStatus.value = `Failed to open export folder: ${String(error)}`;
   }
@@ -419,6 +442,23 @@ function joinPath(directory: string, fileName: string) {
           Open output folder
         </BaseButton>
       </div>
+      <section class="grid gap-2 mt-3">
+        <label class="text-text-muted text-[13px] font-extrabold">Render threads</label>
+        <div class="flex items-center gap-2">
+          <input
+            class="box-border w-20 border border-border-control rounded-md bg-surface-control text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
+            type="number"
+            min="0"
+            max="64"
+            :value="renderThreadsDraft ?? ''"
+            placeholder="Auto"
+            @input="onRenderThreadsInput"
+            @blur="commitRenderThreads"
+            @keydown.enter="commitRenderThreads"
+          />
+          <span class="text-text-secondary text-[13px]">0 or empty = auto (CPU cores)</span>
+        </div>
+      </section>
       <div v-if="exportInProgress" class="export-progress-stack">
         <div class="flex items-center justify-between gap-3 text-text-muted text-[13px] font-extrabold">
           <span>Rendering frames</span>

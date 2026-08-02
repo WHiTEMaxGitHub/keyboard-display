@@ -2,10 +2,13 @@
 
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashSet,
+    collections::{BTreeMap, HashMap, HashSet},
     io::Write,
     path::Path,
     process::{Command, Stdio},
+    sync::atomic::AtomicUsize,
+    sync::mpsc,
+    sync::Mutex,
 };
 use tiny_skia::{Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Rect, Stroke, Transform};
 
@@ -66,6 +69,7 @@ pub struct ExportOverlayStyle {
 pub struct ExportVideoConfig {
     pub render_markers: bool,
     pub font_path: Option<String>,
+    pub render_threads: Option<u16>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -194,6 +198,7 @@ pub fn export_overlay_video(
 }
 
 /// 从 `.kbdrec` 帧状态流渲染透明 WebM overlay，并在渲染过程中上报帧进度。
+/// 支持多线程并行渲染，通过 `profile.export.render_threads` 配置线程数（`None` = 自动检测 CPU 核心数）。
 pub fn export_overlay_video_with_progress(
     recording_path: &Path,
     output_path: &Path,
@@ -212,7 +217,6 @@ pub fn export_overlay_video_with_progress(
     );
     let output_path_string = output_path.to_string_lossy().to_string();
     let args = build_webm_ffmpeg_args(&output_path_string, size, decoded.fps);
-    let font = load_font(profile.export.font_path.as_deref());
     let mut child = Command::new(ffmpeg_path)
         .args(&args)
         .stdin(Stdio::piped())
@@ -221,44 +225,170 @@ pub fn export_overlay_video_with_progress(
         .spawn()
         .map_err(|error| format!("failed to start ffmpeg: {error}"))?;
 
-    {
+    let available_threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(4);
+    let num_threads = profile
+        .export
+        .render_threads
+        .map(|n| (n as usize).max(1).min(available_threads * 4))
+        .unwrap_or(available_threads);
+
+    use std::sync::Arc;
+
+    let next_frame_index = Arc::new(AtomicUsize::new(0));
+    let frames = Arc::new(decoded.frames);
+    let marker_ranges = Arc::new(marker_ranges);
+    let frame_count = decoded.frame_count;
+    let fps = decoded.fps;
+    // Channel: workers send rendered frames to collector
+    let (render_tx, render_rx) = mpsc::channel::<(usize, u64, Vec<String>, Vec<u8>)>();
+    // Channel: collector sends progress updates to main thread
+    let (progress_tx, progress_rx) = mpsc::channel::<ExportOverlayProgress>();
+
+    // Collector thread: receives frames from channel, writes to ffmpeg stdin in order,
+    // and sends progress updates back to the main thread.
+    let collector = std::thread::spawn(move || {
         let stdin = child
             .stdin
             .as_mut()
             .ok_or_else(|| "failed to open ffmpeg stdin".to_string())?;
+        let mut pending: BTreeMap<usize, (u64, Vec<String>, Vec<u8>)> = BTreeMap::new();
+        let mut next_write_index = 0usize;
+        let mut rendered_frames = 0u64;
 
-        for (index, frame) in decoded.frames.iter().enumerate() {
-            let active_keys = frame.keys.iter().cloned().collect::<HashSet<_>>();
-            let marker_active = marker_ranges
-                .iter()
-                .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
-            let (_, rgba) = render_overlay_frame_with_font(profile, &active_keys, marker_active, font.as_ref())?;
-            stdin.write_all(&rgba).map_err(|error| error.to_string())?;
-            if should_emit_export_progress(index, decoded.frames.len()) {
-                on_progress(ExportOverlayProgress {
-                    rendered_frames: index as u64 + 1,
-                    total_frames,
-                    current_frame: frame.frame,
-                    active_key_ids: sorted_active_key_ids(&active_keys),
-                })?;
+        loop {
+            match render_rx.recv() {
+                Ok((index, frame_number, active_keys, rgba)) => {
+                    pending.insert(index, (frame_number, active_keys, rgba));
+                    // Write all consecutive frames that are ready
+                    while let Some((frame_number, mut active_keys, rgba)) = pending.remove(&next_write_index) {
+                        stdin.write_all(&rgba).map_err(|error| error.to_string())?;
+                        rendered_frames += 1;
+                        active_keys.sort();
+                        let _ = progress_tx.send(ExportOverlayProgress {
+                            rendered_frames,
+                            total_frames,
+                            current_frame: frame_number,
+                            active_key_ids: active_keys,
+                        });
+                        next_write_index += 1;
+                    }
+                }
+                Err(mpsc::RecvError) => break, // All senders closed, no more frames incoming
             }
         }
+
+        // Drain any remaining out-of-order frames
+        for (_index, (frame_number, mut active_keys, rgba)) in pending.into_iter() {
+            stdin.write_all(&rgba).map_err(|error| error.to_string())?;
+            rendered_frames += 1;
+            active_keys.sort();
+            let _ = progress_tx.send(ExportOverlayProgress {
+                rendered_frames,
+                total_frames,
+                current_frame: frame_number,
+                active_key_ids: active_keys,
+            });
+        }
+
+        let output = child
+            .wait_with_output()
+            .map_err(|error| format!("failed to finish ffmpeg export: {error}"))?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!("ffmpeg export failed: {}", stderr.trim()));
+        }
+        drop(progress_tx);
+        Ok(())
+    });
+
+    // Render workers on a dedicated thread so the main thread can process
+    // progress events in real-time (std::thread::scope blocks the caller).
+    let profile_owned = profile.clone();
+    let render_handle = std::thread::spawn(move || {
+        let font = Arc::new(Mutex::new(load_font(profile_owned.export.font_path.as_deref())));
+        // 帧缓存：按键状态 → RGBA 数据，避免连续相同状态重复渲染
+        let frame_cache: Arc<Mutex<HashMap<(Vec<String>, bool), Vec<u8>>>> = Arc::new(Mutex::new(HashMap::new()));
+        let mut worker_handles = Vec::new();
+
+        for _ in 0..num_threads {
+            let render_tx = render_tx.clone();
+            let next_frame_index = next_frame_index.clone();
+            let frames = frames.clone();
+            let marker_ranges = marker_ranges.clone();
+            let profile_owned = profile_owned.clone();
+            let font = font.clone();
+            let frame_cache = frame_cache.clone();
+
+            worker_handles.push(std::thread::spawn(move || {
+                loop {
+                    let index = next_frame_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    if index >= frames.len() {
+                        break;
+                    }
+
+                    let frame = &frames[index];
+                    let marker_active = marker_ranges
+                        .iter()
+                        .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
+                    let mut sorted_keys = frame.keys.clone();
+                    sorted_keys.sort();
+                    let cache_key = (sorted_keys, marker_active);
+
+                    // 查缓存，命中则 clone 已有数据
+                    {
+                        let cache = frame_cache.lock().unwrap();
+                        if let Some(rgba) = cache.get(&cache_key) {
+                            let _ = render_tx.send((index, frame.frame, frame.keys.clone(), rgba.clone()));
+                            continue;
+                        }
+                    }
+
+                    // 缓存未命中，渲染并写入缓存
+                    let active_keys_set: HashSet<String> = frame.keys.iter().cloned().collect();
+                    let font_guard = font.lock().unwrap();
+                    let (_, rgba) = render_overlay_frame_with_font(
+                        &profile_owned,
+                        &active_keys_set,
+                        marker_active,
+                        font_guard.as_ref(),
+                    )
+                    .expect("frame rendering failed");
+                    drop(font_guard);
+
+                    let mut cache = frame_cache.lock().unwrap();
+                    cache.insert(cache_key, rgba.clone());
+
+                    let _ = render_tx.send((index, frame.frame, frame.keys.clone(), rgba));
+                }
+            }));
+        }
+
+        for handle in worker_handles {
+            handle.join().expect("render worker panicked");
+        }
+    });
+
+    // Main thread: process progress events in real-time while rendering happens
+    // on the render thread. The collector drops progress_tx when done, which
+    // terminates this loop.
+    while let Ok(progress) = progress_rx.recv() {
+        on_progress(progress)?;
     }
 
-    let output = child
-        .wait_with_output()
-        .map_err(|error| format!("failed to finish ffmpeg export: {error}"))?;
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(format!("ffmpeg export failed: {}", stderr.trim()));
-    }
+    // Wait for the render thread to finish
+    render_handle.join().map_err(|_| "render thread panicked".to_string())?;
+
+    // Wait for the collector to finish and propagate its result
+    collector.join().map_err(|error| format!("collector thread panicked: {error:?}"))??;
 
     Ok(ExportOverlayVideoResult {
         output_path: output_path_string,
-        frame_count: decoded.frame_count,
+        frame_count,
         width: size.width,
         height: size.height,
-        fps: decoded.fps,
+        fps,
     })
 }
 
@@ -367,16 +497,6 @@ fn marker_frame_ranges(
         .into_iter()
         .map(|frame| (frame, frame + duration_frames.saturating_sub(1)))
         .collect()
-}
-
-fn should_emit_export_progress(_index: usize, _frame_count: usize) -> bool {
-    true
-}
-
-fn sorted_active_key_ids(active_keys: &HashSet<String>) -> Vec<String> {
-    let mut key_ids = active_keys.iter().cloned().collect::<Vec<_>>();
-    key_ids.sort();
-    key_ids
 }
 
 fn draw_rect(
@@ -970,7 +1090,7 @@ mod tests {
     use super::{
         build_webm_ffmpeg_args, estimate_export_overlay_size, export_overlay_video,
         export_overlay_video_with_progress, render_overlay_frame, ExportOverlayItem,
-        ExportOverlayLayout, ExportOverlayProfile, ExportOverlayProgress, ExportOverlayStyle,
+        ExportOverlayLayout, ExportOverlayProfile, ExportOverlayStyle,
         ExportRecordingConfig, ExportVideoConfig,
     };
     use crate::recording::{encode_kbdrec, RecordingEvent, RecordingSnapshot};
@@ -1084,7 +1204,8 @@ mod tests {
                 "activeTextColor": "#ffffff"
             },
             "export": {
-                "renderMarkers": true
+                "renderMarkers": true,
+                "renderThreads": null
             },
             "recording": {
                 "syncFeedbackDurationMs": 420
@@ -1304,6 +1425,7 @@ mod tests {
             export: ExportVideoConfig {
                 render_markers: true,
                 font_path: None,
+                render_threads: None,
             },
             recording: ExportRecordingConfig {
                 sync_feedback_duration_ms: 420,

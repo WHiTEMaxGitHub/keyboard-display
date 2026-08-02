@@ -212,6 +212,8 @@ function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppC
     filenameTemplate: sanitizeExportFilenameTemplate(
       exportConfig.filenameTemplate ?? defaultExport.filenameTemplate,
     ),
+    fontPath: exportConfig.fontPath ?? defaultExport.fontPath,
+    renderThreads: exportConfig.renderThreads ?? defaultExport.renderThreads,
   };
 }
 
