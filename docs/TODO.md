@@ -397,7 +397,7 @@
 
 ## Debug logging
 
-- [ ] Extract the debug logger into a reusable crate.
+- [x] Extract the debug logger into a reusable crate.
   - Keep the current in-app `debug_log` module as the first implementation.
   - Provide a single-threaded writer for simple tools and tests.
   - Provide a multi-threaded buffered writer for desktop apps and hot input
@@ -405,6 +405,12 @@
   - Support explicit flush/shutdown so release builds can preserve the last
     diagnostic events before exit.
   - Keep log routing usable from both Rust backend code and frontend commands.
+  - Current implementation:
+    - reusable crate: `src-tauri/crates/debug-log`
+    - sync writer: `SyncDebugLogWriter`
+    - buffered writer: `BufferedDebugLogWriter`
+    - app wrapper: `src-tauri/src/debug_log.rs`
+    - app flushes the buffered writer on Tauri `RunEvent::Exit`
 
 ## Commit chain plan
 

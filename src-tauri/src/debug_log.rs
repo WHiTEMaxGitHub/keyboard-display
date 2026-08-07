@@ -1,38 +1,22 @@
-use std::{
-    fs::{create_dir_all, OpenOptions},
-    io::Write,
-    path::PathBuf,
-    sync::Mutex,
-};
+use std::{path::PathBuf, sync::LazyLock};
 
 use chrono::Local;
-use once_cell::sync::Lazy;
+use keyboard_display_debug_log::{BufferedDebugLogWriter, DebugLogWriter};
 
-static LOG_LOCK: Lazy<Mutex<()>> = Lazy::new(|| Mutex::new(()));
+static LOG_WRITER: LazyLock<BufferedDebugLogWriter> =
+    LazyLock::new(|| BufferedDebugLogWriter::new(log_path()));
 
 pub fn write(source: &str, message: &str) {
     let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
     let line = format!("{timestamp} [{source}] {message}\n");
 
-    if let Err(error) = append_line(&line) {
+    if let Err(error) = LOG_WRITER.write_line(&line) {
         eprintln!("failed to write debug log: {error}; {line}");
     }
 }
 
-fn append_line(line: &str) -> Result<(), String> {
-    let _guard = LOG_LOCK.lock().map_err(|error| error.to_string())?;
-    let path = log_path();
-    if let Some(parent) = path.parent() {
-        create_dir_all(parent).map_err(|error| error.to_string())?;
-    }
-
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&path)
-        .map_err(|error| error.to_string())?;
-    file.write_all(line.as_bytes())
-        .map_err(|error| error.to_string())
+pub fn flush() -> Result<(), String> {
+    LOG_WRITER.flush()
 }
 
 fn log_path() -> PathBuf {

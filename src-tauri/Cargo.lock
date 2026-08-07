@@ -1910,7 +1910,7 @@ dependencies = [
  "core-foundation",
  "core-graphics",
  "fontdue",
- "once_cell",
+ "keyboard-display-debug-log",
  "serde",
  "serde_json",
  "tauri",
@@ -1922,6 +1922,10 @@ dependencies = [
  "windows-sys 0.61.2",
  "zip",
 ]
+
+[[package]]
+name = "keyboard-display-debug-log"
+version = "0.1.0"
 
 [[package]]
 name = "keyboard-types"

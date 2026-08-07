@@ -18,13 +18,13 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
+keyboard-display-debug-log = { path = "crates/debug-log" }
 tauri = { version = "2", features = ["macos-private-api"] }
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri-plugin-dialog = "2.7.1"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
-once_cell = "1.21.3"
 ureq = "3.1.4"
 zip = { version = "6.0.0", default-features = false, features = ["deflate"] }
 tiny-skia = "0.11.4"
