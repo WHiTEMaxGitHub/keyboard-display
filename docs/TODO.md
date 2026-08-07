@@ -375,13 +375,17 @@
   - Always-on-top via `setAlwaysOnTop`.
   - Window sizing and position controls.
 
-- [ ] Evaluate mature cross-platform input capture libraries.
+- [x] Evaluate mature cross-platform input capture libraries.
   - Keep current native hook backends as the baseline while experimenting.
   - Compare candidates against full-state overlay needs, not only hotkey
     registration.
   - Verify left/right modifier fidelity, mouse button coverage, background
     capture, and macOS permission behavior.
   - Re-check the previous `rdev` crash path before adopting any replacement.
+  - Current evaluation lives in `docs/input-capture-libraries.md`.
+  - Decision: keep local macOS `CGEventTap` and Windows Raw Input backends as the
+    baseline; only consider library replacement after a dedicated proof of
+    concept passes the documented checklist.
 
 - [ ] Verify macOS overlay window behavior.
   - Transparent window background with `macOSPrivateApi`.
