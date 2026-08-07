@@ -389,10 +389,11 @@
   - Always-on-top via `setAlwaysOnTop`.
   - Window sizing and position controls.
 
-- [ ] Add platform notes to documentation.
+- [x] Add platform notes to documentation.
   - Required permissions on macOS.
   - Known Windows WebView2 / transparent-window behavior.
   - Fallback behavior if global capture permission is missing.
+  - Current notes live in `docs/platform-notes.md`.
 
 ## Debug logging
 

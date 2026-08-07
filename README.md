@@ -42,6 +42,9 @@ native input backend -> normalized input event -> overlay renderer / recorder
 
 在平台后端不可用时，前端键盘事件只能作为预览机制，不能代表真实后台捕获。
 
+平台权限、透明窗口和各系统待验证项见
+[`docs/platform-notes.md`](docs/platform-notes.md)。
+
 ## 录制策略
 
 这个项目的关键差异在保存格式。应用不把 Overlay 视频作为主要产物保存，
