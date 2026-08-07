@@ -5,7 +5,17 @@
   },
   "common": {
     "chooseProfile": "选择配置",
-    "noRecentProfiles": "暂无最近配置"
+    "noRecentProfiles": "暂无最近配置",
+    "dismissNotification": "关闭通知",
+    "workspaceNavigation": "工作区导航",
+    "configurationPages": "配置页面",
+    "livePreview": "实时预览"
+  },
+  "dialogs": {
+    "loadConfig": "加载键盘显示配置",
+    "saveConfig": "保存键盘显示配置",
+    "recordingFilesFolder": "选择录制文件目录",
+    "jsonFilter": "JSON"
   },
   "nav": {
     "overview": "概览",
@@ -165,6 +175,11 @@
       "stop": "停止录制",
       "addSyncMarker": "添加同步点"
     },
+    "dialog": {
+      "chooseFolder": "选择录制目录",
+      "inspectRecording": "检查键盘录制",
+      "recordingFilter": "键盘录制"
+    },
     "filename": {
       "label": "文件名模板",
       "variables": "变量: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
@@ -184,6 +199,14 @@
       "notSet": "未设置",
       "pressShortcut": "按下快捷键...",
       "capture": "设置"
+    },
+    "status": {
+      "usingDefaultFolder": "使用默认保存目录: {path}",
+      "willStart": "录制将以 {fps}fps 开始。",
+      "started": "录制已以 {fps}fps 开始。",
+      "saved": "录制已保存: {path}",
+      "startBeforeMarker": "请先开始录制再添加同步点。",
+      "syncMarkerAdded": "同步点已添加。"
     }
   },
   "export": {
@@ -216,6 +239,7 @@
       "chooseOutputFolder": "选择输出目录",
       "openOutputFolder": "打开输出目录",
       "renderThreads": "渲染线程",
+      "autoPlaceholder": "自动",
       "autoThreads": "0 或留空 = 自动",
       "renderingFrames": "渲染帧",
       "progress": "导出进度",
@@ -266,6 +290,20 @@
       "uninstallFailed": "视频导出器卸载失败: {error}"
     },
     "note": "视频由录制时间线生成，录制后仍可调整尺寸和格式。"
+  },
+  "colorPicker": {
+    "hex": "HEX",
+    "red": "R",
+    "green": "G",
+    "blue": "B",
+    "alpha": "A",
+    "presets": "预设",
+    "recent": "最近",
+    "apply": "应用"
+  },
+  "overlay": {
+    "keyOverlay": "POV 按键叠层",
+    "configuredRows": "已配置键盘行"
   },
   "recordingBrowser": {
     "title": "录制文件",

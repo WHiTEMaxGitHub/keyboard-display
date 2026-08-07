@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject, computed, type ComputedRef } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AppConfig } from "../../domain/defaultConfig";
 import PovOverlay from "../PovOverlay.vue";
 import BaseFieldRow from "../BaseFieldRow.vue";
@@ -20,6 +21,7 @@ const profileName = computed(() => profileNameRef.value);
 const profileChanged = computed(() => profileChangedRef.value);
 const recentProfiles = computed(() => recentProfilesRef.value);
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
+const { t } = useI18n();
 
 function updateOverlayVisible(event: Event) {
   emit("update-overlay-visible", (event.target as HTMLInputElement).checked);
@@ -44,9 +46,9 @@ function loadRecentProfile(event: Event) {
 
 <template>
   <section class="page-stack">
-    <section class="preview-band" aria-label="Live preview">
+    <section class="preview-band" :aria-label="t('common.livePreview')">
       <div class="preview-copy">
-        <p>Live Preview</p>
+        <p>{{ t("overview.livePreview") }}</p>
         <h2 class="m-0">{{ profileName }}</h2>
       </div>
       <div class="preview-viewport">
@@ -64,14 +66,14 @@ function loadRecentProfile(event: Event) {
 
     <section class="panel-grid">
       <article class="panel">
-        <h2 class="m-0">Profile</h2>
-        <BaseFieldRow label="Name">{{ profileName }}</BaseFieldRow>
-        <BaseFieldRow label="Status">
-          {{ profileChanged ? "Unsaved changes" : "Saved" }}
+        <h2 class="m-0">{{ t("overview.profile") }}</h2>
+        <BaseFieldRow :label="t('overview.name')">{{ profileName }}</BaseFieldRow>
+        <BaseFieldRow :label="t('overview.status')">
+          {{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}
         </BaseFieldRow>
-        <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
+        <BaseFieldRow :label="t('overview.visibleKeys')">{{ config.keys.length }}</BaseFieldRow>
         <label class="recent-profile-control">
-          <span>Recent profiles</span>
+          <span>{{ t("overview.recentProfiles") }}</span>
           <BaseSelect
             class="select-control"
             :disabled="recentProfiles.length === 0"
@@ -79,7 +81,7 @@ function loadRecentProfile(event: Event) {
             @change="loadRecentProfile"
           >
             <option value="">
-              {{ recentProfiles.length ? "Choose a profile" : "No recent profiles" }}
+              {{ recentProfiles.length ? t("common.chooseProfile") : t("common.noRecentProfiles") }}
             </option>
             <option
               v-for="profile in recentProfiles"
@@ -93,12 +95,12 @@ function loadRecentProfile(event: Event) {
       </article>
 
       <article class="panel">
-        <h2 class="m-0">Quick controls</h2>
+        <h2 class="m-0">{{ t("overview.quickControls") }}</h2>
         <BaseToggleRow :checked="overlayVisible" @change="updateOverlayVisible">
-          Show POV overlay
+          {{ t("overview.showOverlay") }}
         </BaseToggleRow>
         <BaseToggleRow :checked="config.style.alwaysOnTop" @change="updateAlwaysOnTop">
-          Always on top
+          {{ t("overview.alwaysOnTop") }}
         </BaseToggleRow>
       </article>
     </section>

@@ -63,7 +63,7 @@
 
 ## Internationalization
 
-- [ ] Add multi-language support for the configuration UI and user-facing text.
+- [x] Add multi-language support for the configuration UI and user-facing text.
   - This is the next planned product-development track after the TODO status
     cleanup.
   - Prefer one file per language, for example:
@@ -99,8 +99,12 @@
       notification copy.
     - Migrated recording browser, metadata editor, tree details, and inspection
       views.
+    - Migrated shared color picker, notification controls, dialog titles, overlay
+      aria labels, and recording runtime status messages.
     - Added the app-config language setting and runtime language switching.
-    - Remaining work: migrate remaining notification and backend-status copy.
+    - Follow-up: backend errors still surface as raw error strings in several
+      places. Convert them to stable error codes and structured arguments before
+      translating backend-originated failures.
 
 ## Recording sync
 

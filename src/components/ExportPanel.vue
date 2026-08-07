@@ -469,7 +469,7 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
             min="0"
             max="64"
             :value="renderThreadsDraft ?? ''"
-            placeholder="Auto"
+            :placeholder="t('export.overlayVideo.autoPlaceholder')"
             @input="onRenderThreadsInput"
             @blur="commitRenderThreads"
             @keydown.enter="commitRenderThreads"

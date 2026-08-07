@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import type { AppNotification } from "../composables/useNotifications";
 
 defineProps<{
@@ -8,6 +9,8 @@ defineProps<{
 const emit = defineEmits<{
   dismiss: [id: number];
 }>();
+
+const { t } = useI18n();
 </script>
 
 <template>
@@ -30,7 +33,7 @@ const emit = defineEmits<{
       <span class="min-w-0 overflow-wrap-anywhere">{{ notification.message }}</span>
       <button
         type="button"
-        aria-label="Dismiss notification"
+        :aria-label="t('common.dismissNotification')"
         class="grid w-[26px] h-[26px] place-items-center border-0 rounded-full bg-white/8 text-inherit cursor-pointer font-inherit leading-none hover:bg-white/14"
         @click="emit('dismiss', notification.id)"
       >

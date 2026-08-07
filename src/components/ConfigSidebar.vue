@@ -66,7 +66,7 @@ function selectRecordingSubPage(page: RecordingSubPage) {
 <template>
   <aside
     class="sidebar fixed top-0 left-0 z-50 h-screen overflow-y-auto overflow-x-hidden rounded-r-[28px] border-r border-[var(--glass-border)] bg-gradient-to-br from-[var(--glass-from)] to-[var(--glass-to)] backdrop-blur-2xl backdrop-saturate-[170%] shadow-[var(--glass-shadow)] transition-[width] duration-[300ms] ease-out py-[22px] w-[48px] hover:w-[228px]"
-    aria-label="Workspace navigation"
+    :aria-label="t('common.workspaceNavigation')"
     @mouseenter="expanded = true"
     @mouseleave="expanded = false"
   >
@@ -78,7 +78,7 @@ function selectRecordingSubPage(page: RecordingSubPage) {
       </div>
     </div>
 
-    <nav class="grid gap-1.5" aria-label="Configuration pages">
+    <nav class="grid gap-1.5" :aria-label="t('common.configurationPages')">
       <template v-for="item in navItems" :key="item.id">
         <button
           :class="[

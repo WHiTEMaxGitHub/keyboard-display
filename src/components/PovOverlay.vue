@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   isKeyBinding,
   type KeyBinding,
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   "start-drag": [];
 }>();
 
+const { t } = useI18n();
 const platformKey = computed(() => detectPlatformKey());
 const shellRef = ref<HTMLElement | null>(null);
 const clusterRef = ref<HTMLElement | null>(null);
@@ -114,7 +116,7 @@ watch(
       '--key-idle-text': overlayStyle.idleTextColor,
       '--key-active-text': overlayStyle.activeTextColor,
     }"
-    aria-label="POV key overlay"
+    :aria-label="t('overlay.keyOverlay')"
   >
     <div
       ref="clusterRef"
@@ -129,7 +131,7 @@ watch(
     >
       <div class="backplate" aria-hidden="true"></div>
 
-      <div class="row-layout" aria-label="Configured keyboard rows">
+      <div class="row-layout" :aria-label="t('overlay.configuredRows')">
         <div v-for="(rowItems, rowIndex) in rows" :key="rowIndex" class="key-row">
           <template v-for="(item, itemIndex) in rowItems" :key="`${rowIndex}-${itemIndex}`">
             <span

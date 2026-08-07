@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   hexToRgb,
   normalizeHexColor,
@@ -38,6 +39,7 @@ const popoverDirection = ref<"down" | "up">("down");
 const hexDraft = ref(normalizeHexColor(props.value));
 const sessionStartColor = ref(normalizeHexColor(props.value));
 const hasPendingCommit = ref(false);
+const { t } = useI18n();
 
 const rgb = computed(() => hexToRgb(hexDraft.value));
 
@@ -188,7 +190,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
         :class="['picker-panel', `picker-panel-${popoverDirection}`]"
       >
         <label class="hex-row">
-          <span>HEX</span>
+          <span>{{ t("colorPicker.hex") }}</span>
           <input
             :value="hexDraft"
             spellcheck="false"
@@ -199,24 +201,24 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
         </label>
         <div class="slider-list">
           <label>
-            <span>R</span>
+            <span>{{ t("colorPicker.red") }}</span>
             <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
           </label>
           <label>
-            <span>G</span>
+            <span>{{ t("colorPicker.green") }}</span>
             <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
           </label>
           <label>
-            <span>B</span>
+            <span>{{ t("colorPicker.blue") }}</span>
             <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
           </label>
           <label v-if="alphaEnabled">
-            <span>A</span>
+            <span>{{ t("colorPicker.alpha") }}</span>
             <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
           </label>
         </div>
         <div class="swatch-section">
-          <span>Presets</span>
+          <span>{{ t("colorPicker.presets") }}</span>
           <div class="swatch-grid">
             <button
               v-for="color in PRESET_COLORS"
@@ -230,7 +232,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
           </div>
         </div>
         <div v-if="recentColors.length" class="swatch-section">
-          <span>Recent</span>
+          <span>{{ t("colorPicker.recent") }}</span>
           <div class="swatch-grid">
             <button
               v-for="color in recentColors"
@@ -245,7 +247,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
         </div>
         <div class="flex justify-end">
           <button class="apply-button" type="button" @click="applyCurrentColor">
-            Apply
+            {{ t("colorPicker.apply") }}
           </button>
         </div>
       </div>

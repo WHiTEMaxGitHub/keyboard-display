@@ -2,6 +2,7 @@ import { emitTo } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ref, type ComputedRef, type Ref } from "vue";
 import { tauriApi } from "../api/tauri";
+import { i18n } from "../i18n";
 import { OVERLAY_SYNC_FEEDBACK_EVENT } from "../domain/inputEvents";
 import { effectiveRecordingFps } from "../domain/recordingConfig";
 import {
@@ -51,6 +52,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   const capturedHotkeyKeys = ref(new Set<string>());
   const activeRecordingHotkeySignature = ref("");
 
+  function t(key: string, params?: Record<string, unknown>) {
+    return i18n.global.t(key, params ?? {});
+  }
+
   async function initializeDefaultRecordingDirectory() {
     if (!options.enabled) {
       return;
@@ -77,7 +82,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
 
     const selectedPath = await open({
-      title: "Choose recording folder",
+      title: t("recording.dialog.chooseFolder"),
       directory: true,
       multiple: false,
     });
@@ -98,7 +103,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
       defaultRecordingDirectory.value || (await tauriApi.defaultRecordingDir());
     defaultRecordingDirectory.value = defaultDirectory;
     recordingDirectory.value = defaultDirectory;
-    recordingStatusMessage.value = `Using default save folder: ${defaultDirectory}`;
+    recordingStatusMessage.value = t("recording.status.usingDefaultFolder", { path: defaultDirectory });
     options.scheduleAppConfigSave();
 
     return defaultDirectory;
@@ -117,7 +122,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
 
     const recordingFps = effectiveRecordingFps(options.config.recording);
-    recordingStatusMessage.value = `Recording will start at ${recordingFps}fps.`;
+    recordingStatusMessage.value = t("recording.status.willStart", { fps: recordingFps });
     recordingCountdown.value = 3;
 
     recordingCountdownTimer.value = window.setInterval(async () => {
@@ -134,7 +139,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
         activeRecordingFps.value = recordingFps;
         isRecording.value = true;
         lastRecordingPath.value = "";
-        recordingStatusMessage.value = `Recording started at ${recordingFps}fps.`;
+        recordingStatusMessage.value = t("recording.status.started", { fps: recordingFps });
       }
     }, 1000);
   }
@@ -164,7 +169,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     activeRecordingHotkeys.value = null;
     activeRecordingFps.value = null;
     lastRecordingPath.value = result.path;
-    recordingStatusMessage.value = `Recording saved: ${result.path}`;
+    recordingStatusMessage.value = t("recording.status.saved", { path: result.path });
 
     if (silentRecording.value && restoreOverlayAfterRecording.value) {
       await options.setOverlayVisible(true);
@@ -179,8 +184,8 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
 
     const selectedPath = await open({
-      title: "Inspect keyboard recording",
-      filters: [{ name: "Keyboard recording", extensions: ["kbdrec"] }],
+      title: t("recording.dialog.inspectRecording"),
+      filters: [{ name: t("recording.dialog.recordingFilter"), extensions: ["kbdrec"] }],
       multiple: false,
     });
 
@@ -242,7 +247,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
 
     if (!isRecording.value) {
-      recordingStatusMessage.value = "Start recording before adding a sync marker.";
+      recordingStatusMessage.value = t("recording.status.startBeforeMarker");
       return;
     }
 
@@ -252,7 +257,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
         durationMs: options.config.recording.syncFeedbackDurationMs,
       });
     }
-    recordingStatusMessage.value = "Sync marker added.";
+    recordingStatusMessage.value = t("recording.status.syncMarkerAdded");
   }
 
   async function suppressRecordingHotkeyInput(keys: string[]) {

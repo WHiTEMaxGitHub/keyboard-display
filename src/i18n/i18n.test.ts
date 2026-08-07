@@ -85,4 +85,15 @@ describe("i18n", () => {
     expect(keys).toContain("recordingTree.inspectEdit");
     expect(keys).toContain("recordingTree.markerColumns.timecode");
   });
+
+  it("contains remaining shared UI and recording status locale sections", () => {
+    const keys = flattenLocaleKeys(en);
+
+    expect(keys).toContain("common.dismissNotification");
+    expect(keys).toContain("common.workspaceNavigation");
+    expect(keys).toContain("colorPicker.hex");
+    expect(keys).toContain("colorPicker.presets");
+    expect(keys).toContain("recording.dialog.chooseFolder");
+    expect(keys).toContain("recording.status.started");
+  });
 });

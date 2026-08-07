@@ -210,7 +210,7 @@ const pageComponent = computed(() => {
 
       <div :key="`${activePage}-${recordingSubPage}`" class="page-container animate-[page-enter_300ms_ease-out]">
         <section v-if="activePage === 'overview'" class="page-stack">
-          <section class="preview-band" aria-label="Live preview">
+          <section class="preview-band" :aria-label="t('common.livePreview')">
             <div class="preview-copy">
               <p>{{ t("overview.livePreview") }}</p>
               <h2 class="m-0">{{ profileName }}</h2>

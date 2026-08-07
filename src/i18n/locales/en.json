@@ -5,7 +5,17 @@
   },
   "common": {
     "chooseProfile": "Choose a profile",
-    "noRecentProfiles": "No recent profiles"
+    "noRecentProfiles": "No recent profiles",
+    "dismissNotification": "Dismiss notification",
+    "workspaceNavigation": "Workspace navigation",
+    "configurationPages": "Configuration pages",
+    "livePreview": "Live preview"
+  },
+  "dialogs": {
+    "loadConfig": "Load keyboard display config",
+    "saveConfig": "Save keyboard display config",
+    "recordingFilesFolder": "Choose recording files folder",
+    "jsonFilter": "JSON"
   },
   "nav": {
     "overview": "Overview",
@@ -165,6 +175,11 @@
       "stop": "Stop recording",
       "addSyncMarker": "Add sync marker"
     },
+    "dialog": {
+      "chooseFolder": "Choose recording folder",
+      "inspectRecording": "Inspect keyboard recording",
+      "recordingFilter": "Keyboard recording"
+    },
     "filename": {
       "label": "Filename template",
       "variables": "Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
@@ -184,6 +199,14 @@
       "notSet": "Not set",
       "pressShortcut": "Press shortcut...",
       "capture": "Set"
+    },
+    "status": {
+      "usingDefaultFolder": "Using default save folder: {path}",
+      "willStart": "Recording will start at {fps}fps.",
+      "started": "Recording started at {fps}fps.",
+      "saved": "Recording saved: {path}",
+      "startBeforeMarker": "Start recording before adding a sync marker.",
+      "syncMarkerAdded": "Sync marker added."
     }
   },
   "export": {
@@ -216,6 +239,7 @@
       "chooseOutputFolder": "Choose output folder",
       "openOutputFolder": "Open output folder",
       "renderThreads": "Render threads",
+      "autoPlaceholder": "Auto",
       "autoThreads": "0 or empty = auto (CPU cores)",
       "renderingFrames": "Rendering frames",
       "progress": "Export progress",
@@ -266,6 +290,20 @@
       "uninstallFailed": "Video exporter uninstall failed: {error}"
     },
     "note": "Video is generated from the input timeline, so size and format can be tuned after recording."
+  },
+  "colorPicker": {
+    "hex": "HEX",
+    "red": "R",
+    "green": "G",
+    "blue": "B",
+    "alpha": "A",
+    "presets": "Presets",
+    "recent": "Recent",
+    "apply": "Apply"
+  },
+  "overlay": {
+    "keyOverlay": "POV key overlay",
+    "configuredRows": "Configured keyboard rows"
   },
   "recordingBrowser": {
     "title": "Recordings",

@@ -2,6 +2,7 @@ import { emitTo } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { reactive, ref, type ComputedRef } from "vue";
 import { tauriApi } from "../api/tauri";
+import { i18n } from "../i18n";
 import {
   parseAppConfigFile,
   type RecentProfile,
@@ -68,6 +69,10 @@ export function useAppConfig(options: {
   const uiLanguage = ref<UiLanguage>("system");
 
   let appConfigSaveTimer: number | undefined;
+
+  function t(key: string, params?: Record<string, unknown>) {
+    return i18n.global.t(key, params ?? {});
+  }
 
   function applyOverlayStyle(style: OverlayStyle) {
     config.style = { ...style };
@@ -181,8 +186,8 @@ export function useAppConfig(options: {
     onSave: () => void,
   ) {
     const selectedPath = await open({
-      title: "Load keyboard display config",
-      filters: [{ name: "JSON", extensions: ["json"] }],
+      title: t("dialogs.loadConfig"),
+      filters: [{ name: t("dialogs.jsonFilter"), extensions: ["json"] }],
       multiple: false,
     });
 
@@ -302,9 +307,9 @@ export function useAppConfig(options: {
       customPosition: customOverlayPosition.value,
     });
     const path = await save({
-      title: "Save keyboard display config",
+      title: t("dialogs.saveConfig"),
       defaultPath: `${profileName.value || "keyboard-display"}.json`,
-      filters: [{ name: "JSON", extensions: ["json"] }],
+      filters: [{ name: t("dialogs.jsonFilter"), extensions: ["json"] }],
     });
 
     if (!path) {
@@ -360,7 +365,7 @@ export function useAppConfig(options: {
 
   async function chooseRecordingBrowserDirectory() {
     const selectedPath = await open({
-      title: "Choose recording files folder",
+      title: t("dialogs.recordingFilesFolder"),
       directory: true,
       multiple: false,
     });
