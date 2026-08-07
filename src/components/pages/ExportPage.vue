@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, inject, ref, type ComputedRef } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AppConfig } from "../../domain/defaultConfig";
 import type { VideoExporterConfig } from "../../domain/videoExporter";
 import { tauriApi } from "../../api/tauri";
@@ -11,6 +12,7 @@ const profileName = computed(() => profileNameRef.value);
 const videoExporterConfigRef = inject<ComputedRef<VideoExporterConfig>>("videoExporterConfig")!;
 const videoExporterConfig = computed(() => videoExporterConfigRef.value);
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
+const { t } = useI18n();
 
 const videoExporterInstalling = ref(false);
 const videoExporterUninstalling = ref(false);
@@ -31,9 +33,9 @@ async function installAppManagedVideoExporter() {
 
   try {
     const result = await tauriApi.installAppManagedVideoExporter();
-    emit("notify", "success", `Video exporter installed: ${result.path}`);
+    emit("notify", "success", t("export.notification.installSuccess", { path: result.path }));
   } catch (error) {
-    emit("notify", "error", `Video exporter install failed: ${String(error)}`);
+    emit("notify", "error", t("export.notification.installFailed", { error: String(error) }));
   } finally {
     videoExporterInstalling.value = false;
   }
@@ -48,9 +50,9 @@ async function uninstallAppManagedVideoExporter() {
 
   try {
     await tauriApi.uninstallAppManagedVideoExporter();
-    emit("notify", "success", "App-managed video exporter uninstalled.");
+    emit("notify", "success", t("export.notification.uninstallSuccess"));
   } catch (error) {
-    emit("notify", "error", `Video exporter uninstall failed: ${String(error)}`);
+    emit("notify", "error", t("export.notification.uninstallFailed", { error: String(error) }));
   } finally {
     videoExporterUninstalling.value = false;
   }

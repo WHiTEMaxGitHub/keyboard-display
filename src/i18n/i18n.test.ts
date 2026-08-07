@@ -61,4 +61,15 @@ describe("i18n", () => {
     expect(keys).toContain("recording.hotkeys.mode");
     expect(keys).toContain("recording.hotkeys.capture");
   });
+
+  it("contains export locale sections", () => {
+    const keys = flattenLocaleKeys(en);
+
+    expect(keys).toContain("export.title");
+    expect(keys).toContain("export.overlayVideo.exportButton");
+    expect(keys).toContain("export.exporter.appManaged");
+    expect(keys).toContain("export.status.exporting");
+    expect(keys).toContain("export.dialog.chooseRecording");
+    expect(keys).toContain("export.notification.installSuccess");
+  });
 });

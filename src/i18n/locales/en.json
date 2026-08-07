@@ -185,5 +185,86 @@
       "pressShortcut": "Press shortcut...",
       "capture": "Set"
     }
+  },
+  "export": {
+    "title": "Export",
+    "transparentOverlay": "Transparent overlay",
+    "compatibleVideo": "Compatible video",
+    "renderMarkers": "Render sync markers",
+    "filenameTemplate": "Filename template",
+    "font": "Font",
+    "systemDefault": "System default",
+    "chooseFont": "Choose font",
+    "reset": "Reset",
+    "dialog": {
+      "chooseFfmpeg": "Choose ffmpeg binary",
+      "chooseRecording": "Choose keyboard recording",
+      "recordingFilter": "Keyboard recording",
+      "chooseFont": "Choose font file",
+      "fontFilter": "Font files",
+      "chooseFolder": "Choose export folder"
+    },
+    "overlayVideo": {
+      "title": "Overlay video",
+      "exportButton": "Export overlay video",
+      "exportingButton": "Exporting...",
+      "recording": "Recording",
+      "output": "Output",
+      "noRecording": "No .kbdrec selected",
+      "noOutputFolder": "No export folder selected",
+      "chooseRecording": "Choose .kbdrec",
+      "chooseOutputFolder": "Choose output folder",
+      "openOutputFolder": "Open output folder",
+      "renderThreads": "Render threads",
+      "autoThreads": "0 or empty = auto (CPU cores)",
+      "renderingFrames": "Rendering frames",
+      "progress": "Export progress",
+      "waitingForFrames": "Waiting for frame data.",
+      "frameNoKeys": "Frame {frame}: no active keys",
+      "frameWithKeys": "Frame {frame}: {keys}"
+    },
+    "exporter": {
+      "title": "Video exporter",
+      "checkAgain": "Check again",
+      "checking": "Checking...",
+      "status": "Status",
+      "using": "Using",
+      "notInstalled": "Not installed",
+      "appManagedExporter": "App-managed exporter",
+      "userSelectedFfmpeg": "User-selected ffmpeg",
+      "systemFfmpeg": "System ffmpeg",
+      "description": "Video export requires ffmpeg. You can select an existing binary, use a PATH installation, or install an app-managed exporter later.",
+      "choosePath": "Choose ffmpeg path",
+      "clearPath": "Clear selected path",
+      "uninstall": "Uninstall app-managed exporter",
+      "uninstalling": "Uninstalling...",
+      "install": "Install app-managed exporter",
+      "installing": "Installing...",
+      "appManaged": "App-managed",
+      "userSelected": "User-selected",
+      "path": "PATH",
+      "installed": "Installed",
+      "notInstalledShort": "Not installed",
+      "available": "Available",
+      "notSelected": "Not selected",
+      "notFound": "Not found",
+      "none": "None"
+    },
+    "status": {
+      "copyFontFailed": "Failed to copy font: {error}",
+      "missingExportRequirements": "Choose a recording, export folder, and available video exporter first.",
+      "missingExporter": "Choose an available video exporter first.",
+      "exporting": "Exporting overlay video...",
+      "exportFailed": "Export failed: {error}",
+      "missingOutputFolder": "Choose an export folder first.",
+      "openFolderFailed": "Failed to open export folder: {error}"
+    },
+    "notification": {
+      "installSuccess": "Video exporter installed: {path}",
+      "installFailed": "Video exporter install failed: {error}",
+      "uninstallSuccess": "App-managed video exporter uninstalled.",
+      "uninstallFailed": "Video exporter uninstall failed: {error}"
+    },
+    "note": "Video is generated from the input timeline, so size and format can be tuned after recording."
   }
 }
