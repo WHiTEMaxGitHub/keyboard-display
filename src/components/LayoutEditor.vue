@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { onMounted, onUnmounted, reactive, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import BaseButton from "./BaseButton.vue";
 import {
   addRow,
@@ -32,6 +33,7 @@ const emit = defineEmits<{
   "update-key-id-labels": [labels: Record<string, string>];
 }>();
 
+const { t } = useI18n();
 const collapsedRows = reactive(new Set<number>());
 const platformLabelEditors = reactive(new Set<string>());
 const captureTarget = ref<{ rowIndex: number; itemIndex: number; currentId: string } | null>(null);
@@ -112,13 +114,21 @@ function toggleRow(rowIndex: number) {
 function rowSummary(row: OverlayRow) {
   const keyCount = row.filter(isKeyBinding).length;
   const gapCount = row.length - keyCount;
-  return `${keyCount} keys · ${gapCount} gaps · ${row.length} items`;
+  return t("layout.editorPanel.rowSummary", {
+    keyCount,
+    gapCount,
+    itemCount: row.length,
+  });
 }
 
 function itemSummary(item: OverlayRowItem) {
   return isKeyBinding(item)
-    ? `${item.label} · ${item.id} · ${item.widthUnit}u`
-    : `${item.type} · ${item.widthUnit}u`;
+    ? t("layout.editorPanel.itemSummary", {
+      label: item.label,
+      id: item.id,
+      widthUnit: item.widthUnit,
+    })
+    : t("layout.editorPanel.gapSummary", { widthUnit: item.widthUnit });
 }
 
 function removeItem(rowIndex: number, itemIndex: number) {
@@ -367,7 +377,7 @@ function updateGapWidth(
 <template>
   <div class="grid gap-3.5">
     <div class="flex justify-end">
-      <BaseButton @click="appendRow">Add row</BaseButton>
+      <BaseButton @click="appendRow">{{ t("layout.editor.addRow") }}</BaseButton>
     </div>
     <article
       v-for="(row, rowIndex) in rows"
@@ -377,15 +387,15 @@ function updateGapWidth(
       <div class="flex items-center justify-between gap-3">
         <button class="flex items-center gap-2 min-w-0 border-0 bg-transparent text-text-body cursor-pointer p-0 text-left hover:text-[#f4f7fb]" type="button" @click="toggleRow(rowIndex)">
           <span :class="['inline-grid place-items-center w-3.5 text-[#8f9baa] text-xs leading-none origin-center transition-[color,transform] duration-[160ms,180ms] ease', !collapsedRows.has(rowIndex) && 'text-text-body rotate-90']">▸</span>
-          <strong class="text-sm transition-colors duration-[160ms] ease">Row {{ rowIndex + 1 }}</strong>
+          <strong class="text-sm transition-colors duration-[160ms] ease">{{ t("layout.editorPanel.row", { number: rowIndex + 1 }) }}</strong>
           <small class="overflow-hidden text-text-muted text-xs font-bold text-ellipsis whitespace-nowrap">{{ rowSummary(row) }}</small>
         </button>
         <div class="flex flex-wrap gap-2">
-          <BaseButton size="xs" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">Up</BaseButton>
-          <BaseButton size="xs" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">Down</BaseButton>
-          <BaseButton size="xs" @click="addKey(rowIndex)">Add key</BaseButton>
-          <BaseButton size="xs" @click="addGap(rowIndex)">Add gap</BaseButton>
-          <BaseButton size="xs" variant="danger" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">Delete row</BaseButton>
+          <BaseButton size="xs" :disabled="rowIndex === 0" @click="shiftRow(rowIndex, -1)">{{ t("layout.editor.up") }}</BaseButton>
+          <BaseButton size="xs" :disabled="rowIndex === rows.length - 1" @click="shiftRow(rowIndex, 1)">{{ t("layout.editor.down") }}</BaseButton>
+          <BaseButton size="xs" @click="addKey(rowIndex)">{{ t("layout.editor.addKey") }}</BaseButton>
+          <BaseButton size="xs" @click="addGap(rowIndex)">{{ t("layout.editor.addGap") }}</BaseButton>
+          <BaseButton size="xs" variant="danger" :disabled="rows.length <= 1" @click="deleteRow(rowIndex)">{{ t("layout.editor.deleteRow") }}</BaseButton>
         </div>
       </div>
 
@@ -400,7 +410,7 @@ function updateGapWidth(
               <div class="self-center min-w-0 overflow-hidden text-text-body text-xs font-extrabold text-ellipsis whitespace-nowrap">{{ itemSummary(item) }}</div>
               <template v-if="isKeyBinding(item)">
                 <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                  ID
+                  {{ t("layout.editor.id") }}
                   <input
                     :value="textDraft(rowIndex, itemIndex, 'id', item.id)"
                     autocapitalize="off"
@@ -416,7 +426,7 @@ function updateGapWidth(
                   </span>
                 </label>
                 <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                  Label
+                  {{ t("layout.editor.label") }}
                   <input
                     :value="textDraft(rowIndex, itemIndex, 'label', item.label)"
                     autocapitalize="off"
@@ -429,7 +439,7 @@ function updateGapWidth(
                   />
                 </label>
                 <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                  Width
+                  {{ t("layout.editor.width") }}
                   <input
                     :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
                     min="0.1"
@@ -445,13 +455,13 @@ function updateGapWidth(
                   size="xs"
                   @click="captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? cancelCapture() : beginCapture(rowIndex, itemIndex, item.id)"
                 >
-                  {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? "Press key..." : "Capture key" }}
+                  {{ captureTarget?.rowIndex === rowIndex && captureTarget?.itemIndex === itemIndex ? t("layout.editor.pressKey") : t("layout.editor.captureKey") }}
                 </BaseButton>
                 <BaseButton
                   size="xs"
                   @click="togglePlatformLabelEditor(rowIndex, itemIndex)"
                 >
-                  {{ isPlatformLabelEditorOpen(rowIndex, itemIndex) ? "Hide platform labels" : "Platform labels" }}
+                  {{ isPlatformLabelEditorOpen(rowIndex, itemIndex) ? t("layout.editor.hidePlatformLabels") : t("layout.editor.platformLabels") }}
                 </BaseButton>
                 <Transition name="field-reveal">
                   <div
@@ -459,7 +469,7 @@ function updateGapWidth(
                     class="grid col-span-full grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2 border-t border-border-control pt-2"
                   >
                     <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                      macOS label
+                      {{ t("layout.editor.macosLabel") }}
                       <input
                         :value="platformLabelDraft(rowIndex, itemIndex, item, 'macos')"
                         autocapitalize="off"
@@ -472,7 +482,7 @@ function updateGapWidth(
                       />
                     </label>
                     <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                      Windows label
+                      {{ t("layout.editor.windowsLabel") }}
                       <input
                         :value="platformLabelDraft(rowIndex, itemIndex, item, 'windows')"
                         autocapitalize="off"
@@ -485,7 +495,7 @@ function updateGapWidth(
                       />
                     </label>
                     <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                      Registered label
+                      {{ t("layout.editor.registeredLabel") }}
                       <input
                         :value="registryLabelDraft(rowIndex, itemIndex, item)"
                         autocapitalize="off"
@@ -501,9 +511,9 @@ function updateGapWidth(
                 </Transition>
               </template>
               <template v-else>
-                <div class="self-center text-text-muted text-xs font-extrabold uppercase">gap</div>
+                <div class="self-center text-text-muted text-xs font-extrabold uppercase">{{ t("layout.gapItem") }}</div>
                 <label class="grid gap-[5px] m-0 text-text-muted text-xs font-extrabold">
-                  Width
+                  {{ t("layout.editor.width") }}
                   <input
                     :value="widthDraft(rowIndex, itemIndex, item.widthUnit)"
                     min="0.1"
@@ -517,14 +527,14 @@ function updateGapWidth(
                 </label>
               </template>
               <BaseButton size="xs" variant="danger" @click="removeItem(rowIndex, itemIndex)">
-                Delete
+                {{ t("layout.editor.delete") }}
               </BaseButton>
               <div class="flex gap-1.5">
                 <BaseButton size="xs" :disabled="itemIndex === 0" @click="shiftItem(rowIndex, itemIndex, -1)">
-                  Left
+                  {{ t("layout.editor.left") }}
                 </BaseButton>
                 <BaseButton size="xs" :disabled="itemIndex === row.length - 1" @click="shiftItem(rowIndex, itemIndex, 1)">
-                  Right
+                  {{ t("layout.editor.right") }}
                 </BaseButton>
               </div>
             </div>

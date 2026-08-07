@@ -31,7 +31,7 @@
 
 ## Profile editor
 
-- [ ] Add a visual profile/config editor window.
+- [x] Add a visual profile/config editor window.
   - Current first pass adds a Layout Editor subtab for editing existing rows.
   - Current second pass supports adding, deleting, and reordering rows/items.
   - Current third pass supports capturing native input into a key id.
@@ -51,10 +51,21 @@
   - Show a live preview using the same renderer as the POV overlay.
   - Export the result as the documented profile JSON format.
   - Keep hand-written JSON support as a first-class workflow.
+  - Status review on 2026-08-03:
+    - Layout page now has Summary and Editor views.
+    - Editor supports row and item add/delete/reorder workflows.
+    - Editor supports key `id`, `label`, `widthUnit`, platform labels, and key id
+      label registry editing.
+    - Editor supports gap `widthUnit` editing.
+    - Editor captures native input-state events into key ids.
+    - Layout page renders a live preview through `PovOverlay`.
+    - Profile JSON load/export/overwrite remains the hand-written JSON workflow.
 
 ## Internationalization
 
 - [ ] Add multi-language support for the configuration UI and user-facing text.
+  - This is the next planned product-development track after the TODO status
+    cleanup.
   - Prefer one file per language, for example:
     - `locales/en.json`
     - `locales/zh-CN.json`
@@ -67,6 +78,26 @@
   - Avoid splitting one visible sentence across multiple translation keys.
   - Add a fallback language, likely English.
   - Add a simple missing-key check before release.
+  - First implementation pass should:
+    - Use `vue-i18n` as the frontend translation runtime instead of maintaining
+      a custom translation helper.
+    - Move configuration-window navigation, buttons, labels, status text, empty
+      states, and notification copy into locale files.
+    - Keep overlay-rendered key labels and user profile data out of translation.
+    - Keep backend-facing messages as stable error/status codes with structured
+      arguments where possible, then translate those codes in the frontend.
+    - Include a missing-key test so new locale files cannot silently drift.
+  - Current first pass:
+    - Added `vue-i18n` with `en` and `zh-CN` JSON locale files.
+    - Added missing-key alignment coverage for locale files.
+    - Migrated the app shell, navigation, topbar, Overview page, and Settings
+      page strings.
+    - Migrated Layout, Appearance, and Window page strings, including the layout
+      editor controls.
+    - Migrated the Recording control page and recording hotkey controls.
+    - Added the app-config language setting and runtime language switching.
+    - Remaining work: migrate Export, recording browser/editor/inspection,
+      notification, and backend-status copy.
 
 ## Recording sync
 
@@ -291,8 +322,21 @@
   - Keep only real user-selected profile paths.
   - Use it for quick switching in the config UI.
 
-- [ ] Add UI language setting after i18n exists.
+- [x] Add UI language setting after i18n exists.
   - Store only the selected language code in app config.
+  - Current state:
+    - `ui.language` already exists in the app config type and documented app
+      config schema.
+    - App config writing still stores `system`, and the Settings page does not
+      yet expose a language selector.
+  - Implement this after the translation runtime exists so the setting can be
+    applied immediately in the UI.
+  - Completed in the first i18n pass:
+    - Settings page exposes `system`, `en`, and `zh-CN`.
+    - App config preserves supported language codes and normalizes unsupported
+      values back to `system`.
+    - Language changes apply immediately through `vue-i18n` and are saved in app
+      config.
 
 ## Cross-platform gaps
 

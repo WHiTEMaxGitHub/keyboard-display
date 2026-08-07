@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import { normalizeHexColor } from "../domain/colorPicker";
 import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
 import BaseButton from "./BaseButton.vue";
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   "remember-color": [color: string];
   "refresh-pov": [];
 }>();
+
+const { t } = useI18n();
 
 function updateScale(event: Event) {
   const scale = Number((event.target as HTMLInputElement).value);
@@ -106,15 +109,15 @@ function setHexAlpha(color: string, alpha: number) {
 <template>
   <article class="box-border min-h-[190px] border border-[var(--glass-border)] rounded-[28px] bg-gradient-to-br from-[var(--glass-from)] to-[var(--glass-to)] backdrop-blur-2xl backdrop-saturate-[170%] shadow-[var(--glass-shadow)] p-[18px] w-full">
     <div class="flex items-center justify-between gap-3 mb-4">
-      <h2 class="m-0 text-lg leading-6 tracking-normal">Appearance</h2>
+      <h2 class="m-0 text-lg leading-6 tracking-normal">{{ t("appearance.title") }}</h2>
       <BaseButton @click="emit('refresh-pov')">
-        Refresh POV
+        {{ t("appearance.refreshPov") }}
       </BaseButton>
     </div>
     <label class="grid gap-2 mb-4 text-text-secondary font-bold">
       <span class="flex items-baseline justify-between gap-3">
-        <span>Scale</span>
-        <strong class="text-text-muted text-xs font-extrabold">{{ formatScale(config.style.scale) }} · {{ effectiveUnitPx() }}px unit</strong>
+        <span>{{ t("appearance.scale") }}</span>
+        <strong class="text-text-muted text-xs font-extrabold">{{ formatScale(config.style.scale) }} · {{ t("appearance.unitPx", { px: effectiveUnitPx() }) }}</strong>
       </span>
       <input
         :value="config.style.scale"
@@ -128,7 +131,7 @@ function setHexAlpha(color: string, alpha: number) {
       />
     </label>
     <label class="grid gap-2 mb-4 text-text-secondary font-bold">
-      Overlay transparency
+      {{ t("appearance.overlayTransparency") }}
       <input
         :value="config.style.opacity"
         min="0.35"
@@ -139,11 +142,11 @@ function setHexAlpha(color: string, alpha: number) {
         style="accent-color: var(--color-accent)"
         @input="updateOpacity"
       />
-      <span class="text-text-subtle text-xs font-medium">Controls the whole POV overlay opacity.</span>
+      <span class="text-text-subtle text-xs font-medium">{{ t("appearance.overlayTransparencyDescription") }}</span>
     </label>
     <div class="grid grid-cols-2 gap-3.5 mb-4">
       <label class="grid gap-2 mb-4 text-text-secondary font-bold">
-        Backplate radius
+        {{ t("appearance.backplateRadius") }}
         <input
           :value="config.style.backgroundRadius"
           min="0"
@@ -157,20 +160,20 @@ function setHexAlpha(color: string, alpha: number) {
       </label>
     </div>
     <label class="grid grid-cols-[minmax(120px,1fr)_minmax(180px,240px)] items-center gap-3 mb-4 text-text-secondary font-bold">
-      <span class="min-w-0">Idle keys</span>
+      <span class="min-w-0">{{ t("appearance.idleKeys") }}</span>
       <BaseSelect
         class="select-control justify-self-end w-[min(240px,100%)]"
         compact
         :model-value="config.style.idleKeyVisibility"
         @change="updateIdleKeyVisibility"
       >
-        <option value="visible">Visible</option>
-        <option value="hidden">Hidden until pressed</option>
+        <option value="visible">{{ t("appearance.idleVisibility.visible") }}</option>
+        <option value="hidden">{{ t("appearance.idleVisibility.hidden") }}</option>
       </BaseSelect>
     </label>
-    <div class="grid grid-cols-2 gap-2.5" aria-label="Overlay colors">
+    <div class="grid grid-cols-2 gap-2.5" :aria-label="t('appearance.colors.group')">
       <ColorPicker
-        label="Idle key"
+        :label="t('appearance.colors.idleKey')"
         :value="config.style.idleColor"
         :recent-colors="recentColors"
         alpha-enabled
@@ -179,7 +182,7 @@ function setHexAlpha(color: string, alpha: number) {
         @remember-color="emit('remember-color', $event)"
       />
       <ColorPicker
-        label="Pressed key"
+        :label="t('appearance.colors.pressedKey')"
         :value="config.style.activeColor"
         :recent-colors="recentColors"
         alpha-enabled
@@ -188,7 +191,7 @@ function setHexAlpha(color: string, alpha: number) {
         @remember-color="emit('remember-color', $event)"
       />
       <ColorPicker
-        label="Idle text"
+        :label="t('appearance.colors.idleText')"
         :value="config.style.idleTextColor"
         :recent-colors="recentColors"
         alpha-enabled
@@ -197,7 +200,7 @@ function setHexAlpha(color: string, alpha: number) {
         @remember-color="emit('remember-color', $event)"
       />
       <ColorPicker
-        label="Pressed text"
+        :label="t('appearance.colors.pressedText')"
         :value="config.style.activeTextColor"
         :recent-colors="recentColors"
         alpha-enabled
@@ -206,7 +209,7 @@ function setHexAlpha(color: string, alpha: number) {
         @remember-color="emit('remember-color', $event)"
       />
       <ColorPicker
-        label="Backplate"
+        :label="t('appearance.colors.backplate')"
         :value="config.style.backgroundColor"
         :recent-colors="recentColors"
         alpha-enabled
@@ -222,7 +225,7 @@ function setHexAlpha(color: string, alpha: number) {
           style="accent-color: var(--color-accent)"
           @change="updateBackplateTransparent"
         />
-        Transparent backplate
+        {{ t("appearance.colors.transparentBackplate") }}
       </label>
     </div>
   </article>

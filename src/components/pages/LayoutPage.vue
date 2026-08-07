@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { inject, computed, ref, type ComputedRef } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AppConfig } from "../../domain/defaultConfig";
 import { isKeyBinding } from "../../domain/defaultConfig";
 import BaseFieldRow from "../BaseFieldRow.vue";
@@ -14,12 +15,13 @@ const activeKeysRef = inject<ComputedRef<Set<string>>>("activeKeys")!;
 const activeKeys = computed(() => activeKeysRef.value);
 const keyIdLabels = inject<ComputedRef<AppConfig["keyIdLabels"]>>("keyIdLabels")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
+const { t } = useI18n();
 
 const layoutSubPage = ref<LayoutSubPage>("summary");
-const layoutSubPageOptions: Array<{ value: LayoutSubPage; label: string }> = [
-  { value: "summary", label: "Summary" },
-  { value: "editor", label: "Editor" },
-];
+const layoutSubPageOptions = computed<Array<{ value: LayoutSubPage; label: string }>>(() => [
+  { value: "summary", label: t("layout.views.summary") },
+  { value: "editor", label: t("layout.views.editor") },
+]);
 
 const layoutRows = computed(() => {
   return config.rows.map((items, index) => ({ row: index + 1, items }));
@@ -29,25 +31,25 @@ const layoutRows = computed(() => {
 <template>
   <section class="page-stack">
     <article class="panel">
-      <h2 class="m-0">Layout</h2>
+      <h2 class="m-0">{{ t("layout.title") }}</h2>
       <BaseSegmentedControl
         v-model="layoutSubPage"
         :options="layoutSubPageOptions"
-        aria-label="Layout view"
+        :aria-label="t('layout.view')"
       />
-      <BaseFieldRow label="Unit size">{{ config.layout.unitPx }}px</BaseFieldRow>
-      <BaseFieldRow label="Gap">{{ config.layout.gapUnit }} unit</BaseFieldRow>
-      <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
+      <BaseFieldRow :label="t('layout.unitSize')">{{ config.layout.unitPx }}px</BaseFieldRow>
+      <BaseFieldRow :label="t('layout.gap')">{{ config.layout.gapUnit }} {{ t("layout.unitSuffix") }}</BaseFieldRow>
+      <BaseFieldRow :label="t('layout.visibleKeys')">{{ config.keys.length }}</BaseFieldRow>
       <div v-if="layoutSubPage === 'summary'" class="layout-line-list">
         <div v-for="line in layoutRows" :key="line.row" class="layout-line">
-          <span class="line-label">Line {{ line.row }}:</span>
+          <span class="line-label">{{ t("layout.line", { number: line.row }) }}</span>
           <span class="line-keys">
             <span
               v-for="(item, index) in line.items"
               :key="`${line.row}-${index}`"
               :class="['line-key', { 'line-gap': !isKeyBinding(item) }]"
             >
-              {{ isKeyBinding(item) ? item.label : "Gap" }} · {{ item.widthUnit }}u
+              {{ isKeyBinding(item) ? item.label : t("layout.gapItem") }} · {{ item.widthUnit }}u
             </span>
           </span>
         </div>

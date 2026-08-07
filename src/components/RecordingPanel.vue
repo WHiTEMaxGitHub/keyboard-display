@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AppConfig, RecordingConfig } from "../domain/defaultConfig";
 import {
   clampRecordingFps,
@@ -30,6 +31,7 @@ const props = defineProps<{
   hotkeyCaptureTarget: "start" | "stop" | "sync" | null;
 }>();
 
+const { t } = useI18n();
 const activeRecordingFps = computed(() => effectiveRecordingFps(props.config.recording));
 const fpsOptions = computed(() =>
   props.config.recording.fpsOptions.map((fps) => ({
@@ -171,32 +173,37 @@ function addSyncMarker() {
 
 <template>
   <BasePanel wide>
-    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">Recording</h2>
-    <BaseFieldRow label="Save folder">
-      {{ recordingDirectory || `Default app folder: ${defaultRecordingDirectory || "loading..."}` }}
+    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">{{ t("recording.title") }}</h2>
+    <BaseFieldRow :label="t('recording.saveFolder')">
+      {{
+        recordingDirectory ||
+          t("recording.defaultFolder", {
+            path: defaultRecordingDirectory || t("recording.loading"),
+          })
+      }}
     </BaseFieldRow>
     <div class="flex flex-wrap gap-2 my-4">
-      <BaseButton @click="chooseRecordingDirectory">Choose folder</BaseButton>
+      <BaseButton @click="chooseRecordingDirectory">{{ t("recording.controls.chooseFolder") }}</BaseButton>
       <BaseButton
         variant="primary"
         :disabled="isRecording || recordingCountdown > 0"
         @click="startRecording"
       >
-        {{ recordingCountdown > 0 ? `Starting in ${recordingCountdown}` : "Start recording" }}
+        {{ recordingCountdown > 0 ? t("recording.controls.startingIn", { seconds: recordingCountdown }) : t("recording.controls.start") }}
       </BaseButton>
       <BaseButton :disabled="!isRecording" @click="stopRecording">
-        Stop recording
+        {{ t("recording.controls.stop") }}
       </BaseButton>
       <BaseButton :disabled="!isRecording" @click="addSyncMarker">
-        Add sync marker
+        {{ t("recording.controls.addSyncMarker") }}
       </BaseButton>
     </div>
     <BaseToggleRow :checked="silentRecording" @change="updateSilentRecording">
-      Silent recording
+      {{ t("recording.silent") }}
     </BaseToggleRow>
     <div class="flex items-center flex-wrap gap-2.5 mb-4">
       <BaseToggleRow compact :checked="config.recording.syncFeedbackEnabled" @change="updateSyncFeedbackEnabled">
-        Sync border flash
+        {{ t("recording.syncFlash") }}
       </BaseToggleRow>
       <input
         :disabled="!config.recording.syncFeedbackEnabled"
@@ -208,7 +215,7 @@ function addSyncMarker() {
         @change="commitSyncFeedbackDuration"
         @input="updateSyncFeedbackDuration"
       />
-      <span class="text-text-muted text-[13px] font-extrabold">ms</span>
+      <span class="text-text-muted text-[13px] font-extrabold">{{ t("recording.milliseconds") }}</span>
     </div>
     <RecordingHotkeysPanel
       :recording-hotkeys="recordingHotkeys"
@@ -220,11 +227,11 @@ function addSyncMarker() {
       <BaseSegmentedControl
         :model-value="selectedDefaultFps"
         :options="fpsOptions"
-        aria-label="Capture frame rate"
+        :aria-label="t('recording.captureFrameRate')"
         @update:model-value="selectRecordingFps"
       />
       <BaseToggleRow compact :checked="config.recording.customFpsEnabled" @change="updateCustomFpsEnabled">
-        Custom FPS
+        {{ t("recording.customFps") }}
       </BaseToggleRow>
       <input
         :disabled="!config.recording.customFpsEnabled"
@@ -238,12 +245,15 @@ function addSyncMarker() {
         @input="updateCustomFps"
       />
       <span class="text-text-muted text-[13px] font-extrabold">
-        {{ activeRecordingFps }}fps · {{ formatBytesPerSecond(estimatedRecordingBytesPerSecond) }} raw
+        {{ t("recording.rateSummary", {
+          fps: activeRecordingFps,
+          bytesPerSecond: formatBytesPerSecond(estimatedRecordingBytesPerSecond),
+        }) }}
       </span>
     </div>
-    <BaseFieldRow label="Primary artifact">{{ config.recording.formatExtension }}</BaseFieldRow>
+    <BaseFieldRow :label="t('recording.primaryArtifact')">{{ config.recording.formatExtension }}</BaseFieldRow>
     <label class="grid gap-[7px] mt-4 mb-4 text-text-secondary text-[13px] font-bold">
-      <span>Filename template</span>
+      <span>{{ t("recording.filename.label") }}</span>
       <input
         :value="filenameTemplateDraft"
         type="text"
@@ -255,15 +265,13 @@ function addSyncMarker() {
       />
     </label>
     <p class="notice">
-      Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime},
-      ${duration}, ${profileName}, ${profileSlug}, ${fps}
+      {{ t("recording.filename.variables") }}
     </p>
     <p class="notice">
-      Input frames are stored as compact binary state, then replayed for
-      rendering or export.
+      {{ t("recording.storage.description") }}
     </p>
     <p v-if="lastRecordingPath" class="notice">
-      Last recording: {{ lastRecordingPath }}
+      {{ t("recording.storage.lastRecording", { path: lastRecordingPath }) }}
     </p>
     <p v-if="recordingStatusMessage" class="mt-2.5 text-text-secondary text-[13px] font-bold">
       {{ recordingStatusMessage }}

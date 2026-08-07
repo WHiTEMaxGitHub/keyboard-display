@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import BaseButton from "./BaseButton.vue";
 import BaseSelect from "./BaseSelect.vue";
@@ -13,6 +14,8 @@ const emit = defineEmits<{
   "begin-hotkey-capture": [target: "start" | "stop" | "sync"];
 }>();
 
+const { t } = useI18n();
+
 function updateRecordingHotkeyMode(event: Event) {
   emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
 }
@@ -22,43 +25,43 @@ function beginHotkeyCapture(target: "start" | "stop" | "sync") {
 }
 
 function formatHotkey(keys: string[]) {
-  return keys.length > 0 ? keys.join(" + ") : "Not set";
+  return keys.length > 0 ? keys.join(" + ") : t("recording.hotkeys.notSet");
 }
 </script>
 
 <template>
   <div class="grid gap-2.5 my-4">
     <label class="grid grid-cols-[minmax(112px,1fr)_minmax(180px,240px)] items-center gap-2.5 m-0 text-text-secondary font-bold">
-      <span class="text-text-muted text-[13px] font-extrabold">Hotkey mode</span>
+      <span class="text-text-muted text-[13px] font-extrabold">{{ t("recording.hotkeys.mode") }}</span>
       <BaseSelect
         class="select-control justify-self-end w-[min(240px,100%)]"
         :model-value="recordingHotkeys.mode"
         @change="updateRecordingHotkeyMode"
       >
-        <option value="disabled">Disabled</option>
-        <option value="toggle">Toggle start/stop</option>
-        <option value="separate">Separate start/stop</option>
+        <option value="disabled">{{ t("recording.hotkeys.disabled") }}</option>
+        <option value="toggle">{{ t("recording.hotkeys.toggle") }}</option>
+        <option value="separate">{{ t("recording.hotkeys.separate") }}</option>
       </BaseSelect>
     </label>
     <div v-if="recordingHotkeys.mode !== 'disabled'" class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
-      <span class="text-text-muted text-[13px] font-extrabold">Start</span>
+      <span class="text-text-muted text-[13px] font-extrabold">{{ t("recording.hotkeys.start") }}</span>
       <strong class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{{ formatHotkey(recordingHotkeys.start) }}</strong>
       <BaseButton size="sm" @click="beginHotkeyCapture('start')">
-        {{ hotkeyCaptureTarget === "start" ? "Press shortcut..." : "Set" }}
+        {{ hotkeyCaptureTarget === "start" ? t("recording.hotkeys.pressShortcut") : t("recording.hotkeys.capture") }}
       </BaseButton>
     </div>
     <div v-if="recordingHotkeys.mode === 'separate'" class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
-      <span class="text-text-muted text-[13px] font-extrabold">Stop</span>
+      <span class="text-text-muted text-[13px] font-extrabold">{{ t("recording.hotkeys.stop") }}</span>
       <strong class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{{ formatHotkey(recordingHotkeys.stop) }}</strong>
       <BaseButton size="sm" @click="beginHotkeyCapture('stop')">
-        {{ hotkeyCaptureTarget === "stop" ? "Press shortcut..." : "Set" }}
+        {{ hotkeyCaptureTarget === "stop" ? t("recording.hotkeys.pressShortcut") : t("recording.hotkeys.capture") }}
       </BaseButton>
     </div>
     <div class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
-      <span class="text-text-muted text-[13px] font-extrabold">Sync</span>
+      <span class="text-text-muted text-[13px] font-extrabold">{{ t("recording.hotkeys.sync") }}</span>
       <strong class="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{{ formatHotkey(recordingHotkeys.sync) }}</strong>
       <BaseButton size="sm" @click="beginHotkeyCapture('sync')">
-        {{ hotkeyCaptureTarget === "sync" ? "Press shortcut..." : "Set" }}
+        {{ hotkeyCaptureTarget === "sync" ? t("recording.hotkeys.pressShortcut") : t("recording.hotkeys.capture") }}
       </BaseButton>
     </div>
   </div>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   Clapperboard,
   Eye,
@@ -23,21 +24,21 @@ type RecordingSubPage = "control" | "files";
 
 const navItems: Array<{
   id: ConfigPage;
-  label: string;
+  labelKey: string;
   icon: typeof Eye;
 }> = [
-  { id: "overview", label: "Overview", icon: Eye },
-  { id: "layout", label: "Layout", icon: MonitorUp },
-  { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "window", label: "Window", icon: MonitorCog },
-  { id: "recording", label: "Recording", icon: Clapperboard },
-  { id: "export", label: "Export", icon: Video },
-  { id: "settings", label: "App Config", icon: Settings },
+  { id: "overview", labelKey: "nav.overview", icon: Eye },
+  { id: "layout", labelKey: "nav.layout", icon: MonitorUp },
+  { id: "appearance", labelKey: "nav.appearance", icon: Palette },
+  { id: "window", labelKey: "nav.window", icon: MonitorCog },
+  { id: "recording", labelKey: "nav.recording", icon: Clapperboard },
+  { id: "export", labelKey: "nav.export", icon: Video },
+  { id: "settings", labelKey: "nav.settings", icon: Settings },
 ];
 
-const recordingNavItems: Array<{ id: RecordingSubPage; label: string }> = [
-  { id: "control", label: "Control" },
-  { id: "files", label: "Files" },
+const recordingNavItems: Array<{ id: RecordingSubPage; labelKey: string }> = [
+  { id: "control", labelKey: "nav.recordingControl" },
+  { id: "files", labelKey: "nav.recordingFiles" },
 ];
 
 defineProps<{
@@ -51,6 +52,7 @@ const emit = defineEmits<{
 }>();
 
 const expanded = ref(false);
+const { t } = useI18n();
 
 function selectPage(page: ConfigPage) {
   emit("update-active-page", page);
@@ -71,8 +73,8 @@ function selectRecordingSubPage(page: RecordingSubPage) {
     <div class="flex items-center gap-3 mb-7 px-3.5">
       <Keyboard :size="22" class="shrink-0" aria-hidden="true" />
       <div class="whitespace-nowrap opacity-0 transition-opacity duration-250 delay-100" :class="{ 'opacity-100': expanded }">
-        <strong class="block">Keyboard Display</strong>
-        <span class="block mt-0.5 text-xs text-text-muted">Desktop POV overlay</span>
+        <strong class="block">{{ t("app.name") }}</strong>
+        <span class="block mt-0.5 text-xs text-text-muted">{{ t("app.tagline") }}</span>
       </div>
     </div>
 
@@ -90,7 +92,7 @@ function selectRecordingSubPage(page: RecordingSubPage) {
           @click="selectPage(item.id)"
         >
           <component :is="item.icon" :size="18" class="shrink-0" aria-hidden="true" />
-          <span class="whitespace-nowrap opacity-0 transition-opacity duration-250 delay-100" :class="{ 'opacity-100': expanded }">{{ item.label }}</span>
+          <span class="whitespace-nowrap opacity-0 transition-opacity duration-250 delay-100" :class="{ 'opacity-100': expanded }">{{ t(item.labelKey) }}</span>
         </button>
         <div
           v-if="item.id === 'recording' && activePage === 'recording'"
@@ -109,7 +111,7 @@ function selectRecordingSubPage(page: RecordingSubPage) {
             @pointerdown="selectRecordingSubPage(child.id)"
             @click="selectRecordingSubPage(child.id)"
           >
-            {{ child.label }}
+            {{ t(child.labelKey) }}
           </button>
         </div>
       </template>
