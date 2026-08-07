@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   buildRecordingTimelineMarkers,
   type RecordingTimelineMarker,
@@ -11,6 +12,7 @@ const props = defineProps<{
   inspection: RecordingInspection;
 }>();
 
+const { t } = useI18n();
 const selectedTimelineMarker = ref<RecordingTimelineMarker | null>(null);
 
 const keyIds = computed(() => props.inspection.keyIds ?? []);
@@ -35,14 +37,14 @@ watch(
 
 function formatInspectionEvent(event: RecordingInspectionEvent) {
   if ("down" in event) {
-    return `frame ${event.frame} down ${event.down}`;
+    return t("recordingInspection.eventDown", { frame: event.frame, key: event.down });
   }
 
   if ("up" in event) {
-    return `frame ${event.frame} up ${event.up}`;
+    return t("recordingInspection.eventUp", { frame: event.frame, key: event.up });
   }
 
-  return `frame ${event.frame} marker ${event.marker}`;
+  return t("recordingInspection.eventMarker", { frame: event.frame, marker: event.marker });
 }
 
 function markerEvents(events: RecordingInspectionEvent[]) {
@@ -76,66 +78,66 @@ function padFrame(frame: number, fps: number) {
 
 <template>
   <div class="grid grid-cols-2 gap-x-[18px] gap-y-0">
-    <BaseFieldRow label="Version">{{ inspection.version }}</BaseFieldRow>
-    <BaseFieldRow label="FPS">{{ inspection.fps }}</BaseFieldRow>
-    <BaseFieldRow label="Keys">{{ keyIds.length }}</BaseFieldRow>
-    <BaseFieldRow label="Events">{{ events.length }}</BaseFieldRow>
-    <BaseFieldRow label="Frames">{{ frames.length }}</BaseFieldRow>
-    <BaseFieldRow label="Markers">
+    <BaseFieldRow :label="t('recordingInspection.version')">{{ inspection.version }}</BaseFieldRow>
+    <BaseFieldRow :label="t('recordingInspection.fps')">{{ inspection.fps }}</BaseFieldRow>
+    <BaseFieldRow :label="t('recordingInspection.keys')">{{ keyIds.length }}</BaseFieldRow>
+    <BaseFieldRow :label="t('recordingInspection.events')">{{ events.length }}</BaseFieldRow>
+    <BaseFieldRow :label="t('recordingInspection.frames')">{{ frames.length }}</BaseFieldRow>
+    <BaseFieldRow :label="t('recordingInspection.markers')">
       {{ events.filter((event) => "marker" in event).length }}
     </BaseFieldRow>
   </div>
 
   <div class="grid gap-2.5 border border-border-control rounded-lg bg-surface-control p-3.5">
     <div class="flex items-center justify-between gap-3">
-      <h3 class="m-0 text-base leading-[22px] tracking-normal">Marker timeline</h3>
+      <h3 class="m-0 text-base leading-[22px] tracking-normal">{{ t("recordingInspection.markerTimeline") }}</h3>
       <span class="text-text-muted">
-        {{ frames.length }} frames
+        {{ t("recordingInspection.framesCount", { count: frames.length }) }}
       </span>
     </div>
-    <div v-if="timelineMarkers.length" class="marker-timeline" aria-label="Marker timeline">
+    <div v-if="timelineMarkers.length" class="marker-timeline" :aria-label="t('recordingInspection.timeline')">
       <button
         v-for="(marker, index) in timelineMarkers"
         :key="`${marker.frame}-${marker.name}-${index}`"
         type="button"
         :class="['timeline-marker', { selected: selectedTimelineMarker === marker }]"
         :style="{ left: timelineMarkerPosition(marker.percent) }"
-        :title="`${marker.name} · frame ${marker.frame} · ${marker.timecode}`"
+        :title="t('recordingInspection.markerTitle', { name: marker.name, frame: marker.frame, timecode: marker.timecode })"
         @click="selectedTimelineMarker = marker"
       >
         <span class="timeline-marker-dot" />
         <span class="timeline-marker-label">{{ marker.name }}</span>
       </button>
     </div>
-    <p v-else class="text-text-muted">No markers in this recording.</p>
+    <p v-else class="text-text-muted">{{ t("recordingInspection.noMarkers") }}</p>
     <div v-if="selectedTimelineMarker" class="grid grid-cols-[minmax(120px,1fr)_minmax(90px,auto)_minmax(170px,auto)] gap-2.5 border border-border-control rounded-md bg-surface-control text-text-body font-mono text-xs px-2.5 py-2">
       <strong class="text-[#fff2c2] font-mono font-extrabold">{{ selectedTimelineMarker.name }}</strong>
-      <span>frame {{ selectedTimelineMarker.frame }}</span>
+      <span>{{ t("recordingInspection.frame", { frame: selectedTimelineMarker.frame }) }}</span>
       <span>{{ selectedTimelineMarker.timecode }}</span>
     </div>
   </div>
 
   <div class="grid gap-3.5">
     <div>
-      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Markers</h4>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">{{ t("recordingInspection.markers") }}</h4>
       <div class="grid gap-2">
         <div
           v-for="(event, index) in markerEvents(events)"
           :key="`${event.frame}-${event.marker}-${index}`"
           class="grid grid-cols-[minmax(120px,1.1fr)_minmax(100px,0.7fr)_minmax(180px,1.2fr)] gap-2.5 border border-border-control rounded-md bg-surface-control text-text-body font-mono text-xs px-2.5 py-2"
         >
-          <strong class="text-accent-text font-mono font-extrabold">marker {{ event.marker }}</strong>
-          <span>frame {{ event.frame }}</span>
-          <span>time {{ formatFrameTimecode(event.frame, inspection.fps) }}</span>
+          <strong class="text-accent-text font-mono font-extrabold">{{ t("recordingInspection.marker", { name: event.marker }) }}</strong>
+          <span>{{ t("recordingInspection.frame", { frame: event.frame }) }}</span>
+          <span>{{ t("recordingInspection.time", { timecode: formatFrameTimecode(event.frame, inspection.fps) }) }}</span>
         </div>
       </div>
     </div>
     <div>
-      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Key table</h4>
-      <p class="text-text-muted">{{ keyIds.join(", ") || "None" }}</p>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">{{ t("recordingInspection.keyTable") }}</h4>
+      <p class="text-text-muted">{{ keyIds.join(", ") || t("recordingInspection.none") }}</p>
     </div>
     <div>
-      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Events</h4>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">{{ t("recordingInspection.events") }}</h4>
       <ol class="grid gap-1.5 m-0 pl-[18px] text-text-body font-mono text-xs">
         <li
           v-for="(event, index) in events.slice(0, 8)"
@@ -146,13 +148,15 @@ function padFrame(frame: number, fps: number) {
       </ol>
     </div>
     <div>
-      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">Frames</h4>
+      <h4 class="mb-1.5 text-text-secondary text-[13px] tracking-normal">{{ t("recordingInspection.frames") }}</h4>
       <ol class="grid gap-1.5 m-0 pl-[18px] text-text-body font-mono text-xs">
         <li
           v-for="frame in frames.slice(0, 8)"
           :key="frame.frame"
         >
-          frame {{ frame.frame }}: {{ frame.keys.join(", ") || "none" }}
+          {{ frame.keys.length
+            ? t("recordingInspection.frameKeys", { frame: frame.frame, keys: frame.keys.join(", ") })
+            : t("recordingInspection.frameNoKeys", { frame: frame.frame }) }}
         </li>
       </ol>
     </div>

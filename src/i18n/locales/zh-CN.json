@@ -266,5 +266,83 @@
       "uninstallFailed": "视频导出器卸载失败: {error}"
     },
     "note": "视频由录制时间线生成，录制后仍可调整尺寸和格式。"
+  },
+  "recordingBrowser": {
+    "title": "录制文件",
+    "filesTitle": "文件",
+    "chooseFolder": "选择目录",
+    "newFolder": "新建目录",
+    "refresh": "刷新",
+    "loading": "加载中...",
+    "chooseFolderNotice": "选择目录以浏览 .kbdrec 文件。",
+    "chooseFolderFirst": "请先选择录制文件目录。",
+    "folderMissing": "录制目录不存在。它可能已被删除；新建目录或开始录制可重新初始化。",
+    "inspectionTitle": "录制检查",
+    "inspectFile": "检查 .kbdrec",
+    "folder": {
+      "name": "目录名",
+      "required": "目录名不能为空。",
+      "placeholder": "Match 01",
+      "create": "创建",
+      "creating": "创建中...",
+      "cancel": "取消"
+    }
+  },
+  "recordingMetadata": {
+    "eyebrow": "录制元数据",
+    "title": "旁车元数据",
+    "discard": "放弃并关闭",
+    "save": "保存",
+    "saving": "保存中...",
+    "saveAndClose": "保存并关闭",
+    "displayName": "显示名",
+    "displayNamePlaceholder": "浏览器显示名",
+    "description": "描述",
+    "descriptionPlaceholder": "这段录制的备注",
+    "tags": "标签",
+    "tagsPlaceholder": "sync, ranked, aim",
+    "chooseFileFirst": "请先选择录制文件。",
+    "saved": "元数据已保存。"
+  },
+  "recordingInspection": {
+    "version": "版本",
+    "fps": "FPS",
+    "keys": "按键",
+    "events": "事件",
+    "frames": "帧",
+    "markers": "标记",
+    "markerTimeline": "标记时间线",
+    "framesCount": "{count} 帧",
+    "timeline": "标记时间线",
+    "markerTitle": "{name} · 第 {frame} 帧 · {timecode}",
+    "noMarkers": "这段录制没有标记。",
+    "frame": "第 {frame} 帧",
+    "time": "时间 {timecode}",
+    "marker": "标记 {name}",
+    "keyTable": "按键表",
+    "none": "无",
+    "eventDown": "第 {frame} 帧 按下 {key}",
+    "eventUp": "第 {frame} 帧 松开 {key}",
+    "eventMarker": "第 {frame} 帧 标记 {marker}",
+    "frameKeys": "第 {frame} 帧: {keys}",
+    "frameNoKeys": "第 {frame} 帧: 无"
+  },
+  "recordingTree": {
+    "unknownTime": "未知时间",
+    "fileSummary": "{size} · {fps}fps · {frames} 帧 · {markers} 标记",
+    "tags": "标签: {tags}",
+    "inspectEdit": "检查 / 编辑",
+    "description": "描述",
+    "tagsTitle": "标签",
+    "markers": "标记",
+    "total": "共 {count}",
+    "markerFallback": "marker",
+    "dash": "-",
+    "markerColumns": {
+      "name": "名称",
+      "frame": "帧",
+      "timecode": "时间码",
+      "note": "备注"
+    }
   }
 }

@@ -72,4 +72,17 @@ describe("i18n", () => {
     expect(keys).toContain("export.dialog.chooseRecording");
     expect(keys).toContain("export.notification.installSuccess");
   });
+
+  it("contains recording browser and inspection locale sections", () => {
+    const keys = flattenLocaleKeys(en);
+
+    expect(keys).toContain("recordingBrowser.title");
+    expect(keys).toContain("recordingBrowser.folder.create");
+    expect(keys).toContain("recordingMetadata.title");
+    expect(keys).toContain("recordingMetadata.displayName");
+    expect(keys).toContain("recordingInspection.markerTimeline");
+    expect(keys).toContain("recordingInspection.keyTable");
+    expect(keys).toContain("recordingTree.inspectEdit");
+    expect(keys).toContain("recordingTree.markerColumns.timecode");
+  });
 });

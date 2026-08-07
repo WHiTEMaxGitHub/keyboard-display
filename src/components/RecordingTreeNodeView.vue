@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useI18n } from "vue-i18n";
 import type { RecordingFileSummary, RecordingTreeNode } from "../types/recording";
 import BaseButton from "./BaseButton.vue";
 
@@ -13,6 +14,7 @@ const emit = defineEmits<{
 
 const expanded = ref(true);
 const fileDetailsVisible = ref(false);
+const { t } = useI18n();
 
 function inspect(path: string) {
   emit("inspect", path);
@@ -36,7 +38,7 @@ function formatFileSize(bytes: number) {
 
 function formatFileTimes(summary: RecordingFileSummary) {
   if (!summary.startUnixMs || !summary.endUnixMs) {
-    return "unknown time";
+    return t("recordingTree.unknownTime");
   }
 
   return `${new Date(summary.startUnixMs).toLocaleString()} - ${new Date(summary.endUnixMs).toLocaleTimeString()}`;
@@ -125,16 +127,20 @@ function padFrame(frame: number, fps: number) {
           <strong class="overflow-hidden text-ellipsis whitespace-nowrap">{{ displayTitle(node) }}</strong>
           <small v-if="node.summary?.metadata.displayName" class="text-text-muted text-xs">{{ node.name }}</small>
           <small v-if="node.summary" class="text-text-muted text-xs">
-            {{ formatFileSize(node.summary.sizeBytes) }} · {{ node.summary.fps }}fps ·
-            {{ node.summary.frameCount }} frames · {{ node.summary.markerCount }} markers
+            {{ t("recordingTree.fileSummary", {
+              size: formatFileSize(node.summary.sizeBytes),
+              fps: node.summary.fps,
+              frames: node.summary.frameCount,
+              markers: node.summary.markerCount,
+            }) }}
           </small>
           <small v-if="node.summary?.metadata.tags.length" class="text-text-muted text-xs">
-            tags: {{ node.summary.metadata.tags.join(", ") }}
+            {{ t("recordingTree.tags", { tags: node.summary.metadata.tags.join(", ") }) }}
           </small>
           <small v-if="node.summary" class="text-text-muted text-xs">{{ formatFileTimes(node.summary) }}</small>
         </span>
         <BaseButton class="justify-self-end" size="sm" @click.stop="inspect(node.path)">
-          Inspect / edit
+          {{ t("recordingTree.inspectEdit") }}
         </BaseButton>
       </div>
       <div
@@ -145,34 +151,34 @@ function padFrame(frame: number, fps: number) {
       >
         <div v-if="node.summary && hasFileDetails(node.summary)" class="grid gap-2 ml-[18px] min-h-0 overflow-hidden border border-border-control rounded-md bg-surface-control text-text-body p-2.5">
           <div v-if="node.summary.metadata.description" class="grid gap-[3px] min-w-0">
-            <strong class="text-text-secondary text-xs">Description</strong>
+            <strong class="text-text-secondary text-xs">{{ t("recordingTree.description") }}</strong>
             <span class="overflow-wrap-anywhere text-text-muted text-xs">{{ node.summary.metadata.description }}</span>
           </div>
           <div v-if="node.summary.metadata.tags.length" class="grid gap-[3px] min-w-0">
-            <strong class="text-text-secondary text-xs">Tags</strong>
+            <strong class="text-text-secondary text-xs">{{ t("recordingTree.tagsTitle") }}</strong>
             <span class="overflow-wrap-anywhere text-text-muted text-xs">{{ node.summary.metadata.tags.join(", ") }}</span>
           </div>
           <div class="grid gap-2 mt-0.5">
             <div class="flex items-baseline justify-between gap-3">
-              <strong class="text-text-body text-[13px]">Markers</strong>
-              <span class="text-text-muted text-xs font-bold">{{ node.summary.markerCount }} total</span>
+              <strong class="text-text-body text-[13px]">{{ t("recordingTree.markers") }}</strong>
+              <span class="text-text-muted text-xs font-bold">{{ t("recordingTree.total", { count: node.summary.markerCount }) }}</span>
             </div>
             <div v-if="node.summary.markers.length" class="grid overflow-hidden border border-border-dim rounded-md">
               <div class="grid grid-cols-[minmax(110px,0.9fr)_minmax(90px,auto)_minmax(190px,auto)_minmax(120px,1fr)] gap-2.5 items-center px-2.5 py-2 bg-white/[0.035] text-text-subtle text-[11px] font-extrabold uppercase">
-                <span>Name</span>
-                <span>Frame</span>
-                <span>Timecode</span>
-                <span>Note</span>
+                <span>{{ t("recordingTree.markerColumns.name") }}</span>
+                <span>{{ t("recordingTree.markerColumns.frame") }}</span>
+                <span>{{ t("recordingTree.markerColumns.timecode") }}</span>
+                <span>{{ t("recordingTree.markerColumns.note") }}</span>
               </div>
               <div
                 v-for="marker in node.summary.markers"
                 :key="`${marker.frame}-${marker.name}`"
                 class="marker-note-row"
               >
-                <strong class="text-text-body font-mono font-extrabold text-xs">{{ marker.name || "marker" }}</strong>
-                <span class="min-w-0 overflow-wrap-anywhere">frame {{ marker.frame }}</span>
+                <strong class="text-text-body font-mono font-extrabold text-xs">{{ marker.name || t("recordingTree.markerFallback") }}</strong>
+                <span class="min-w-0 overflow-wrap-anywhere">{{ t("recordingInspection.frame", { frame: marker.frame }) }}</span>
                 <span class="min-w-0 overflow-wrap-anywhere">{{ formatMarkerTime(marker.frame, node.summary.fps) }}</span>
-                <span class="min-w-0 overflow-wrap-anywhere">{{ markerNoteFor(node.summary, marker)?.note || "-" }}</span>
+                <span class="min-w-0 overflow-wrap-anywhere">{{ markerNoteFor(node.summary, marker)?.note || t("recordingTree.dash") }}</span>
               </div>
             </div>
           </div>

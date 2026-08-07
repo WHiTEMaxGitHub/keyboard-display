@@ -266,5 +266,83 @@
       "uninstallFailed": "Video exporter uninstall failed: {error}"
     },
     "note": "Video is generated from the input timeline, so size and format can be tuned after recording."
+  },
+  "recordingBrowser": {
+    "title": "Recordings",
+    "filesTitle": "Recording files",
+    "chooseFolder": "Choose folder",
+    "newFolder": "New folder",
+    "refresh": "Refresh",
+    "loading": "Loading...",
+    "chooseFolderNotice": "Choose a folder to browse .kbdrec files.",
+    "chooseFolderFirst": "Choose a recording files folder first.",
+    "folderMissing": "Recording folder does not exist yet. It may have been deleted; create a folder or start recording to initialize it again.",
+    "inspectionTitle": "Recording inspection",
+    "inspectFile": "Inspect .kbdrec",
+    "folder": {
+      "name": "Folder name",
+      "required": "Folder name is required.",
+      "placeholder": "Match 01",
+      "create": "Create",
+      "creating": "Creating...",
+      "cancel": "Cancel"
+    }
+  },
+  "recordingMetadata": {
+    "eyebrow": "Recording metadata",
+    "title": "Sidecar metadata",
+    "discard": "Discard & Close",
+    "save": "Save",
+    "saving": "Saving...",
+    "saveAndClose": "Save & Close",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Browser display name",
+    "description": "Description",
+    "descriptionPlaceholder": "Notes for this recording",
+    "tags": "Tags",
+    "tagsPlaceholder": "sync, ranked, aim",
+    "chooseFileFirst": "Choose a recording file first.",
+    "saved": "Metadata saved."
+  },
+  "recordingInspection": {
+    "version": "Version",
+    "fps": "FPS",
+    "keys": "Keys",
+    "events": "Events",
+    "frames": "Frames",
+    "markers": "Markers",
+    "markerTimeline": "Marker timeline",
+    "framesCount": "{count} frames",
+    "timeline": "Marker timeline",
+    "markerTitle": "{name} · frame {frame} · {timecode}",
+    "noMarkers": "No markers in this recording.",
+    "frame": "frame {frame}",
+    "time": "time {timecode}",
+    "marker": "marker {name}",
+    "keyTable": "Key table",
+    "none": "None",
+    "eventDown": "frame {frame} down {key}",
+    "eventUp": "frame {frame} up {key}",
+    "eventMarker": "frame {frame} marker {marker}",
+    "frameKeys": "frame {frame}: {keys}",
+    "frameNoKeys": "frame {frame}: none"
+  },
+  "recordingTree": {
+    "unknownTime": "unknown time",
+    "fileSummary": "{size} · {fps}fps · {frames} frames · {markers} markers",
+    "tags": "tags: {tags}",
+    "inspectEdit": "Inspect / edit",
+    "description": "Description",
+    "tagsTitle": "Tags",
+    "markers": "Markers",
+    "total": "{count} total",
+    "markerFallback": "marker",
+    "dash": "-",
+    "markerColumns": {
+      "name": "Name",
+      "frame": "Frame",
+      "timecode": "Timecode",
+      "note": "Note"
+    }
   }
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { tauriApi } from "../api/tauri";
 import type { RecordingMetadata } from "../types/recording";
 import BaseButton from "./BaseButton.vue";
@@ -19,6 +20,7 @@ const metadataTagsDraft = ref("");
 const metadataStatus = ref("");
 const metadataError = ref("");
 const metadataSaving = ref(false);
+const { t } = useI18n();
 
 watch(
   () => props.path,
@@ -47,7 +49,7 @@ async function loadRecordingMetadata(path: string) {
 
 async function saveRecordingMetadata() {
   if (!props.path) {
-    metadataError.value = "Choose a recording file first.";
+    metadataError.value = t("recordingMetadata.chooseFileFirst");
     return false;
   }
 
@@ -58,7 +60,7 @@ async function saveRecordingMetadata() {
   try {
     const metadata = await tauriApi.saveRecordingMetadata(props.path, metadataFromDraft());
     setMetadataDraft(metadata);
-    metadataStatus.value = "Metadata saved.";
+    metadataStatus.value = t("recordingMetadata.saved");
     emit("saved");
     return true;
   } catch (error) {
@@ -111,33 +113,33 @@ function createEmptyMetadata(): RecordingMetadata {
   <section class="grid gap-3 border border-border-control rounded-lg bg-surface-control p-3.5">
     <div class="flex items-start justify-between gap-3 mb-1 border-b border-border-dim pb-3 max-[520px]:flex-col max-[520px]:items-stretch">
       <div>
-        <p class="m-0 text-text-muted text-[11px] font-extrabold tracking-[0.08em] uppercase">Recording metadata</p>
-        <h3 class="m-0 mt-0.5 text-base leading-[22px] tracking-normal">Sidecar metadata</h3>
+        <p class="m-0 text-text-muted text-[11px] font-extrabold tracking-[0.08em] uppercase">{{ t("recordingMetadata.eyebrow") }}</p>
+        <h3 class="m-0 mt-0.5 text-base leading-[22px] tracking-normal">{{ t("recordingMetadata.title") }}</h3>
       </div>
       <div class="flex flex-wrap justify-end gap-2">
         <BaseButton :disabled="metadataSaving" @click="emit('discard-and-close')">
-          Discard & Close
+          {{ t("recordingMetadata.discard") }}
         </BaseButton>
         <BaseButton :disabled="metadataSaving" @click="saveRecordingMetadata">
-          {{ metadataSaving ? "Saving..." : "Save" }}
+          {{ metadataSaving ? t("recordingMetadata.saving") : t("recordingMetadata.save") }}
         </BaseButton>
         <BaseButton variant="primary" :disabled="metadataSaving" @click="saveRecordingMetadataAndClose">
-          {{ metadataSaving ? "Saving..." : "Save & Close" }}
+          {{ metadataSaving ? t("recordingMetadata.saving") : t("recordingMetadata.saveAndClose") }}
         </BaseButton>
       </div>
     </div>
     <p class="m-0 overflow-wrap-anywhere text-text-muted font-mono text-xs">{{ path }}</p>
     <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
-      <span>Display name</span>
-      <input v-model="metadataDraft.displayName" type="text" placeholder="Browser display name" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]" />
+      <span>{{ t("recordingMetadata.displayName") }}</span>
+      <input v-model="metadataDraft.displayName" type="text" :placeholder="t('recordingMetadata.displayNamePlaceholder')" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]" />
     </label>
     <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
-      <span>Description</span>
-      <textarea v-model="metadataDraft.description" rows="3" placeholder="Notes for this recording" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px] resize-y" />
+      <span>{{ t("recordingMetadata.description") }}</span>
+      <textarea v-model="metadataDraft.description" rows="3" :placeholder="t('recordingMetadata.descriptionPlaceholder')" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px] resize-y" />
     </label>
     <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
-      <span>Tags</span>
-      <input v-model="metadataTagsDraft" type="text" placeholder="sync, ranked, aim" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]" />
+      <span>{{ t("recordingMetadata.tags") }}</span>
+      <input v-model="metadataTagsDraft" type="text" :placeholder="t('recordingMetadata.tagsPlaceholder')" class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]" />
     </label>
     <p v-if="metadataStatus" class="m-0 text-[#9ff0b9] text-[13px] font-bold">{{ metadataStatus }}</p>
     <p v-if="metadataError" class="error">{{ metadataError }}</p>

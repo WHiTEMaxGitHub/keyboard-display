@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { tauriApi } from "../api/tauri";
 import type {
   RecordingInspection,
@@ -24,6 +25,7 @@ const recordingTreeLoading = ref(false);
 const folderNameDraft = ref("");
 const folderCreating = ref(false);
 const folderEditorVisible = ref(false);
+const { t } = useI18n();
 
 const recordingRoot = computed(() => props.recordingBrowserDirectory);
 
@@ -41,7 +43,7 @@ function inspectRecordingFile() {
 async function refreshRecordingTree() {
   const root = recordingRoot.value;
   if (!root) {
-    recordingTreeError.value = "Choose a recording files folder first.";
+    recordingTreeError.value = t("recordingBrowser.chooseFolderFirst");
     return;
   }
 
@@ -84,12 +86,12 @@ async function createRecordingFolder() {
   const folderName = folderNameDraft.value.trim();
 
   if (!root) {
-    recordingTreeError.value = "Choose a recording files folder first.";
+    recordingTreeError.value = t("recordingBrowser.chooseFolderFirst");
     return;
   }
 
   if (!folderName) {
-    recordingTreeError.value = "Folder name is required.";
+    recordingTreeError.value = t("recordingBrowser.folder.required");
     return;
   }
 
@@ -120,48 +122,47 @@ function saveAndCloseRecordingMetadata() {
 
 <template>
   <BasePanel wide>
-    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">Recordings</h2>
+    <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">{{ t("recordingBrowser.title") }}</h2>
     <div class="flex items-center justify-between gap-3 mb-4">
-      <h3 class="m-0 text-base leading-[22px] tracking-normal">Recording files</h3>
+      <h3 class="m-0 text-base leading-[22px] tracking-normal">{{ t("recordingBrowser.filesTitle") }}</h3>
       <div class="flex flex-wrap justify-end gap-2">
         <BaseButton @click="emit('choose-recording-browser-directory')">
-          Choose folder
+          {{ t("recordingBrowser.chooseFolder") }}
         </BaseButton>
         <BaseButton @click="showFolderEditor">
-          New folder
+          {{ t("recordingBrowser.newFolder") }}
         </BaseButton>
         <BaseButton :disabled="recordingTreeLoading" @click="refreshRecordingTree">
-          {{ recordingTreeLoading ? "Loading..." : "Refresh" }}
+          {{ recordingTreeLoading ? t("recordingBrowser.loading") : t("recordingBrowser.refresh") }}
         </BaseButton>
       </div>
     </div>
     <p class="notice">
-      {{ recordingBrowserDirectory || "Choose a folder to browse .kbdrec files." }}
+      {{ recordingBrowserDirectory || t("recordingBrowser.chooseFolderNotice") }}
     </p>
     <form v-if="folderEditorVisible" class="grid gap-2.5 border border-border-control rounded-lg bg-surface-control p-3 my-4" @submit.prevent="createRecordingFolder">
       <label class="grid gap-1.5 text-text-secondary text-[13px] font-bold">
-        <span>Folder name</span>
+        <span>{{ t("recordingBrowser.folder.name") }}</span>
         <input
           v-model="folderNameDraft"
           type="text"
-          placeholder="Match 01"
+          :placeholder="t('recordingBrowser.folder.placeholder')"
           :disabled="folderCreating"
           class="w-full box-border border border-border-control rounded-md bg-surface-control text-text-body font-inherit px-2.5 py-[9px]"
         />
       </label>
       <div class="flex flex-wrap justify-end gap-2">
         <BaseButton type="submit" :disabled="folderCreating">
-          {{ folderCreating ? "Creating..." : "Create" }}
+          {{ folderCreating ? t("recordingBrowser.folder.creating") : t("recordingBrowser.folder.create") }}
         </BaseButton>
         <BaseButton :disabled="folderCreating" @click="cancelFolderEditor">
-          Cancel
+          {{ t("recordingBrowser.folder.cancel") }}
         </BaseButton>
       </div>
     </form>
     <p v-if="recordingTreeError" class="error">{{ recordingTreeError }}</p>
     <p v-else-if="recordingTree && !recordingTree.exists" class="notice-text">
-      Recording folder does not exist yet. It may have been deleted; create a
-      folder or start recording to initialize it again.
+      {{ t("recordingBrowser.folderMissing") }}
     </p>
     <div v-if="recordingTree" class="grid gap-1.5 max-h-[360px] overflow-auto mt-4">
       <RecordingTreeNodeView
@@ -172,9 +173,9 @@ function saveAndCloseRecordingMetadata() {
 
     <div class="grid gap-3.5 mt-5 border-t border-border-dim pt-4">
       <div class="flex items-center justify-between gap-3">
-        <h3 class="m-0 text-base leading-[22px] tracking-normal">Recording inspection</h3>
+        <h3 class="m-0 text-base leading-[22px] tracking-normal">{{ t("recordingBrowser.inspectionTitle") }}</h3>
         <BaseButton @click="inspectRecordingFile">
-          Inspect .kbdrec
+          {{ t("recordingBrowser.inspectFile") }}
         </BaseButton>
       </div>
       <p v-if="recordingInspectionError" class="error">{{ recordingInspectionError }}</p>

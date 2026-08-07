@@ -97,9 +97,10 @@
     - Migrated the Recording control page and recording hotkey controls.
     - Migrated Export page, exporter setup, export progress, and export
       notification copy.
+    - Migrated recording browser, metadata editor, tree details, and inspection
+      views.
     - Added the app-config language setting and runtime language switching.
-    - Remaining work: migrate recording browser/editor/inspection, remaining
-      notification, and backend-status copy.
+    - Remaining work: migrate remaining notification and backend-status copy.
 
 ## Recording sync
 
