@@ -1,0 +1,189 @@
+{
+  "app": {
+    "name": "Keyboard Display",
+    "tagline": "Desktop POV overlay"
+  },
+  "common": {
+    "chooseProfile": "Choose a profile",
+    "noRecentProfiles": "No recent profiles"
+  },
+  "nav": {
+    "overview": "Overview",
+    "layout": "Layout",
+    "appearance": "Appearance",
+    "window": "Window",
+    "recording": "Recording",
+    "recordingControl": "Control",
+    "recordingFiles": "Files",
+    "export": "Export",
+    "settings": "App Config"
+  },
+  "topbar": {
+    "profile": "Profile",
+    "loadConfig": "Load config",
+    "exportApply": "Export & Apply",
+    "overwriteApply": "Overwrite & Apply"
+  },
+  "overview": {
+    "livePreview": "Live Preview",
+    "profile": "Profile",
+    "name": "Name",
+    "status": "Status",
+    "unsavedChanges": "Unsaved changes",
+    "saved": "Saved",
+    "visibleKeys": "Visible keys",
+    "recentProfiles": "Recent profiles",
+    "quickControls": "Quick controls",
+    "showOverlay": "Show POV overlay",
+    "alwaysOnTop": "Always on top"
+  },
+  "settings": {
+    "application": "Application",
+    "appConfig": "App Config",
+    "configFile": "Config file",
+    "currentProfile": "Current profile",
+    "profileStatus": "Profile status",
+    "recentProfiles": "Recent profiles",
+    "interface": "Interface",
+    "theme": "Theme",
+    "activeTheme": "Active interface theme",
+    "language": "Language",
+    "languageDescription": "Configuration UI language",
+    "recentConfigs": "Recent Configs",
+    "noRecentProfiles": "No recent profiles stored yet.",
+    "future": "Future",
+    "appLevelSettings": "App-Level Settings",
+    "recordingDefaults": "Recording defaults",
+    "exporterSettings": "Exporter settings",
+    "interfaceSettings": "Interface settings",
+    "storedInAppConfig": "Stored in app config",
+    "readyForExpansion": "Ready for expansion",
+    "languageOption": {
+      "system": "Follow system",
+      "en": "English",
+      "zh-CN": "Simplified Chinese"
+    }
+  },
+  "layout": {
+    "title": "Layout",
+    "view": "Layout view",
+    "views": {
+      "summary": "Summary",
+      "editor": "Editor"
+    },
+    "unitSize": "Unit size",
+    "gap": "Gap",
+    "visibleKeys": "Visible keys",
+    "line": "Line {number}:",
+    "gapItem": "Gap",
+    "unitSuffix": "unit",
+    "editorPanel": {
+      "row": "Row {number}",
+      "rowSummary": "{keyCount} keys · {gapCount} gaps · {itemCount} items",
+      "itemSummary": "{label} · {id} · {widthUnit}u",
+      "gapSummary": "gap · {widthUnit}u"
+    },
+    "editor": {
+      "addRow": "Add row",
+      "up": "Up",
+      "down": "Down",
+      "addKey": "Add key",
+      "addGap": "Add gap",
+      "deleteRow": "Delete row",
+      "id": "ID",
+      "label": "Label",
+      "width": "Width",
+      "pressKey": "Press key...",
+      "captureKey": "Capture key",
+      "hidePlatformLabels": "Hide platform labels",
+      "platformLabels": "Platform labels",
+      "macosLabel": "macOS label",
+      "windowsLabel": "Windows label",
+      "registeredLabel": "Registered label",
+      "delete": "Delete",
+      "left": "Left",
+      "right": "Right"
+    }
+  },
+  "appearance": {
+    "title": "Appearance",
+    "refreshPov": "Refresh POV",
+    "scale": "Scale",
+    "unitPx": "{px}px unit",
+    "overlayTransparency": "Overlay transparency",
+    "overlayTransparencyDescription": "Controls the whole POV overlay opacity.",
+    "backplateRadius": "Backplate radius",
+    "idleKeys": "Idle keys",
+    "idleVisibility": {
+      "visible": "Visible",
+      "hidden": "Hidden until pressed"
+    },
+    "colors": {
+      "group": "Overlay colors",
+      "idleKey": "Idle key",
+      "pressedKey": "Pressed key",
+      "idleText": "Idle text",
+      "pressedText": "Pressed text",
+      "backplate": "Backplate",
+      "transparentBackplate": "Transparent backplate"
+    }
+  },
+  "window": {
+    "title": "Window",
+    "positionLabel": "Position",
+    "visualAdjust": "Visual adjust",
+    "showOverlay": "Show POV overlay",
+    "alwaysOnTop": "Always on top",
+    "adjust": {
+      "start": "Adjust position",
+      "savePosition": "Save position",
+      "cancel": "Cancel"
+    },
+    "position": {
+      "topLeft": "Top left",
+      "topRight": "Top right",
+      "bottomLeft": "Bottom left",
+      "bottomRight": "Bottom right"
+    }
+  },
+  "recording": {
+    "title": "Recording",
+    "saveFolder": "Save folder",
+    "defaultFolder": "Default app folder: {path}",
+    "loading": "loading...",
+    "silent": "Silent recording",
+    "syncFlash": "Sync border flash",
+    "milliseconds": "ms",
+    "captureFrameRate": "Capture frame rate",
+    "customFps": "Custom FPS",
+    "rateSummary": "{fps}fps · {bytesPerSecond} raw",
+    "primaryArtifact": "Primary artifact",
+    "controls": {
+      "chooseFolder": "Choose folder",
+      "startingIn": "Starting in {seconds}",
+      "start": "Start recording",
+      "stop": "Stop recording",
+      "addSyncMarker": "Add sync marker"
+    },
+    "filename": {
+      "label": "Filename template",
+      "variables": "Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
+    },
+    "storage": {
+      "description": "Input frames are stored as compact binary state, then replayed for rendering or export.",
+      "lastRecording": "Last recording: {path}"
+    },
+    "hotkeys": {
+      "mode": "Hotkey mode",
+      "disabled": "Disabled",
+      "toggle": "Toggle start/stop",
+      "separate": "Separate start/stop",
+      "start": "Start",
+      "stop": "Stop",
+      "sync": "Sync",
+      "notSet": "Not set",
+      "pressShortcut": "Press shortcut...",
+      "capture": "Set"
+    }
+  }
+}

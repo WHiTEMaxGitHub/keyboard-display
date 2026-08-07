@@ -13,6 +13,7 @@ import {
   type VideoExporterConfig,
 } from "./videoExporter";
 import { sanitizeExportFilenameTemplate } from "./exportFilename";
+import { normalizeUiLanguage, type UiLanguage } from "./uiLanguage";
 
 export type RecentProfile = {
   name: string;
@@ -63,7 +64,7 @@ export type AppConfigFile = {
     video: VideoExporterConfig;
   };
   ui: {
-    language: string;
+    language: UiLanguage;
   };
 };
 
@@ -77,12 +78,14 @@ export function buildAppConfigFile({
   currentProfile,
   recording,
   exporter,
+  ui,
 }: {
   defaultProfilePath: string;
   recentProfiles: RecentProfile[];
   currentProfile: CurrentProfile;
   recording: AppConfigFile["recording"];
   exporter: AppConfigFile["exporter"];
+  ui?: Partial<AppConfigFile["ui"]>;
 }): PersistedAppConfigFile {
   const nextRecentProfiles = mergeRecentProfiles(recentProfiles, currentProfile);
 
@@ -111,7 +114,7 @@ export function buildAppConfigFile({
       video: normalizeVideoExporterConfig(exporter.video),
     },
     ui: {
-      language: "system",
+      language: normalizeUiLanguage(ui?.language),
     },
   };
 }
@@ -185,6 +188,9 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       video: normalizeVideoExporterConfig(
         config.exporter?.video ?? createDefaultVideoExporterConfig(),
       ),
+    },
+    ui: {
+      language: normalizeUiLanguage(config.ui?.language),
     },
   };
 }

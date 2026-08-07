@@ -18,6 +18,7 @@ import { useTheme } from "./composables/useTheme";
 import AmbientBackground from "./components/AmbientBackground.vue";
 import { buildAppConfigFile } from "./domain/appConfig";
 import { type OverlayStyle } from "./domain/defaultConfig";
+import { setI18nLanguage } from "./i18n";
 import {
   OVERLAY_CONFIG_EVENT,
   OVERLAY_READY_EVENT,
@@ -50,6 +51,7 @@ const {
   syncFeedbackActive,
   videoExporterConfig,
   recordingBrowserDirectory,
+  uiLanguage,
   applyOverlayStyle,
   applyOverlayRows,
   applyKeyIdLabels,
@@ -65,6 +67,7 @@ const {
   updateRecordingConfig,
   updateExportConfig,
   updateVideoExporterConfig,
+  updateUiLanguage,
   chooseRecordingBrowserDirectory,
   dispose,
 } = useAppConfig({ isOverlayWindow });
@@ -241,10 +244,19 @@ async function saveAppConfig() {
     exporter: {
       video: videoExporterConfig.value,
     },
+    ui: {
+      language: uiLanguage.value,
+    },
   });
   recentProfiles.value = appConfig.profiles.recentProfiles;
 
   await tauriApi.saveAppConfig(`${JSON.stringify(appConfig, null, 2)}\n`);
+}
+
+function setUiLanguage(language: typeof uiLanguage.value) {
+  updateUiLanguage(language);
+  setI18nLanguage(uiLanguage.value);
+  scheduleSave();
 }
 
 function updateRecordingHotkeyMode(mode: RecordingHotkeyMode) {
@@ -269,6 +281,7 @@ onMounted(async () => {
         recordingHotkeys.value = recording.hotkeys;
       },
     );
+    setI18nLanguage(uiLanguage.value);
     unlistenCloseRequested = await getCurrentWindow().onCloseRequested(async () => {
       await destroyOverlayWindow();
     });
@@ -389,6 +402,7 @@ onUnmounted(() => {
       :video-exporter-config="videoExporterConfig"
       :notifications="notifications"
       :theme-id="themeId"
+      :ui-language="uiLanguage"
       :app-config-path="appConfigPath"
       @preview-overlay-style="previewOverlayStyle"
       @update-key-id-labels="updateKeyIdLabels"
@@ -406,6 +420,7 @@ onUnmounted(() => {
       @update-recording-config="(r: RecordingConfig) => { updateRecordingConfig(r); scheduleSave(); }"
       @update-export-config="(e: any) => { updateExportConfig(e); scheduleSave(); }"
       @update-video-exporter-config="(v: any) => { updateVideoExporterConfig(v); scheduleSave(); }"
+      @set-ui-language="setUiLanguage"
       @notify="notify"
       @dismiss-notification="dismissNotification"
       @set-theme="(id: any) => setTheme(id)"

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, provide, ref } from "vue";
+import { useI18n } from "vue-i18n";
 import type { AppConfig, ExportConfig, OverlayStyle } from "../domain/defaultConfig";
 import type { RecentProfile } from "../domain/appConfig";
+import type { UiLanguage } from "../domain/uiLanguage";
 import type { AppNotification, NotificationTone } from "../composables/useNotifications";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import type { VideoExporterConfig } from "../domain/videoExporter";
@@ -57,6 +59,7 @@ const props = defineProps<{
   videoExporterConfig: VideoExporterConfig;
   notifications: AppNotification[];
   themeId: ThemeId;
+  uiLanguage: UiLanguage;
   appConfigPath: string;
 }>();
 
@@ -94,11 +97,13 @@ const emit = defineEmits<{
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
   ];
   "set-theme": [id: ThemeId];
+  "set-ui-language": [language: UiLanguage];
 }>();
 
 const activePage = ref<ConfigPage>("overview");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
+const { t } = useI18n();
 
 function relay(event: string, ...args: unknown[]) {
   (emit as any)(event, ...args);
@@ -163,6 +168,7 @@ provide("hotkeyCaptureTarget", computed(() => props.hotkeyCaptureTarget));
 provide("videoExporterConfig", computed(() => props.videoExporterConfig));
 provide("recentColors", recentColors);
 provide("themeId", computed(() => props.themeId));
+provide("uiLanguage", computed(() => props.uiLanguage));
 provide("appConfigPath", computed(() => props.appConfigPath));
 provide("emit", relay);
 
@@ -206,7 +212,7 @@ const pageComponent = computed(() => {
         <section v-if="activePage === 'overview'" class="page-stack">
           <section class="preview-band" aria-label="Live preview">
             <div class="preview-copy">
-              <p>Live Preview</p>
+              <p>{{ t("overview.livePreview") }}</p>
               <h2 class="m-0">{{ profileName }}</h2>
             </div>
             <div class="preview-viewport">
@@ -224,14 +230,14 @@ const pageComponent = computed(() => {
 
           <section class="panel-grid">
             <article class="panel">
-              <h2 class="m-0">Profile</h2>
-              <BaseFieldRow label="Name">{{ profileName }}</BaseFieldRow>
-              <BaseFieldRow label="Status">
-                {{ profileChanged ? "Unsaved changes" : "Saved" }}
+              <h2 class="m-0">{{ t("overview.profile") }}</h2>
+              <BaseFieldRow :label="t('overview.name')">{{ profileName }}</BaseFieldRow>
+              <BaseFieldRow :label="t('overview.status')">
+                {{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}
               </BaseFieldRow>
-              <BaseFieldRow label="Visible keys">{{ config.keys.length }}</BaseFieldRow>
+              <BaseFieldRow :label="t('overview.visibleKeys')">{{ config.keys.length }}</BaseFieldRow>
               <label class="recent-profile-control">
-                <span>Recent profiles</span>
+                <span>{{ t("overview.recentProfiles") }}</span>
                 <BaseSelect
                   class="select-control"
                   :disabled="recentProfiles.length === 0"
@@ -239,7 +245,7 @@ const pageComponent = computed(() => {
                   @change="loadRecentProfile"
                 >
                   <option value="">
-                    {{ recentProfiles.length ? "Choose a profile" : "No recent profiles" }}
+                    {{ recentProfiles.length ? t("common.chooseProfile") : t("common.noRecentProfiles") }}
                   </option>
                   <option
                     v-for="profile in recentProfiles"
@@ -253,12 +259,12 @@ const pageComponent = computed(() => {
             </article>
 
             <article class="panel">
-              <h2 class="m-0">Quick controls</h2>
+              <h2 class="m-0">{{ t("overview.quickControls") }}</h2>
               <BaseToggleRow :checked="overlayVisible" @change="updateOverlayVisible">
-                Show POV overlay
+                {{ t("overview.showOverlay") }}
               </BaseToggleRow>
               <BaseToggleRow :checked="config.style.alwaysOnTop" @change="updateAlwaysOnTop">
-                Always on top
+                {{ t("overview.alwaysOnTop") }}
               </BaseToggleRow>
             </article>
           </section>

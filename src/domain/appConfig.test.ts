@@ -41,6 +41,9 @@ describe("app config", () => {
           outputDirectory: "/tmp/exports",
         },
       },
+      ui: {
+        language: "zh-CN",
+      },
     });
 
     expect(appConfig.profiles.lastProfilePath).toBe("/tmp/cs-pov.json");
@@ -60,6 +63,7 @@ describe("app config", () => {
     expect(appConfig.recording.silent).toBe(true);
     expect(appConfig.exporter.video.userSelectedPath).toBe("/opt/ffmpeg");
     expect(appConfig.exporter.video.outputDirectory).toBe("/tmp/exports");
+    expect(appConfig.ui.language).toBe("zh-CN");
   });
 
   it("keeps real recent profile paths deduped and newest first", () => {
@@ -221,6 +225,55 @@ describe("app config", () => {
     expect(appConfig.recording.browserDirectory).toBe("/tmp/browse-recordings");
     expect(appConfig.exporter.video.userSelectedPath).toBe("/Applications/ffmpeg");
     expect(appConfig.exporter.video.outputDirectory).toBe("/tmp/exports");
+    expect(appConfig.ui.language).toBe("system");
+  });
+
+  it("normalizes unsupported UI language codes to system", () => {
+    const appConfig = parseAppConfigFile(
+      JSON.stringify({
+        version: 1,
+        profiles: {
+          defaultProfilePath: "docs/default-config.json",
+          lastProfilePath: null,
+          recentProfiles: [],
+        },
+        currentProfile: {
+          name: "Unsaved",
+          sourcePath: null,
+          changed: true,
+          recording: createDefaultConfig().recording,
+          overlay: {
+            visible: true,
+            position: "center",
+            layout: createDefaultConfig().layout,
+            style: createDefaultConfig().style,
+            rows: createDefaultConfig().rows,
+          },
+        },
+        recording: {
+          outputDirectory: null,
+          browserDirectory: null,
+          silent: false,
+          hotkeys: {
+            mode: "disabled",
+            start: [],
+            stop: [],
+            sync: ["f8"],
+          },
+        },
+        exporter: {
+          video: {
+            userSelectedPath: null,
+            outputDirectory: null,
+          },
+        },
+        ui: {
+          language: "fr-FR",
+        },
+      }),
+    );
+
+    expect(appConfig.ui.language).toBe("system");
   });
 
   it("fills profile recording config when loading older app config", () => {

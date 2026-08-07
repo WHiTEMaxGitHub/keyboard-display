@@ -1,23 +1,29 @@
 <script setup lang="ts">
 import { computed, inject, type ComputedRef } from "vue";
+import { useI18n } from "vue-i18n";
 import BaseFieldRow from "../BaseFieldRow.vue";
 import BasePanel from "../BasePanel.vue";
 import BaseSelect from "../BaseSelect.vue";
 import type { RecentProfile } from "../../domain/appConfig";
+import type { UiLanguage } from "../../domain/uiLanguage";
 import { THEMES, type ThemeId } from "../../domain/theme";
+import { LOCALE_OPTIONS } from "../../i18n";
 
 const appConfigPathRef = inject<ComputedRef<string>>("appConfigPath")!;
 const profileNameRef = inject<ComputedRef<string>>("profileName")!;
 const profileChangedRef = inject<ComputedRef<boolean>>("profileChanged")!;
 const recentProfilesRef = inject<ComputedRef<RecentProfile[]>>("recentProfiles")!;
 const themeIdRef = inject<ComputedRef<ThemeId>>("themeId")!;
+const uiLanguageRef = inject<ComputedRef<UiLanguage>>("uiLanguage")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
+const { t } = useI18n();
 
 const appConfigPath = computed(() => appConfigPathRef.value || "Resolving...");
 const profileName = computed(() => profileNameRef.value);
 const profileChanged = computed(() => profileChangedRef.value);
 const recentProfiles = computed(() => recentProfilesRef.value);
 const themeId = computed(() => themeIdRef.value);
+const uiLanguage = computed(() => uiLanguageRef.value);
 const themeOptions = Object.values(THEMES);
 const selectedTheme = computed(() => THEMES[themeId.value]);
 const configDirectory = computed(() => {
@@ -30,6 +36,10 @@ const displayedRecentProfiles = computed(() => recentProfiles.value.slice(0, 5))
 function updateTheme(event: Event) {
   emit("set-theme", (event.target as HTMLSelectElement).value as ThemeId);
 }
+
+function updateUiLanguage(event: Event) {
+  emit("set-ui-language", (event.target as HTMLSelectElement).value as UiLanguage);
+}
 </script>
 
 <template>
@@ -37,28 +47,28 @@ function updateTheme(event: Event) {
     <BasePanel>
       <div class="section-header">
         <div>
-          <p class="eyebrow">Application</p>
-          <h2 class="m-0">App Config</h2>
+          <p class="eyebrow">{{ t("settings.application") }}</p>
+          <h2 class="m-0">{{ t("settings.appConfig") }}</h2>
         </div>
       </div>
 
       <div class="config-path-card">
-        <span class="config-path-label">Config file</span>
+        <span class="config-path-label">{{ t("settings.configFile") }}</span>
         <code class="config-path">{{ appConfigPath }}</code>
         <span class="config-path-dir">{{ configDirectory }}</span>
       </div>
 
       <div class="metric-grid">
         <div class="metric-card">
-          <span>Current profile</span>
+          <span>{{ t("settings.currentProfile") }}</span>
           <strong>{{ profileName }}</strong>
         </div>
         <div class="metric-card">
-          <span>Profile status</span>
-          <strong>{{ profileChanged ? "Unsaved" : "Saved" }}</strong>
+          <span>{{ t("settings.profileStatus") }}</span>
+          <strong>{{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}</strong>
         </div>
         <div class="metric-card">
-          <span>Recent profiles</span>
+          <span>{{ t("settings.recentProfiles") }}</span>
           <strong>{{ recentProfiles.length }}</strong>
         </div>
       </div>
@@ -67,13 +77,13 @@ function updateTheme(event: Event) {
     <BasePanel>
       <div class="section-header">
         <div>
-          <p class="eyebrow">Interface</p>
-          <h2 class="m-0">Theme</h2>
+          <p class="eyebrow">{{ t("settings.interface") }}</p>
+          <h2 class="m-0">{{ t("settings.theme") }}</h2>
         </div>
       </div>
 
       <label class="setting-row">
-        <span>Theme</span>
+        <span>{{ t("settings.theme") }}</span>
         <BaseSelect class="select-control" :model-value="themeId" @change="updateTheme">
           <option
             v-for="theme in themeOptions"
@@ -81,6 +91,19 @@ function updateTheme(event: Event) {
             :value="theme.id"
           >
             {{ theme.label }}
+          </option>
+        </BaseSelect>
+      </label>
+
+      <label class="setting-row mt-3">
+        <span>{{ t("settings.language") }}</span>
+        <BaseSelect class="select-control" :model-value="uiLanguage" @change="updateUiLanguage">
+          <option
+            v-for="option in LOCALE_OPTIONS"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ t(option.labelKey) }}
           </option>
         </BaseSelect>
       </label>
@@ -106,7 +129,7 @@ function updateTheme(event: Event) {
         </div>
         <div>
           <strong>{{ selectedTheme.label }}</strong>
-          <span>Active interface theme</span>
+          <span>{{ t("settings.activeTheme") }}</span>
         </div>
       </div>
     </BasePanel>
@@ -114,8 +137,8 @@ function updateTheme(event: Event) {
     <BasePanel>
       <div class="section-header">
         <div>
-          <p class="eyebrow">Profiles</p>
-          <h2 class="m-0">Recent Configs</h2>
+          <p class="eyebrow">{{ t("overview.profile") }}</p>
+          <h2 class="m-0">{{ t("settings.recentConfigs") }}</h2>
         </div>
       </div>
 
@@ -129,21 +152,21 @@ function updateTheme(event: Event) {
           <span>{{ profile.path }}</span>
         </div>
       </div>
-      <p v-else class="empty-state">No recent profiles stored yet.</p>
+      <p v-else class="empty-state">{{ t("settings.noRecentProfiles") }}</p>
     </BasePanel>
 
     <BasePanel>
       <div class="section-header">
         <div>
-          <p class="eyebrow">Future</p>
-          <h2 class="m-0">App-Level Settings</h2>
+          <p class="eyebrow">{{ t("settings.future") }}</p>
+          <h2 class="m-0">{{ t("settings.appLevelSettings") }}</h2>
         </div>
       </div>
 
       <div class="settings-roadmap">
-        <BaseFieldRow label="Recording defaults">Stored in app config</BaseFieldRow>
-        <BaseFieldRow label="Exporter settings">Stored in app config</BaseFieldRow>
-        <BaseFieldRow label="Interface settings">Ready for expansion</BaseFieldRow>
+        <BaseFieldRow :label="t('settings.recordingDefaults')">{{ t("settings.storedInAppConfig") }}</BaseFieldRow>
+        <BaseFieldRow :label="t('settings.exporterSettings')">{{ t("settings.storedInAppConfig") }}</BaseFieldRow>
+        <BaseFieldRow :label="t('settings.interfaceSettings')">{{ t("settings.readyForExpansion") }}</BaseFieldRow>
       </div>
     </BasePanel>
   </section>

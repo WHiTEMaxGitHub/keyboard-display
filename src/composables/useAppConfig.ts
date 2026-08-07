@@ -28,6 +28,7 @@ import {
   type OverlayPosition,
   type OverlayStyleSyncMode,
 } from "./useOverlayWindow";
+import { normalizeUiLanguage, type UiLanguage } from "../domain/uiLanguage";
 
 export type OverlayCallbacks = {
   resizeOverlayWindow: () => Promise<void>;
@@ -64,6 +65,7 @@ export function useAppConfig(options: {
     createDefaultVideoExporterConfig(),
   );
   const recordingBrowserDirectory = ref("");
+  const uiLanguage = ref<UiLanguage>("system");
 
   let appConfigSaveTimer: number | undefined;
 
@@ -242,6 +244,7 @@ export function useAppConfig(options: {
     recordingBrowserDirectory.value =
       appConfig.recording.browserDirectory ?? "";
     videoExporterConfig.value = appConfig.exporter.video;
+    uiLanguage.value = appConfig.ui.language;
 
     onRestore({
       directory: appConfig.recording.outputDirectory ?? "",
@@ -351,6 +354,10 @@ export function useAppConfig(options: {
     videoExporterConfig.value = exporterConfig;
   }
 
+  function updateUiLanguage(language: UiLanguage) {
+    uiLanguage.value = normalizeUiLanguage(language);
+  }
+
   async function chooseRecordingBrowserDirectory() {
     const selectedPath = await open({
       title: "Choose recording files folder",
@@ -381,6 +388,7 @@ export function useAppConfig(options: {
     syncFeedbackActive,
     videoExporterConfig,
     recordingBrowserDirectory,
+    uiLanguage,
     applyOverlayStyle,
     applyOverlayLayout,
     applyOverlayRows,
@@ -399,6 +407,7 @@ export function useAppConfig(options: {
     updateRecordingConfig,
     updateExportConfig,
     updateVideoExporterConfig,
+    updateUiLanguage,
     chooseRecordingBrowserDirectory,
     dispose,
   };
