@@ -31,6 +31,7 @@ type ConfigPage =
   | "recording"
   | "export"
   | "settings";
+type LayoutSubPage = "summary" | "editor";
 type RecordingSubPage = "control" | "files";
 
 const props = defineProps<{
@@ -68,6 +69,7 @@ const emit = defineEmits<{
   "preview-overlay-style": [style: OverlayStyle];
   "update-key-id-labels": [labels: AppConfig["keyIdLabels"]];
   "update-overlay-style": [style: OverlayStyle];
+  "update-overlay-layout": [layout: AppConfig["layout"]];
   "update-overlay-rows": [rows: AppConfig["rows"]];
   "update-overlay-visible": [visible: boolean];
   "load-config": [];
@@ -98,12 +100,14 @@ const emit = defineEmits<{
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
   ];
   "set-theme": [id: ThemeId];
+  "preview-custom-theme-color": [key: CustomThemeColorKey, color: string];
   "set-custom-theme-color": [key: CustomThemeColorKey, color: string];
   "reset-custom-theme-colors": [];
   "set-ui-language": [language: UiLanguage];
 }>();
 
 const activePage = ref<ConfigPage>("overview");
+const layoutSubPage = ref<LayoutSubPage>("summary");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
 const { t } = useI18n();
@@ -124,6 +128,10 @@ function selectRecordingSubPage(page: RecordingSubPage) {
     emit("clear-recording-inspection");
   }
   recordingSubPage.value = page;
+}
+
+function selectLayoutSubPage(page: LayoutSubPage) {
+  layoutSubPage.value = page;
 }
 
 function updateOverlayVisible(event: Event) {
@@ -170,6 +178,7 @@ provide("recordingHotkeys", computed(() => props.recordingHotkeys));
 provide("hotkeyCaptureTarget", computed(() => props.hotkeyCaptureTarget));
 provide("videoExporterConfig", computed(() => props.videoExporterConfig));
 provide("recentColors", recentColors);
+provide("layoutSubPage", computed(() => layoutSubPage.value));
 provide("themeId", computed(() => props.themeId));
 provide("customThemeColors", computed(() => props.customThemeColors));
 provide("uiLanguage", computed(() => props.uiLanguage));
@@ -197,8 +206,10 @@ const pageComponent = computed(() => {
     />
     <ConfigSidebar
       :active-page="activePage"
+      :layout-sub-page="layoutSubPage"
       :recording-sub-page="recordingSubPage"
       @update-active-page="selectActivePage"
+      @update-layout-sub-page="selectLayoutSubPage"
       @update-recording-sub-page="selectRecordingSubPage"
     />
 
@@ -282,7 +293,8 @@ const pageComponent = computed(() => {
 <style scoped>
 .config-shell {
   position: relative;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   background: transparent;
   color: var(--color-text-primary);
@@ -295,7 +307,7 @@ const pageComponent = computed(() => {
 }
 
 .workspace {
-  height: 100vh;
+  height: 100%;
   min-width: 0;
   overflow-y: auto;
   padding: 0 24px 24px;
