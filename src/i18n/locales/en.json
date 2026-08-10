@@ -57,6 +57,15 @@
     "interface": "Interface",
     "theme": "Theme",
     "activeTheme": "Active interface theme",
+    "customTheme": "Custom colors",
+    "customThemeDescription": "Tune the theme accent colors used by buttons, highlights, and focus states.",
+    "resetCustomTheme": "Reset",
+    "customThemeColor": {
+      "accent": "Primary",
+      "accentBlue": "Blue",
+      "accentViolet": "Violet",
+      "accentEmerald": "Green"
+    },
     "language": "Language",
     "languageDescription": "Configuration UI language",
     "recentConfigs": "Recent Configs",

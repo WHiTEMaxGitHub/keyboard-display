@@ -8,7 +8,7 @@ import type { AppNotification, NotificationTone } from "../composables/useNotifi
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import type { VideoExporterConfig } from "../domain/videoExporter";
 import type { RecordingInspection } from "../types/recording";
-import type { ThemeId } from "../domain/theme";
+import type { CustomThemeColorKey, CustomThemeColors, ThemeId } from "../domain/theme";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import NotificationStack from "./NotificationStack.vue";
@@ -59,6 +59,7 @@ const props = defineProps<{
   videoExporterConfig: VideoExporterConfig;
   notifications: AppNotification[];
   themeId: ThemeId;
+  customThemeColors: CustomThemeColors;
   uiLanguage: UiLanguage;
   appConfigPath: string;
 }>();
@@ -97,6 +98,8 @@ const emit = defineEmits<{
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
   ];
   "set-theme": [id: ThemeId];
+  "set-custom-theme-color": [key: CustomThemeColorKey, color: string];
+  "reset-custom-theme-colors": [];
   "set-ui-language": [language: UiLanguage];
 }>();
 
@@ -168,6 +171,7 @@ provide("hotkeyCaptureTarget", computed(() => props.hotkeyCaptureTarget));
 provide("videoExporterConfig", computed(() => props.videoExporterConfig));
 provide("recentColors", recentColors);
 provide("themeId", computed(() => props.themeId));
+provide("customThemeColors", computed(() => props.customThemeColors));
 provide("uiLanguage", computed(() => props.uiLanguage));
 provide("appConfigPath", computed(() => props.appConfigPath));
 provide("emit", relay);

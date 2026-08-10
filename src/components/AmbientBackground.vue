@@ -52,6 +52,7 @@ function drawFlow(time: number) {
     dark: 0.78,
     midnight: 1.06,
     light: 0.9,
+    custom: 0.82,
   };
   const strength = themeStrength[themeId.value] ?? 1;
 

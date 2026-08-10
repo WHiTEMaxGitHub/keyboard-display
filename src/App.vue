@@ -36,7 +36,14 @@ const isOverlayWindow = computed(() => {
 
 const { notifications, notify, dismissNotification } = useNotifications();
 
-const { themeId, loadTheme, setTheme } = useTheme();
+const {
+  themeId,
+  customThemeColors,
+  loadTheme,
+  setTheme,
+  setCustomThemeColor,
+  resetCustomThemeColors,
+} = useTheme();
 const appConfigPath = ref("");
 
 const {
@@ -402,6 +409,7 @@ onUnmounted(() => {
       :video-exporter-config="videoExporterConfig"
       :notifications="notifications"
       :theme-id="themeId"
+      :custom-theme-colors="customThemeColors"
       :ui-language="uiLanguage"
       :app-config-path="appConfigPath"
       @preview-overlay-style="previewOverlayStyle"
@@ -424,6 +432,8 @@ onUnmounted(() => {
       @notify="notify"
       @dismiss-notification="dismissNotification"
       @set-theme="(id: any) => setTheme(id)"
+      @set-custom-theme-color="(key: any, color: string) => setCustomThemeColor(key, color)"
+      @reset-custom-theme-colors="resetCustomThemeColors"
       @start-recording="startRecordingWithCountdown"
       @stop-recording="stopRecording"
       @add-sync-marker="addSyncMarker"

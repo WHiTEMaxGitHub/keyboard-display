@@ -1,12 +1,19 @@
 <script setup lang="ts">
 import { computed, inject, type ComputedRef } from "vue";
 import { useI18n } from "vue-i18n";
+import BaseButton from "../BaseButton.vue";
 import BaseFieldRow from "../BaseFieldRow.vue";
 import BasePanel from "../BasePanel.vue";
 import BaseSelect from "../BaseSelect.vue";
 import type { RecentProfile } from "../../domain/appConfig";
 import type { UiLanguage } from "../../domain/uiLanguage";
-import { THEMES, type ThemeId } from "../../domain/theme";
+import {
+  CUSTOM_THEME_COLOR_KEYS,
+  THEMES,
+  type CustomThemeColorKey,
+  type CustomThemeColors,
+  type ThemeId,
+} from "../../domain/theme";
 import { LOCALE_OPTIONS } from "../../i18n";
 
 const appConfigPathRef = inject<ComputedRef<string>>("appConfigPath")!;
@@ -14,6 +21,7 @@ const profileNameRef = inject<ComputedRef<string>>("profileName")!;
 const profileChangedRef = inject<ComputedRef<boolean>>("profileChanged")!;
 const recentProfilesRef = inject<ComputedRef<RecentProfile[]>>("recentProfiles")!;
 const themeIdRef = inject<ComputedRef<ThemeId>>("themeId")!;
+const customThemeColorsRef = inject<ComputedRef<CustomThemeColors>>("customThemeColors")!;
 const uiLanguageRef = inject<ComputedRef<UiLanguage>>("uiLanguage")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 const { t } = useI18n();
@@ -23,9 +31,17 @@ const profileName = computed(() => profileNameRef.value);
 const profileChanged = computed(() => profileChangedRef.value);
 const recentProfiles = computed(() => recentProfilesRef.value);
 const themeId = computed(() => themeIdRef.value);
+const customThemeColors = computed(() => customThemeColorsRef.value);
 const uiLanguage = computed(() => uiLanguageRef.value);
 const themeOptions = Object.values(THEMES);
 const selectedTheme = computed(() => THEMES[themeId.value]);
+const customThemeColorOptions: Array<{
+  key: CustomThemeColorKey;
+  labelKey: string;
+}> = CUSTOM_THEME_COLOR_KEYS.map(({ key }) => ({
+  key,
+  labelKey: `settings.customThemeColor.${key}`,
+}));
 const configDirectory = computed(() => {
   const path = appConfigPathRef.value;
   const separatorIndex = Math.max(path.lastIndexOf("/"), path.lastIndexOf("\\"));
@@ -39,6 +55,23 @@ function updateTheme(event: Event) {
 
 function updateUiLanguage(event: Event) {
   emit("set-ui-language", (event.target as HTMLSelectElement).value as UiLanguage);
+}
+
+function updateCustomThemeColor(key: CustomThemeColorKey, event: Event) {
+  emit("set-custom-theme-color", key, (event.target as HTMLInputElement).value);
+}
+
+function resetCustomThemeColors() {
+  emit("reset-custom-theme-colors");
+}
+
+function themeSwatchColor(key: CustomThemeColorKey) {
+  if (themeId.value === "custom") {
+    return customThemeColors.value[key];
+  }
+
+  const cssVar = CUSTOM_THEME_COLOR_KEYS.find((item) => item.key === key)?.cssVar ?? "--theme-accent";
+  return selectedTheme.value.css[cssVar];
 }
 </script>
 
@@ -111,25 +144,44 @@ function updateUiLanguage(event: Event) {
       <div class="theme-preview">
         <div class="theme-swatch-row" aria-hidden="true">
           <span
+            v-for="option in customThemeColorOptions"
+            :key="option.key"
             class="theme-swatch"
-            :style="{ background: selectedTheme.css['--theme-accent'] }"
-          />
-          <span
-            class="theme-swatch"
-            :style="{ background: selectedTheme.css['--theme-accent-blue'] }"
-          />
-          <span
-            class="theme-swatch"
-            :style="{ background: selectedTheme.css['--theme-accent-violet'] }"
-          />
-          <span
-            class="theme-swatch"
-            :style="{ background: selectedTheme.css['--theme-accent-emerald'] }"
+            :style="{ background: themeSwatchColor(option.key) }"
           />
         </div>
         <div>
           <strong>{{ selectedTheme.label }}</strong>
           <span>{{ t("settings.activeTheme") }}</span>
+        </div>
+      </div>
+
+      <div class="custom-theme-card">
+        <div class="custom-theme-header">
+          <div>
+            <strong>{{ t("settings.customTheme") }}</strong>
+            <span>{{ t("settings.customThemeDescription") }}</span>
+          </div>
+          <BaseButton size="sm" @click="resetCustomThemeColors">
+            {{ t("settings.resetCustomTheme") }}
+          </BaseButton>
+        </div>
+
+        <div class="custom-color-grid">
+          <label
+            v-for="option in customThemeColorOptions"
+            :key="option.key"
+            class="custom-color-control"
+          >
+            <span>{{ t(option.labelKey) }}</span>
+            <input
+              :value="customThemeColors[option.key]"
+              type="color"
+              @input="updateCustomThemeColor(option.key, $event)"
+              @change="updateCustomThemeColor(option.key, $event)"
+            />
+            <code>{{ customThemeColors[option.key] }}</code>
+          </label>
         </div>
       </div>
     </BasePanel>
@@ -305,6 +357,85 @@ function updateUiLanguage(event: Event) {
   min-width: 0;
 }
 
+.custom-theme-card {
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface-control) 72%, transparent);
+  padding: 14px;
+}
+
+.custom-theme-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.custom-theme-header div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.custom-theme-header strong {
+  color: var(--color-text-primary);
+}
+
+.custom-theme-header span,
+.custom-color-control span {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.custom-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  gap: 10px;
+}
+
+.custom-color-control {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px 9px;
+  min-width: 0;
+  border: 1px solid var(--color-border-dim);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-surface-control) 64%, transparent);
+  padding: 10px;
+}
+
+.custom-color-control span,
+.custom-color-control code {
+  grid-column: 2;
+}
+
+.custom-color-control input {
+  grid-row: 1 / span 2;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 999px;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.custom-color-control code {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .recent-list {
   display: grid;
   gap: 8px;
@@ -347,6 +478,10 @@ function updateUiLanguage(event: Event) {
   .select-control {
     justify-self: stretch;
     width: 100%;
+  }
+
+  .custom-theme-header {
+    display: grid;
   }
 }
 </style>

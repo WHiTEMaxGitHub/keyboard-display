@@ -57,6 +57,15 @@
     "interface": "界面",
     "theme": "外观",
     "activeTheme": "当前主题",
+    "customTheme": "自定义配色",
+    "customThemeDescription": "调整按钮、高亮和焦点态使用的主题强调色。",
+    "resetCustomTheme": "恢复默认",
+    "customThemeColor": {
+      "accent": "主色",
+      "accentBlue": "蓝色",
+      "accentViolet": "紫色",
+      "accentEmerald": "绿色"
+    },
     "language": "语言",
     "languageDescription": "界面语言",
     "recentConfigs": "最近配置",
