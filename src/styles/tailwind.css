@@ -94,6 +94,7 @@
 
   body {
     overflow: hidden;
+    background: transparent;
   }
 
   button,
@@ -104,12 +105,13 @@
   }
 
   .app-surface:not(.overlay-surface) {
+    position: relative;
     background: var(--theme-bg-base, #0d1117);
   }
 
   .app-surface:not(.overlay-surface)::before {
     content: "";
-    position: fixed;
+    position: absolute;
     inset: 0;
     pointer-events: none;
     opacity: 0.28;

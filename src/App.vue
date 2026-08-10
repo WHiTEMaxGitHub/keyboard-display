@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { computed, onMounted, onUnmounted, ref, watch, type WatchStopHandle } from "vue";
 import { tauriApi } from "./api/tauri";
+import AppTitlebar from "./components/AppTitlebar.vue";
 import ConfigPanel from "./components/ConfigPanel.vue";
 import OverlayWindow from "./components/OverlayWindow.vue";
 import {
@@ -41,6 +42,7 @@ const {
   customThemeColors,
   loadTheme,
   setTheme,
+  previewCustomThemeColor,
   setCustomThemeColor,
   resetCustomThemeColors,
 } = useTheme();
@@ -60,6 +62,7 @@ const {
   recordingBrowserDirectory,
   uiLanguage,
   applyOverlayStyle,
+  applyOverlayLayout,
   applyOverlayRows,
   applyKeyIdLabels,
   markProfileChanged,
@@ -207,6 +210,12 @@ async function updateOverlayStyle(style: OverlayStyle) {
   applyOverlayStyle(style);
   markProfileChanged();
   await syncOverlayStyle(style, syncMode);
+}
+
+async function updateOverlayLayout(layout: typeof config.layout) {
+  applyOverlayLayout(layout);
+  markProfileChanged();
+  await syncOverlayRows();
 }
 
 async function updateOverlayRows(rows: typeof config.rows) {
@@ -382,70 +391,137 @@ onUnmounted(() => {
         :sync-feedback-active="syncFeedbackActive"
       />
     </div>
-    <ConfigPanel
-      v-else
-      :config="config"
-      :active-keys="activeKeyIds"
-      :key-id-labels="config.keyIdLabels"
-      :overlay-visible="isOverlayVisible"
-      :profile-name="profileName"
-      :profile-changed="profileChanged"
-      :recent-profiles="recentProfiles"
-      :recording-directory="recordingDirectory"
-      :default-recording-directory="defaultRecordingDirectory"
-      :recording-browser-directory="recordingBrowserDirectory"
-      :silent-recording="silentRecording"
-      :is-recording="isRecording"
-      :recording-countdown="recordingCountdown"
-      :last-recording-path="lastRecordingPath"
-      :recording-status-message="recordingStatusMessage"
-      :current-recording-path="currentRecordingPath"
-      :recording-inspection="recordingInspection"
-      :recording-inspection-error="recordingInspectionError"
-      :overlay-position="overlayPosition"
-      :overlay-adjusting="overlayAdjusting"
-      :recording-hotkeys="recordingHotkeys"
-      :hotkey-capture-target="hotkeyCaptureTarget"
-      :video-exporter-config="videoExporterConfig"
-      :notifications="notifications"
-      :theme-id="themeId"
-      :custom-theme-colors="customThemeColors"
-      :ui-language="uiLanguage"
-      :app-config-path="appConfigPath"
-      @preview-overlay-style="previewOverlayStyle"
-      @update-key-id-labels="updateKeyIdLabels"
-      @update-overlay-style="updateOverlayStyle"
-      @update-overlay-rows="updateOverlayRows"
-      @update-overlay-visible="setOverlayVisible"
-      @load-config="loadConfig(overlayCallbacks, scheduleSave)"
-      @refresh-pov="applyConfigToOverlay(overlayCallbacks)"
-      @load-recent-profile="(path: string) => loadRecentProfile(path, overlayCallbacks, scheduleSave)"
-      @export-and-apply-config="exportAndApplyConfig(overlayCallbacks, scheduleSave)"
-      @overwrite-and-apply-config="overwriteAndApplyConfig(overlayCallbacks, scheduleSave)"
-      @choose-recording-directory="chooseRecordingDirectory"
-      @choose-recording-browser-directory="(async () => { await chooseRecordingBrowserDirectory(); scheduleSave(); })()"
-      @update-silent-recording="updateSilentRecording"
-      @update-recording-config="(r: RecordingConfig) => { updateRecordingConfig(r); scheduleSave(); }"
-      @update-export-config="(e: any) => { updateExportConfig(e); scheduleSave(); }"
-      @update-video-exporter-config="(v: any) => { updateVideoExporterConfig(v); scheduleSave(); }"
-      @set-ui-language="setUiLanguage"
-      @notify="notify"
-      @dismiss-notification="dismissNotification"
-      @set-theme="(id: any) => setTheme(id)"
-      @set-custom-theme-color="(key: any, color: string) => setCustomThemeColor(key, color)"
-      @reset-custom-theme-colors="resetCustomThemeColors"
-      @start-recording="startRecordingWithCountdown"
-      @stop-recording="stopRecording"
-      @add-sync-marker="addSyncMarker"
-      @inspect-recording-file="inspectRecordingFile"
-      @inspect-recording-path="inspectRecordingPath"
-      @clear-recording-inspection="clearRecordingInspection"
-      @update-recording-hotkey-mode="updateRecordingHotkeyMode"
-      @begin-hotkey-capture="beginHotkeyCapture"
-      @start-overlay-adjust="startOverlayAdjust"
-      @save-overlay-adjust="saveOverlayAdjust"
-      @cancel-overlay-adjust="cancelOverlayAdjust"
-      @move-overlay="moveOverlay"
-    />
+    <div v-else class="config-window-frame">
+      <AppTitlebar />
+      <ConfigPanel
+        :config="config"
+        :active-keys="activeKeyIds"
+        :key-id-labels="config.keyIdLabels"
+        :overlay-visible="isOverlayVisible"
+        :profile-name="profileName"
+        :profile-changed="profileChanged"
+        :recent-profiles="recentProfiles"
+        :recording-directory="recordingDirectory"
+        :default-recording-directory="defaultRecordingDirectory"
+        :recording-browser-directory="recordingBrowserDirectory"
+        :silent-recording="silentRecording"
+        :is-recording="isRecording"
+        :recording-countdown="recordingCountdown"
+        :last-recording-path="lastRecordingPath"
+        :recording-status-message="recordingStatusMessage"
+        :current-recording-path="currentRecordingPath"
+        :recording-inspection="recordingInspection"
+        :recording-inspection-error="recordingInspectionError"
+        :overlay-position="overlayPosition"
+        :overlay-adjusting="overlayAdjusting"
+        :recording-hotkeys="recordingHotkeys"
+        :hotkey-capture-target="hotkeyCaptureTarget"
+        :video-exporter-config="videoExporterConfig"
+        :notifications="notifications"
+        :theme-id="themeId"
+        :custom-theme-colors="customThemeColors"
+        :ui-language="uiLanguage"
+        :app-config-path="appConfigPath"
+        @preview-overlay-style="previewOverlayStyle"
+        @update-key-id-labels="updateKeyIdLabels"
+        @update-overlay-style="updateOverlayStyle"
+        @update-overlay-layout="updateOverlayLayout"
+        @update-overlay-rows="updateOverlayRows"
+        @update-overlay-visible="setOverlayVisible"
+        @load-config="loadConfig(overlayCallbacks, scheduleSave)"
+        @refresh-pov="applyConfigToOverlay(overlayCallbacks)"
+        @load-recent-profile="(path: string) => loadRecentProfile(path, overlayCallbacks, scheduleSave)"
+        @export-and-apply-config="exportAndApplyConfig(overlayCallbacks, scheduleSave)"
+        @overwrite-and-apply-config="overwriteAndApplyConfig(overlayCallbacks, scheduleSave)"
+        @choose-recording-directory="chooseRecordingDirectory"
+        @choose-recording-browser-directory="(async () => { await chooseRecordingBrowserDirectory(); scheduleSave(); })()"
+        @update-silent-recording="updateSilentRecording"
+        @update-recording-config="(r: RecordingConfig) => { updateRecordingConfig(r); scheduleSave(); }"
+        @update-export-config="(e: any) => { updateExportConfig(e); scheduleSave(); }"
+        @update-video-exporter-config="(v: any) => { updateVideoExporterConfig(v); scheduleSave(); }"
+        @set-ui-language="setUiLanguage"
+        @notify="notify"
+        @dismiss-notification="dismissNotification"
+        @set-theme="(id: any) => setTheme(id)"
+        @preview-custom-theme-color="(key: any, color: string) => previewCustomThemeColor(key, color)"
+        @set-custom-theme-color="(key: any, color: string) => setCustomThemeColor(key, color)"
+        @reset-custom-theme-colors="resetCustomThemeColors"
+        @start-recording="startRecordingWithCountdown"
+        @stop-recording="stopRecording"
+        @add-sync-marker="addSyncMarker"
+        @inspect-recording-file="inspectRecordingFile"
+        @inspect-recording-path="inspectRecordingPath"
+        @clear-recording-inspection="clearRecordingInspection"
+        @update-recording-hotkey-mode="updateRecordingHotkeyMode"
+        @begin-hotkey-capture="beginHotkeyCapture"
+        @start-overlay-adjust="startOverlayAdjust"
+        @save-overlay-adjust="saveOverlayAdjust"
+        @cancel-overlay-adjust="cancelOverlayAdjust"
+        @move-overlay="moveOverlay"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.app-surface:not(.overlay-surface) {
+  border: 1px solid var(--color-border-dim);
+  border-radius: 16px;
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
+  clip-path: inset(0 round 16px);
+  contain: paint;
+  overflow: hidden;
+  transform-origin: center;
+  animation: app-window-enter 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+:global(.app-window-closing) .app-surface:not(.overlay-surface) {
+  pointer-events: none;
+  animation: app-window-exit 140ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.config-window-frame {
+  --app-titlebar-height: 32px;
+
+  display: grid;
+  grid-template-rows: var(--app-titlebar-height) minmax(0, 1fr);
+  height: 100vh;
+  min-width: 0;
+  clip-path: inset(0 round 16px);
+  overflow: hidden;
+}
+
+@keyframes app-window-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes app-window-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+    filter: blur(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-surface:not(.overlay-surface),
+  :global(.app-window-closing) .app-surface:not(.overlay-surface) {
+    animation-duration: 1ms;
+    filter: none;
+  }
+}
+</style>
