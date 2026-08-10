@@ -5,6 +5,7 @@ import BaseButton from "../BaseButton.vue";
 import BaseFieldRow from "../BaseFieldRow.vue";
 import BasePanel from "../BasePanel.vue";
 import BaseSelect from "../BaseSelect.vue";
+import ColorPicker from "../ColorPicker.vue";
 import type { RecentProfile } from "../../domain/appConfig";
 import type { UiLanguage } from "../../domain/uiLanguage";
 import {
@@ -57,8 +58,12 @@ function updateUiLanguage(event: Event) {
   emit("set-ui-language", (event.target as HTMLSelectElement).value as UiLanguage);
 }
 
-function updateCustomThemeColor(key: CustomThemeColorKey, event: Event) {
-  emit("set-custom-theme-color", key, (event.target as HTMLInputElement).value);
+function previewCustomThemeColor(key: CustomThemeColorKey, color: string) {
+  emit("preview-custom-theme-color", key, color);
+}
+
+function updateCustomThemeColor(key: CustomThemeColorKey, color: string) {
+  emit("set-custom-theme-color", key, color);
 }
 
 function resetCustomThemeColors() {
@@ -72,6 +77,10 @@ function themeSwatchColor(key: CustomThemeColorKey) {
 
   const cssVar = CUSTOM_THEME_COLOR_KEYS.find((item) => item.key === key)?.cssVar ?? "--theme-accent";
   return selectedTheme.value.css[cssVar];
+}
+
+function themeLabel(id: ThemeId) {
+  return t(`settings.themeOption.${id}`);
 }
 </script>
 
@@ -123,7 +132,7 @@ function themeSwatchColor(key: CustomThemeColorKey) {
             :key="theme.id"
             :value="theme.id"
           >
-            {{ theme.label }}
+            {{ themeLabel(theme.id) }}
           </option>
         </BaseSelect>
       </label>
@@ -151,7 +160,7 @@ function themeSwatchColor(key: CustomThemeColorKey) {
           />
         </div>
         <div>
-          <strong>{{ selectedTheme.label }}</strong>
+          <strong>{{ themeLabel(selectedTheme.id) }}</strong>
           <span>{{ t("settings.activeTheme") }}</span>
         </div>
       </div>
@@ -167,21 +176,20 @@ function themeSwatchColor(key: CustomThemeColorKey) {
           </BaseButton>
         </div>
 
-        <div class="custom-color-grid">
-          <label
-            v-for="option in customThemeColorOptions"
-            :key="option.key"
-            class="custom-color-control"
-          >
-            <span>{{ t(option.labelKey) }}</span>
-            <input
+        <div class="custom-color-section">
+          <span>{{ t("settings.customThemeAccentColors") }}</span>
+          <div class="custom-color-grid">
+            <ColorPicker
+              v-for="option in customThemeColorOptions"
+              :key="option.key"
+              :label="t(option.labelKey)"
               :value="customThemeColors[option.key]"
-              type="color"
-              @input="updateCustomThemeColor(option.key, $event)"
-              @change="updateCustomThemeColor(option.key, $event)"
+              :recent-colors="[]"
+              alpha-enabled
+              @preview:value="previewCustomThemeColor(option.key, $event)"
+              @update:value="updateCustomThemeColor(option.key, $event)"
             />
-            <code>{{ customThemeColors[option.key] }}</code>
-          </label>
+          </div>
         </div>
       </div>
     </BasePanel>
@@ -385,55 +393,21 @@ function themeSwatchColor(key: CustomThemeColorKey) {
 }
 
 .custom-theme-header span,
-.custom-color-control span {
+.custom-color-section > span {
   color: var(--color-text-muted);
   font-size: 12px;
   font-weight: 700;
 }
 
+.custom-color-section {
+  display: grid;
+  gap: 8px;
+}
+
 .custom-color-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 10px;
-}
-
-.custom-color-control {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  align-items: center;
-  gap: 5px 9px;
-  min-width: 0;
-  border: 1px solid var(--color-border-dim);
-  border-radius: var(--radius-lg);
-  background: color-mix(in srgb, var(--color-surface-control) 64%, transparent);
-  padding: 10px;
-}
-
-.custom-color-control span,
-.custom-color-control code {
-  grid-column: 2;
-}
-
-.custom-color-control input {
-  grid-row: 1 / span 2;
-  width: 34px;
-  height: 34px;
-  border: 1px solid var(--color-border-control);
-  border-radius: 999px;
-  background: transparent;
-  cursor: pointer;
-  padding: 0;
-}
-
-.custom-color-control code {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-secondary);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 800;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .recent-list {

@@ -55,7 +55,7 @@ function saveCustomThemeColors() {
 function sanitizeCustomThemeColors(colors: Partial<CustomThemeColors>) {
   const next = { ...DEFAULT_CUSTOM_THEME_COLORS };
   for (const { key } of CUSTOM_THEME_COLOR_KEYS) {
-    next[key] = normalizeHexColor(colors[key] ?? "", DEFAULT_CUSTOM_THEME_COLORS[key]).slice(0, 7);
+    next[key] = normalizeHexColor(colors[key] ?? "", DEFAULT_CUSTOM_THEME_COLORS[key]);
   }
   return next;
 }
@@ -87,10 +87,18 @@ export function useTheme() {
   function setCustomThemeColor(key: CustomThemeColorKey, color: string) {
     customThemeColors.value = {
       ...customThemeColors.value,
-      [key]: normalizeHexColor(color, customThemeColors.value[key]).slice(0, 7),
+      [key]: normalizeHexColor(color, customThemeColors.value[key]),
     };
     saveCustomThemeColors();
     setTheme("custom");
+  }
+
+  function previewCustomThemeColor(key: CustomThemeColorKey, color: string) {
+    customThemeColors.value = {
+      ...customThemeColors.value,
+      [key]: normalizeHexColor(color, customThemeColors.value[key]),
+    };
+    applyTheme("custom");
   }
 
   function resetCustomThemeColors() {
@@ -104,6 +112,7 @@ export function useTheme() {
     customThemeColors,
     loadTheme,
     setTheme,
+    previewCustomThemeColor,
     setCustomThemeColor,
     resetCustomThemeColors,
   };

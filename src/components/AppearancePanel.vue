@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { normalizeHexColor } from "../domain/colorPicker";
 import type { AppConfig, OverlayStyle } from "../domain/defaultConfig";
@@ -43,6 +44,17 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const rememberedBackplateAlpha = ref(alphaFromHex(props.config.style.backgroundColor) || 255);
+
+watch(
+  () => props.config.style.backgroundColor,
+  (color) => {
+    const alpha = alphaFromHex(color);
+    if (alpha > 0) {
+      rememberedBackplateAlpha.value = alpha;
+    }
+  },
+);
 
 function updateScale(scale: number) {
   emit("update-overlay-style", { ...props.config.style, scale });
@@ -75,9 +87,17 @@ function updateIdleKeyVisibility(event: Event) {
 
 function updateBackplateTransparent(event: Event) {
   const transparent = (event.target as HTMLInputElement).checked;
+  const currentAlpha = alphaFromHex(props.config.style.backgroundColor);
+  if (transparent && currentAlpha > 0) {
+    rememberedBackplateAlpha.value = currentAlpha;
+  }
+
   emit("update-overlay-style", {
     ...props.config.style,
-    backgroundColor: setHexAlpha(props.config.style.backgroundColor, transparent ? 0 : 255),
+    backgroundColor: setHexAlpha(
+      props.config.style.backgroundColor,
+      transparent ? 0 : rememberedBackplateAlpha.value,
+    ),
   });
 }
 
@@ -115,6 +135,11 @@ function setHexAlpha(color: string, alpha: number) {
     .toString(16)
     .padStart(2, "0")}`;
 }
+
+function alphaFromHex(color: string) {
+  const normalizedColor = normalizeHexColor(color);
+  return normalizedColor.length === 9 ? Number.parseInt(normalizedColor.slice(7, 9), 16) : 255;
+}
 </script>
 
 <template>
@@ -131,9 +156,9 @@ function setHexAlpha(color: string, alpha: number) {
       :model-value="config.style.scale"
       :label="t('appearance.scale')"
       :value-label="`${formatScale(config.style.scale)} · ${t('appearance.unitPx', { px: effectiveUnitPx() })}`"
-      :min="0.75"
-      :max="1.5"
-      :step="0.05"
+      :min="0.5"
+      :max="2.5"
+      :step="0.01"
       @update:model-value="updateScale"
     />
 

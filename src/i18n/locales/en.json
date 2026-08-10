@@ -12,27 +12,34 @@
     "livePreview": "Live preview"
   },
   "dialogs": {
-    "loadConfig": "Load keyboard display config",
-    "saveConfig": "Save keyboard display config",
+    "loadConfig": "Load keyboard display profile",
+    "saveConfig": "Save keyboard display profile",
     "recordingFilesFolder": "Choose recording files folder",
     "jsonFilter": "JSON"
   },
   "nav": {
     "overview": "Overview",
     "layout": "Layout",
+    "layoutSummary": "Summary",
+    "layoutEditor": "Editor",
     "appearance": "Appearance",
     "window": "Window",
     "recording": "Recording",
     "recordingControl": "Control",
     "recordingFiles": "Files",
     "export": "Export",
-    "settings": "App Config"
+    "settings": "Settings"
   },
   "topbar": {
     "profile": "Profile",
-    "loadConfig": "Load config",
+    "loadConfig": "Load profile",
     "exportApply": "Export & Apply",
     "overwriteApply": "Overwrite & Apply"
+  },
+  "windowControls": {
+    "close": "Close window",
+    "minimize": "Minimize",
+    "maximize": "Maximize or restore"
   },
   "overview": {
     "livePreview": "Live Preview",
@@ -49,34 +56,42 @@
   },
   "settings": {
     "application": "Application",
-    "appConfig": "App Config",
+    "appConfig": "App settings",
     "configFile": "Config file",
     "currentProfile": "Current profile",
     "profileStatus": "Profile status",
     "recentProfiles": "Recent profiles",
     "interface": "Interface",
     "theme": "Theme",
-    "activeTheme": "Active interface theme",
+    "activeTheme": "Current theme",
     "customTheme": "Custom colors",
-    "customThemeDescription": "Tune the theme accent colors used by buttons, highlights, and focus states.",
+    "customThemeDescription": "Use the built-in picker to tune accent colors for buttons, highlights, and focus states, including opacity.",
     "resetCustomTheme": "Reset",
+    "customThemeAccentColors": "Accent colors",
     "customThemeColor": {
       "accent": "Primary",
       "accentBlue": "Blue",
       "accentViolet": "Violet",
       "accentEmerald": "Green"
     },
+    "themeOption": {
+      "vibrant": "Vibrant",
+      "dark": "Dark",
+      "midnight": "Midnight",
+      "light": "Light",
+      "custom": "Custom"
+    },
     "language": "Language",
     "languageDescription": "Configuration UI language",
-    "recentConfigs": "Recent Configs",
+    "recentConfigs": "Recent profiles",
     "noRecentProfiles": "No recent profiles stored yet.",
-    "future": "Future",
-    "appLevelSettings": "App-Level Settings",
+    "future": "More",
+    "appLevelSettings": "Planned settings",
     "recordingDefaults": "Recording defaults",
     "exporterSettings": "Exporter settings",
     "interfaceSettings": "Interface settings",
     "storedInAppConfig": "Stored in app config",
-    "readyForExpansion": "Ready for expansion",
+    "readyForExpansion": "Planned",
     "languageOption": {
       "system": "Follow system",
       "en": "English",
@@ -92,6 +107,12 @@
     },
     "unitSize": "Unit size",
     "gap": "Gap",
+    "gaps": "Gap items",
+    "rows": "Rows",
+    "totalWidth": "Total width",
+    "structure": "Row structure",
+    "preview": "Layout preview",
+    "editorTitle": "Layout editor",
     "visibleKeys": "Visible keys",
     "line": "Line {number}:",
     "gapItem": "Gap",
@@ -109,16 +130,11 @@
       "addKey": "Add key",
       "addGap": "Add gap",
       "deleteRow": "Delete row",
-      "id": "ID",
-      "label": "Label",
+      "id": "Key ID",
+      "label": "Display name",
       "width": "Width",
       "pressKey": "Press key...",
       "captureKey": "Capture key",
-      "hidePlatformLabels": "Hide platform labels",
-      "platformLabels": "Platform labels",
-      "macosLabel": "macOS label",
-      "windowsLabel": "Windows label",
-      "registeredLabel": "Registered label",
       "delete": "Delete",
       "left": "Left",
       "right": "Right"
@@ -130,7 +146,7 @@
     "scale": "Scale",
     "unitPx": "{px}px unit",
     "overlayTransparency": "Overlay transparency",
-    "overlayTransparencyDescription": "Controls the whole POV overlay opacity.",
+    "overlayTransparencyDescription": "Controls the opacity of the whole POV key overlay.",
     "backplateRadius": "Backplate radius",
     "idleKeys": "Idle keys",
     "idleVisibility": {
@@ -170,13 +186,13 @@
     "saveFolder": "Save folder",
     "defaultFolder": "Default app folder: {path}",
     "loading": "loading...",
-    "silent": "Silent recording",
-    "syncFlash": "Sync border flash",
+    "silent": "Background recording",
+    "syncFlash": "Sync flash",
     "milliseconds": "ms",
     "captureFrameRate": "Capture frame rate",
     "customFps": "Custom FPS",
-    "rateSummary": "{fps}fps · {bytesPerSecond} raw",
-    "primaryArtifact": "Primary artifact",
+    "rateSummary": "{fps}fps · {bytesPerSecond} raw data",
+    "primaryArtifact": "Saved format",
     "controls": {
       "chooseFolder": "Choose folder",
       "startingIn": "Starting in {seconds}",
@@ -194,7 +210,7 @@
       "variables": "Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
     },
     "storage": {
-      "description": "Input frames are stored as compact binary state, then replayed for rendering or export.",
+      "description": "Input frames are stored as compact binary state and replayed later for rendering or video export.",
       "lastRecording": "Last recording: {path}"
     },
     "hotkeys": {
@@ -222,7 +238,7 @@
     "title": "Export",
     "transparentOverlay": "Transparent overlay",
     "compatibleVideo": "Compatible video",
-    "renderMarkers": "Render sync markers",
+    "renderMarkers": "Show sync markers",
     "filenameTemplate": "Filename template",
     "font": "Font",
     "systemDefault": "System default",
@@ -257,23 +273,23 @@
       "frameWithKeys": "Frame {frame}: {keys}"
     },
     "exporter": {
-      "title": "Video exporter",
+      "title": "Video export tool",
       "checkAgain": "Check again",
       "checking": "Checking...",
       "status": "Status",
       "using": "Using",
       "notInstalled": "Not installed",
-      "appManagedExporter": "App-managed exporter",
+      "appManagedExporter": "Built-in export tool",
       "userSelectedFfmpeg": "User-selected ffmpeg",
       "systemFfmpeg": "System ffmpeg",
-      "description": "Video export requires ffmpeg. You can select an existing binary, use a PATH installation, or install an app-managed exporter later.",
+      "description": "Video export requires ffmpeg. You can choose an existing executable, use an installation from PATH, or install the built-in export tool.",
       "choosePath": "Choose ffmpeg path",
       "clearPath": "Clear selected path",
-      "uninstall": "Uninstall app-managed exporter",
+      "uninstall": "Uninstall built-in tool",
       "uninstalling": "Uninstalling...",
-      "install": "Install app-managed exporter",
+      "install": "Install built-in tool",
       "installing": "Installing...",
-      "appManaged": "App-managed",
+      "appManaged": "Built-in",
       "userSelected": "User-selected",
       "path": "PATH",
       "installed": "Installed",
@@ -295,10 +311,10 @@
     "notification": {
       "installSuccess": "Video exporter installed: {path}",
       "installFailed": "Video exporter install failed: {error}",
-      "uninstallSuccess": "App-managed video exporter uninstalled.",
-      "uninstallFailed": "Video exporter uninstall failed: {error}"
+      "uninstallSuccess": "Built-in video export tool uninstalled.",
+      "uninstallFailed": "Video export tool uninstall failed: {error}"
     },
-    "note": "Video is generated from the input timeline, so size and format can be tuned after recording."
+    "note": "Video is generated from the input timeline, so size and format can still be adjusted after recording."
   },
   "colorPicker": {
     "hex": "HEX",
@@ -336,20 +352,20 @@
     }
   },
   "recordingMetadata": {
-    "eyebrow": "Recording metadata",
-    "title": "Sidecar metadata",
-    "discard": "Discard & Close",
+    "eyebrow": "Recording details",
+    "title": "Recording details",
+    "discard": "Discard and close",
     "save": "Save",
     "saving": "Saving...",
     "saveAndClose": "Save & Close",
-    "displayName": "Display name",
-    "displayNamePlaceholder": "Browser display name",
+    "displayName": "Recording name",
+    "displayNamePlaceholder": "Name shown in the recording list",
     "description": "Description",
     "descriptionPlaceholder": "Notes for this recording",
     "tags": "Tags",
     "tagsPlaceholder": "sync, ranked, aim",
     "chooseFileFirst": "Choose a recording file first.",
-    "saved": "Metadata saved."
+    "saved": "Recording details saved."
   },
   "recordingInspection": {
     "version": "Version",
