@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+  type CSSProperties,
+} from "vue";
 import { useI18n } from "vue-i18n";
+import { placeColorPopover } from "../domain/colorPopover";
 import {
   hexToRgb,
   normalizeHexColor,
   rgbToHex,
   type RgbColor,
 } from "../domain/colorPicker";
+
+const POPOVER_GAP = 8;
+const POPOVER_MARGIN = 16;
+const POPOVER_MAX_HEIGHT = 360;
+const POPOVER_MIN_WIDTH = 260;
 
 const PRESET_COLORS = [
   "#25d366",
@@ -19,12 +33,18 @@ const PRESET_COLORS = [
   "#b197fc",
 ];
 
-const props = defineProps<{
-  label: string;
-  value: string;
-  recentColors: string[];
-  alphaEnabled?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    label: string;
+    value: string;
+    recentColors?: string[];
+    alphaEnabled?: boolean;
+  }>(),
+  {
+    recentColors: () => [],
+    alphaEnabled: false,
+  },
+);
 
 const emit = defineEmits<{
   "preview:value": [value: string];
@@ -35,11 +55,14 @@ const emit = defineEmits<{
 const pickerOpen = ref(false);
 const pickerRoot = ref<HTMLElement | null>(null);
 const colorTrigger = ref<HTMLButtonElement | null>(null);
+const pickerPanel = ref<HTMLElement | null>(null);
 const popoverDirection = ref<"down" | "up">("down");
+const popoverStyle = ref<CSSProperties>({});
 const hexDraft = ref(normalizeHexColor(props.value));
 const sessionStartColor = ref(normalizeHexColor(props.value));
 const hasPendingCommit = ref(false);
 const { t } = useI18n();
+const pickerId = `color-picker-${Math.random().toString(36).slice(2)}`;
 
 const rgb = computed(() => hexToRgb(hexDraft.value));
 
@@ -59,12 +82,14 @@ function togglePicker() {
   openPicker();
 }
 
-function openPicker() {
+async function openPicker() {
   hexDraft.value = normalizeHexColor(props.value, hexDraft.value);
   sessionStartColor.value = normalizePickerColor(hexDraft.value);
   hasPendingCommit.value = false;
-  updatePopoverDirection();
   pickerOpen.value = true;
+  updatePopoverPosition();
+  await nextTick();
+  updatePopoverPosition();
 }
 
 function closePicker() {
@@ -79,9 +104,22 @@ function handleDocumentPointerDown(event: PointerEvent) {
     return;
   }
 
+  const target = event.target as Node;
   const root = pickerRoot.value;
-  if (root && !root.contains(event.target as Node)) {
+  const panel = pickerPanel.value;
+
+  if (root?.contains(target) || panel?.contains(target)) {
+    return;
+  }
+
+  if (root || panel) {
     closePicker();
+  }
+}
+
+function handleViewportChange() {
+  if (pickerOpen.value) {
+    updatePopoverPosition();
   }
 }
 
@@ -91,9 +129,29 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("pointerdown", handleDocumentPointerDown, true);
+  stopPopoverPositionTracking();
 });
 
-function updatePopoverDirection() {
+watch(pickerOpen, (open) => {
+  if (open) {
+    startPopoverPositionTracking();
+    return;
+  }
+
+  stopPopoverPositionTracking();
+});
+
+function startPopoverPositionTracking() {
+  window.addEventListener("resize", handleViewportChange);
+  document.addEventListener("scroll", handleViewportChange, true);
+}
+
+function stopPopoverPositionTracking() {
+  window.removeEventListener("resize", handleViewportChange);
+  document.removeEventListener("scroll", handleViewportChange, true);
+}
+
+function updatePopoverPosition() {
   const trigger = colorTrigger.value;
   if (!trigger) {
     popoverDirection.value = "down";
@@ -101,9 +159,34 @@ function updatePopoverDirection() {
   }
 
   const rect = trigger.getBoundingClientRect();
-  const spaceBelow = window.innerHeight - rect.bottom;
-  const spaceAbove = rect.top;
-  popoverDirection.value = spaceBelow < 300 && spaceAbove > spaceBelow ? "up" : "down";
+  const placement = placeColorPopover(
+    {
+      left: rect.left,
+      right: rect.right,
+      top: rect.top,
+      bottom: rect.bottom,
+      width: rect.width,
+    },
+    {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    },
+    {
+      gap: POPOVER_GAP,
+      margin: POPOVER_MARGIN,
+      maxHeight: POPOVER_MAX_HEIGHT,
+      minWidth: POPOVER_MIN_WIDTH,
+      panelHeight: pickerPanel.value?.offsetHeight,
+    },
+  );
+
+  popoverDirection.value = placement.direction;
+  popoverStyle.value = {
+    left: `${placement.left}px`,
+    top: `${placement.top}px`,
+    width: `${placement.width}px`,
+    maxHeight: `${placement.maxHeight}px`,
+  };
 }
 
 function updateHex(event: Event) {
@@ -177,6 +260,8 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
       ref="colorTrigger"
       class="color-trigger"
       type="button"
+      aria-haspopup="dialog"
+      :aria-controls="pickerOpen ? pickerId : undefined"
       :aria-expanded="pickerOpen"
       @click="togglePicker"
     >
@@ -184,74 +269,82 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
       <span>{{ label }}</span>
       <strong>{{ normalizeHexColor(value) }}</strong>
     </button>
-    <Transition name="picker-popover">
-      <div
-        v-if="pickerOpen"
-        :class="['picker-panel', `picker-panel-${popoverDirection}`]"
-      >
-        <label class="hex-row">
-          <span>{{ t("colorPicker.hex") }}</span>
-          <input
-            :value="hexDraft"
-            spellcheck="false"
-            @blur="commitHex"
-            @change="commitHex"
-            @input="updateHex"
-          />
-        </label>
-        <div class="slider-list">
-          <label>
-            <span>{{ t("colorPicker.red") }}</span>
-            <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
-          </label>
-          <label>
-            <span>{{ t("colorPicker.green") }}</span>
-            <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
-          </label>
-          <label>
-            <span>{{ t("colorPicker.blue") }}</span>
-            <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
-          </label>
-          <label v-if="alphaEnabled">
-            <span>{{ t("colorPicker.alpha") }}</span>
-            <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
-          </label>
-        </div>
-        <div class="swatch-section">
-          <span>{{ t("colorPicker.presets") }}</span>
-          <div class="swatch-grid">
-            <button
-              v-for="color in PRESET_COLORS"
-              :key="color"
-              :aria-label="color"
-              class="swatch-button"
-              type="button"
-              :style="{ backgroundColor: color }"
-              @click="chooseColor(color)"
+    <Teleport to="body">
+      <Transition name="picker-popover">
+        <div
+          v-if="pickerOpen"
+          :id="pickerId"
+          ref="pickerPanel"
+          :class="['picker-panel', `picker-panel-${popoverDirection}`]"
+          :style="popoverStyle"
+          role="dialog"
+          :aria-label="label"
+          @keydown.esc.prevent.stop="closePicker"
+        >
+          <label class="hex-row">
+            <span>{{ t("colorPicker.hex") }}</span>
+            <input
+              :value="hexDraft"
+              spellcheck="false"
+              @blur="commitHex"
+              @change="commitHex"
+              @input="updateHex"
             />
+          </label>
+          <div class="slider-list">
+            <label>
+              <span>{{ t("colorPicker.red") }}</span>
+              <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
+            </label>
+            <label>
+              <span>{{ t("colorPicker.green") }}</span>
+              <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
+            </label>
+            <label>
+              <span>{{ t("colorPicker.blue") }}</span>
+              <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
+            </label>
+            <label v-if="alphaEnabled">
+              <span>{{ t("colorPicker.alpha") }}</span>
+              <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
+            </label>
+          </div>
+          <div class="swatch-section">
+            <span>{{ t("colorPicker.presets") }}</span>
+            <div class="swatch-grid">
+              <button
+                v-for="color in PRESET_COLORS"
+                :key="color"
+                :aria-label="color"
+                class="swatch-button"
+                type="button"
+                :style="{ backgroundColor: color }"
+                @click="chooseColor(color)"
+              />
+            </div>
+          </div>
+          <div v-if="recentColors.length" class="swatch-section">
+            <span>{{ t("colorPicker.recent") }}</span>
+            <div class="swatch-grid">
+              <button
+                v-for="color in recentColors"
+                :key="color"
+                :aria-label="color"
+                class="swatch-button"
+                type="button"
+                :style="{ backgroundColor: color }"
+                @click="chooseColor(color)"
+              />
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button class="apply-button" type="button" @click="applyCurrentColor">
+              {{ t("colorPicker.apply") }}
+            </button>
           </div>
         </div>
-        <div v-if="recentColors.length" class="swatch-section">
-          <span>{{ t("colorPicker.recent") }}</span>
-          <div class="swatch-grid">
-            <button
-              v-for="color in recentColors"
-              :key="color"
-              :aria-label="color"
-              class="swatch-button"
-              type="button"
-              :style="{ backgroundColor: color }"
-              @click="chooseColor(color)"
-            />
-          </div>
-        </div>
-        <div class="flex justify-end">
-          <button class="apply-button" type="button" @click="applyCurrentColor">
-            {{ t("colorPicker.apply") }}
-          </button>
-        </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -302,27 +395,17 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 }
 
 .picker-panel {
-  position: absolute;
-  left: 0;
-  z-index: 30;
+  position: fixed;
+  z-index: 1000;
   display: grid;
   gap: 12px;
-  width: max(100%, 260px);
-  max-height: min(360px, calc(100vh - 32px));
+  box-sizing: border-box;
   overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
   padding: 12px;
-}
-
-.picker-panel-down {
-  top: calc(100% + 8px);
-}
-
-.picker-panel-up {
-  bottom: calc(100% + 8px);
 }
 
 .picker-popover-enter-active,

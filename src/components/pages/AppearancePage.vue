@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { inject } from "vue";
+import { inject, type Ref } from "vue";
 import type { AppConfig } from "../../domain/defaultConfig";
 import AppearancePanel from "../AppearancePanel.vue";
 
 const config = inject<AppConfig>("config")!;
-const recentColors = inject("recentColors") as any as { value: string[] };
+const recentColors = inject<Ref<string[]>>("recentColors")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 
 function rememberColor(color: string) {
@@ -20,7 +20,7 @@ function rememberColor(color: string) {
   <section class="page-stack">
     <AppearancePanel
       :config="config"
-      :recent-colors="recentColors.value"
+      :recent-colors="recentColors"
       @preview-overlay-style="emit('preview-overlay-style', $event)"
       @update-overlay-style="emit('update-overlay-style', $event)"
       @remember-color="rememberColor"
