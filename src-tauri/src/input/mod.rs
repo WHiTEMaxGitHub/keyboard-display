@@ -91,7 +91,7 @@ fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: 
         }
     }
 
-    if let Err(error) = app_handle.emit_to("config", INPUT_STATE_EVENT, payload) {
+    if let Err(error) = app_handle.emit(INPUT_STATE_EVENT, payload) {
         debug_log::write("input", &format!("failed to emit input state to config: {error}"));
     }
 }
