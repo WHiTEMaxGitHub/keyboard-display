@@ -4,16 +4,15 @@
     "tagline": "桌面 POV 按键显示层"
   },
   "common": {
-    "chooseProfile": "选择方案",
-    "noRecentProfiles": "暂无最近方案",
+    "chooseProfile": "选择配置",
     "dismissNotification": "关闭通知",
     "workspaceNavigation": "工作区导航",
     "configurationPages": "配置页面",
     "livePreview": "实时预览"
   },
   "dialogs": {
-    "loadConfig": "加载按键显示方案",
-    "saveConfig": "保存按键显示方案",
+    "loadConfig": "加载按键显示配置",
+    "saveConfig": "保存按键显示配置",
     "recordingFilesFolder": "选择录制文件目录",
     "jsonFilter": "JSON"
   },
@@ -31,8 +30,8 @@
     "settings": "设置"
   },
   "topbar": {
-    "profile": "方案",
-    "loadConfig": "加载方案",
+    "profile": "配置",
+    "loadConfig": "加载配置",
     "exportApply": "导出并应用",
     "overwriteApply": "覆盖并应用"
   },
@@ -43,13 +42,12 @@
   },
   "overview": {
     "livePreview": "预览",
-    "profile": "方案",
+    "profile": "配置",
     "name": "名称",
     "status": "状态",
     "unsavedChanges": "未保存",
     "saved": "已保存",
     "visibleKeys": "可见按键",
-    "recentProfiles": "最近方案",
     "quickControls": "快捷项",
     "showOverlay": "显示 POV",
     "alwaysOnTop": "窗口置顶"
@@ -58,21 +56,26 @@
     "application": "应用",
     "appConfig": "应用设置",
     "configFile": "配置文件",
-    "currentProfile": "当前方案",
+    "currentProfile": "当前配置",
     "profileStatus": "状态",
-    "recentProfiles": "最近方案",
     "interface": "界面",
     "theme": "主题",
     "activeTheme": "当前主题",
     "customTheme": "自定义配色",
     "customThemeDescription": "使用内置调色板调整按钮、高亮和焦点状态的强调色，支持透明度。",
+    "customThemeInactiveDescription": "当前正在使用预设主题。启用自定义主题后，才可以调整背景模板、背景板透明度和强调色。",
+    "customThemeTemplate": "背景模板",
+    "customThemePanelOpacity": "背景板透明度",
+    "customThemePanelOpacityDescription": "控制界面卡片和控制区底板的不透明度，不影响窗口整体透明度。",
+    "customThemePreview": "实时预览",
+    "activateCustomTheme": "启用自定义",
     "resetCustomTheme": "恢复默认",
-    "customThemeAccentColors": "强调色",
+    "customThemeAccentColors": "色彩通道",
     "customThemeColor": {
       "accent": "主色",
-      "accentBlue": "蓝色",
-      "accentViolet": "紫色",
-      "accentEmerald": "绿色"
+      "accentBlue": "蓝色通道",
+      "accentViolet": "紫色通道",
+      "accentEmerald": "绿色通道"
     },
     "themeOption": {
       "vibrant": "霓虹",
@@ -81,10 +84,13 @@
       "light": "浅色",
       "custom": "自定义"
     },
+    "customThemeTemplateOption": {
+      "vibrant": "流动霓虹",
+      "calm": "柔和流光",
+      "still": "静态玻璃"
+    },
     "language": "语言",
     "languageDescription": "界面语言",
-    "recentConfigs": "最近方案",
-    "noRecentProfiles": "暂无最近方案。",
     "future": "更多",
     "appLevelSettings": "待完善设置",
     "recordingDefaults": "录制",
@@ -106,7 +112,7 @@
       "editor": "编辑"
     },
     "unitSize": "单位尺寸",
-    "gap": "间距",
+    "gap": "间距单位",
     "gaps": "间距项",
     "rows": "行数",
     "totalWidth": "总宽度",
@@ -184,8 +190,7 @@
   "recording": {
     "title": "录制",
     "saveFolder": "保存目录",
-    "defaultFolder": "默认目录: {path}",
-    "loading": "加载中...",
+    "noFolderSelected": "未选择。开始录制时会使用 app config 同目录的 recording-files。",
     "silent": "后台录制",
     "syncFlash": "同步闪烁",
     "milliseconds": "ms",
@@ -259,13 +264,14 @@
       "recording": "录制文件",
       "output": "输出",
       "noRecording": "未选择 .kbdrec",
-      "noOutputFolder": "未选择导出目录",
+      "noOutputFolder": "未选择导出目录，默认使用 app config 同目录的 export-videos。",
       "chooseRecording": "选择 .kbdrec",
       "chooseOutputFolder": "选择输出目录",
       "openOutputFolder": "打开输出目录",
       "renderThreads": "渲染线程",
-      "autoPlaceholder": "自动",
-      "autoThreads": "0 或留空 = 自动",
+      "autoPlaceholder": "默认",
+      "autoThreads": "留空或 0 = CPU 核心数，-1 = 高并发（CPU 核心数 × 4）",
+      "renderThreadsCapped": "线程数超过上限，已按当前 CPU 核心数 × 4 调整为 {max}。",
       "renderingFrames": "渲染帧",
       "progress": "导出进度",
       "waitingForFrames": "等待帧数据。",
@@ -301,7 +307,7 @@
     },
     "status": {
       "copyFontFailed": "复制字体失败: {error}",
-      "missingExportRequirements": "请先选择录制文件、导出目录和可用导出器。",
+      "missingExportRequirements": "请先选择录制文件和可用导出器。",
       "missingExporter": "请先选择可用的视频导出器。",
       "exporting": "正在导出显示层视频...",
       "exportFailed": "导出失败: {error}",

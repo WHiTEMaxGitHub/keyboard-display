@@ -6,6 +6,8 @@ export type CustomThemeColorKey =
   | "accentViolet"
   | "accentEmerald";
 
+export type CustomThemeTemplateId = "vibrant" | "calm" | "still";
+
 export type CustomThemeColors = Record<CustomThemeColorKey, string>;
 
 export type Theme = {
@@ -194,6 +196,113 @@ export const THEMES: Record<ThemeId, Theme> = {
 
 export const DEFAULT_THEME: ThemeId = "vibrant";
 
+export const CUSTOM_THEME_TEMPLATES: Record<CustomThemeTemplateId, {
+  id: CustomThemeTemplateId;
+  label: string;
+  colorKeys: CustomThemeColorKey[];
+  css: Record<string, string>;
+}> = {
+  vibrant: {
+    id: "vibrant",
+    label: "Vibrant Flow",
+    colorKeys: ["accent", "accentBlue", "accentViolet", "accentEmerald"],
+    css: {
+      "--theme-bg-base": "linear-gradient(135deg, #0c1026, #101a35 46%, #1b102a)",
+      "--theme-flow-1": "rgba(45, 184, 220, 0.28)",
+      "--theme-flow-2": "rgba(105, 86, 216, 0.24)",
+      "--theme-flow-3": "rgba(214, 82, 146, 0.18)",
+      "--theme-flow-4": "rgba(224, 166, 76, 0.14)",
+      "--theme-orb-1": "rgba(45, 184, 220, 0.13)",
+      "--theme-orb-2": "rgba(105, 86, 216, 0.12)",
+      "--theme-orb-3": "rgba(214, 82, 146, 0.10)",
+      "--theme-glass-from": "rgba(255, 255, 255, 0.125)",
+      "--theme-glass-to": "rgba(255, 255, 255, 0.055)",
+      "--theme-glass-border": "rgba(255, 255, 255, 0.16)",
+      "--theme-glass-inset": "rgba(255, 255, 255, 0.18)",
+      "--theme-text-primary": "#f8f6ff",
+      "--theme-text-body": "rgba(248, 246, 255, 0.86)",
+      "--theme-text-secondary": "rgba(248, 246, 255, 0.72)",
+      "--theme-text-muted": "rgba(248, 246, 255, 0.56)",
+      "--theme-text-subtle": "rgba(248, 246, 255, 0.38)",
+      "--theme-surface-base": "#0b1020",
+      "--theme-surface-control": "rgba(255, 255, 255, 0.085)",
+      "--theme-surface-control-hover": "rgba(255, 255, 255, 0.14)",
+      "--theme-surface-panel": "var(--theme-glass-from, rgba(255, 255, 255, 0.12))",
+      "--theme-grid-line": "rgba(255, 255, 255, 0.07)",
+      "--theme-border-dim": "rgba(255, 255, 255, 0.07)",
+      "--theme-border-default": "rgba(255, 255, 255, 0.13)",
+      "--theme-border-control": "rgba(255, 255, 255, 0.16)",
+    },
+  },
+  calm: {
+    id: "calm",
+    label: "Calm Flow",
+    colorKeys: ["accent", "accentBlue", "accentEmerald"],
+    css: {
+      "--theme-bg-base": "linear-gradient(135deg, #07090f, #101522 52%, #160f12)",
+      "--theme-flow-1": "rgba(65, 116, 128, 0.13)",
+      "--theme-flow-2": "rgba(78, 104, 132, 0.10)",
+      "--theme-flow-3": "rgba(76, 130, 112, 0.075)",
+      "--theme-flow-4": "rgba(104, 94, 128, 0.08)",
+      "--theme-orb-1": "rgba(65, 116, 128, 0.07)",
+      "--theme-orb-2": "rgba(78, 104, 132, 0.055)",
+      "--theme-orb-3": "rgba(76, 130, 112, 0.045)",
+      "--theme-glass-from": "rgba(30, 36, 48, 0.72)",
+      "--theme-glass-to": "rgba(12, 15, 22, 0.56)",
+      "--theme-glass-border": "rgba(255, 255, 255, 0.085)",
+      "--theme-glass-inset": "rgba(255, 255, 255, 0.06)",
+      "--theme-text-primary": "#edeff5",
+      "--theme-text-body": "rgba(237, 239, 245, 0.86)",
+      "--theme-text-secondary": "rgba(237, 239, 245, 0.68)",
+      "--theme-text-muted": "rgba(237, 239, 245, 0.48)",
+      "--theme-text-subtle": "rgba(237, 239, 245, 0.32)",
+      "--theme-surface-base": "#090b11",
+      "--theme-surface-control": "rgba(255, 255, 255, 0.065)",
+      "--theme-surface-control-hover": "rgba(255, 255, 255, 0.105)",
+      "--theme-surface-panel": "rgba(31, 37, 49, 0.72)",
+      "--theme-grid-line": "rgba(255, 255, 255, 0.035)",
+      "--theme-border-dim": "rgba(255, 255, 255, 0.05)",
+      "--theme-border-default": "rgba(255, 255, 255, 0.085)",
+      "--theme-border-control": "rgba(255, 255, 255, 0.11)",
+    },
+  },
+  still: {
+    id: "still",
+    label: "Still Glass",
+    colorKeys: ["accent", "accentBlue"],
+    css: {
+      "--theme-bg-base": "linear-gradient(135deg, #080b11, #0d1118 52%, #100f16)",
+      "--theme-flow-1": "rgba(65, 116, 128, 0.045)",
+      "--theme-flow-2": "rgba(78, 104, 132, 0.035)",
+      "--theme-flow-3": "rgba(76, 130, 112, 0.025)",
+      "--theme-flow-4": "rgba(104, 94, 128, 0.025)",
+      "--theme-orb-1": "rgba(65, 116, 128, 0.025)",
+      "--theme-orb-2": "rgba(78, 104, 132, 0.020)",
+      "--theme-orb-3": "rgba(76, 130, 112, 0.018)",
+      "--theme-glass-from": "rgba(28, 33, 42, 0.78)",
+      "--theme-glass-to": "rgba(10, 13, 18, 0.62)",
+      "--theme-glass-border": "rgba(255, 255, 255, 0.07)",
+      "--theme-glass-inset": "rgba(255, 255, 255, 0.045)",
+      "--theme-text-primary": "#e7eaf0",
+      "--theme-text-body": "rgba(231, 234, 240, 0.86)",
+      "--theme-text-secondary": "rgba(231, 234, 240, 0.66)",
+      "--theme-text-muted": "rgba(231, 234, 240, 0.46)",
+      "--theme-text-subtle": "rgba(231, 234, 240, 0.30)",
+      "--theme-surface-base": "#080a0f",
+      "--theme-surface-control": "rgba(255, 255, 255, 0.055)",
+      "--theme-surface-control-hover": "rgba(255, 255, 255, 0.090)",
+      "--theme-surface-panel": "rgba(28, 33, 42, 0.76)",
+      "--theme-grid-line": "rgba(255, 255, 255, 0.024)",
+      "--theme-border-dim": "rgba(255, 255, 255, 0.04)",
+      "--theme-border-default": "rgba(255, 255, 255, 0.070)",
+      "--theme-border-control": "rgba(255, 255, 255, 0.095)",
+    },
+  },
+};
+
+export const DEFAULT_CUSTOM_THEME_TEMPLATE: CustomThemeTemplateId = "calm";
+export const DEFAULT_CUSTOM_THEME_PANEL_OPACITY = 0.88;
+
 export const DEFAULT_CUSTOM_THEME_COLORS: CustomThemeColors = {
   accent: THEMES.custom.css["--theme-accent"],
   accentBlue: THEMES.custom.css["--theme-accent-blue"],
@@ -211,12 +320,43 @@ export const CUSTOM_THEME_COLOR_KEYS: Array<{
   { key: "accentEmerald", cssVar: "--theme-accent-emerald" },
 ];
 
-export function buildCustomThemeCss(colors: CustomThemeColors) {
+export function buildCustomThemeCss(
+  colors: CustomThemeColors,
+  templateId: CustomThemeTemplateId = DEFAULT_CUSTOM_THEME_TEMPLATE,
+  panelOpacity = DEFAULT_CUSTOM_THEME_PANEL_OPACITY,
+) {
   return {
-    ...THEMES.custom.css,
+    ...applyPanelOpacity(CUSTOM_THEME_TEMPLATES[templateId].css, panelOpacity),
     "--theme-accent": colors.accent,
     "--theme-accent-blue": colors.accentBlue,
     "--theme-accent-violet": colors.accentViolet,
     "--theme-accent-emerald": colors.accentEmerald,
   };
+}
+
+function applyPanelOpacity(css: Record<string, string>, opacity: number) {
+  const clampedOpacity = Math.min(1, Math.max(0, opacity));
+  const next = { ...css };
+
+  for (const key of [
+    "--theme-glass-from",
+    "--theme-glass-to",
+    "--theme-surface-panel",
+    "--theme-surface-control",
+    "--theme-surface-control-hover",
+  ]) {
+    next[key] = scaleRgbaAlpha(next[key], clampedOpacity);
+  }
+
+  return next;
+}
+
+function scaleRgbaAlpha(value: string, opacity: number) {
+  const match = value.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/);
+  if (!match) {
+    return value;
+  }
+
+  const [, r, g, b, alpha] = match;
+  return `rgba(${r}, ${g}, ${b}, ${(Number(alpha) * opacity).toFixed(3)})`;
 }

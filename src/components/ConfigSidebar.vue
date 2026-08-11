@@ -77,7 +77,7 @@ function selectLayoutSubPage(page: LayoutSubPage) {
 
 <template>
   <aside
-    class="sidebar absolute top-0 left-0 z-50 h-full overflow-y-auto overflow-x-hidden rounded-r-[28px] border-r border-[var(--glass-border)] bg-gradient-to-br from-[var(--glass-from)] to-[var(--glass-to)] backdrop-blur-2xl backdrop-saturate-[170%] shadow-[var(--glass-shadow)] transition-[width] duration-[300ms] ease-out py-[22px] w-[48px] hover:w-[228px]"
+    class="sidebar absolute top-0 left-0 z-50 h-full overflow-y-auto overflow-x-hidden rounded-r-[28px] border-r border-[var(--glass-border)] shadow-[var(--glass-shadow)] transition-[width] duration-[300ms] ease-out py-[22px] w-[48px] hover:w-[228px]"
     :aria-label="t('common.workspaceNavigation')"
     @mouseenter="expanded = true"
     @mouseleave="expanded = false"
@@ -150,3 +150,19 @@ function selectLayoutSubPage(page: LayoutSubPage) {
     </nav>
   </aside>
 </template>
+
+<style scoped>
+.sidebar {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-surface-base) 86%, var(--glass-from) 14%),
+      color-mix(in srgb, var(--color-surface-base) 90%, var(--glass-to) 10%)
+    );
+  backdrop-filter: blur(28px) saturate(145%);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  box-shadow:
+    var(--glass-shadow),
+    inset -1px 0 0 color-mix(in srgb, var(--color-border-default) 85%, transparent);
+}
+</style>

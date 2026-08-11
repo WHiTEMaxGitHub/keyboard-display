@@ -51,6 +51,15 @@ export function rgbToHex(rgb: RgbColor) {
   return `#${toHexChannel(rgb.r)}${toHexChannel(rgb.g)}${toHexChannel(rgb.b)}${alpha}`;
 }
 
+export function hexToCssColor(value: string) {
+  const rgb = hexToRgb(value);
+  if (rgb.a === undefined) {
+    return rgbToHex(rgb);
+  }
+
+  return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${(rgb.a / 255).toFixed(3)})`;
+}
+
 function toHexChannel(value: number) {
   return clampChannel(value).toString(16).padStart(2, "0");
 }

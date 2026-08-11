@@ -11,30 +11,44 @@ import LayoutEditor from "../LayoutEditor.vue";
 type LayoutSubPage = "summary" | "editor";
 
 const config = inject<AppConfig>("config")!;
-const activeKeysRef = inject<ComputedRef<Set<string>>>("activeKeys")!;
-const activeKeys = computed(() => activeKeysRef.value);
 const keyIdLabels = inject<ComputedRef<AppConfig["keyIdLabels"]>>("keyIdLabels")!;
 const layoutSubPageRef = inject<ComputedRef<LayoutSubPage>>("layoutSubPage")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 const { t } = useI18n();
+const staticActiveKeys = new Set<string>();
 
 const layoutRows = computed(() => {
   return config.rows.map((items, index) => ({ row: index + 1, items }));
 });
 
 const layoutSubPage = computed(() => layoutSubPageRef.value);
-const totalGaps = computed(() => config.rows.flat().filter((item) => !isKeyBinding(item)).length);
 const totalUnits = computed(() => {
   return config.rows
     .flat()
     .reduce((sum, item) => sum + item.widthUnit, 0);
 });
+const previewOverlayStyle = computed(() => ({
+  ...config.style,
+  idleKeyVisibility: "visible" as const,
+  opacity: 1,
+}));
 
 function updateUnitPx(event: Event) {
   const unitPx = Math.max(24, Math.min(120, Math.round(Number((event.target as HTMLInputElement).value))));
   emit("update-overlay-layout", {
     ...config.layout,
     unitPx,
+  });
+}
+
+function updateGapUnit(event: Event) {
+  const gapUnit = Math.max(
+    0,
+    Math.min(1, Math.round(Number((event.target as HTMLInputElement).value) * 100) / 100),
+  );
+  emit("update-overlay-layout", {
+    ...config.layout,
+    gapUnit,
   });
 }
 </script>
@@ -57,10 +71,6 @@ function updateUnitPx(event: Event) {
             <span>{{ t("layout.rows") }}</span>
             <strong>{{ config.rows.length }}</strong>
           </div>
-          <div class="layout-metric">
-            <span>{{ t("layout.gaps") }}</span>
-            <strong>{{ totalGaps }}</strong>
-          </div>
           <label class="layout-metric layout-metric-control">
             <span>{{ t("layout.unitSize") }}</span>
             <input
@@ -73,10 +83,18 @@ function updateUnitPx(event: Event) {
               @change="updateUnitPx"
             />
           </label>
-          <div class="layout-metric">
+          <label class="layout-metric layout-metric-control">
             <span>{{ t("layout.gap") }}</span>
-            <strong>{{ config.layout.gapUnit }}{{ t("layout.unitSuffix") }}</strong>
-          </div>
+            <input
+              :value="config.layout.gapUnit"
+              min="0"
+              max="1"
+              step="0.01"
+              type="number"
+              @blur="updateGapUnit"
+              @change="updateGapUnit"
+            />
+          </label>
           <div class="layout-metric">
             <span>{{ t("layout.totalWidth") }}</span>
             <strong>{{ totalUnits.toFixed(1) }}{{ t("layout.unitSuffix") }}</strong>
@@ -89,8 +107,8 @@ function updateUnitPx(event: Event) {
             :rows="config.rows"
             :keys="config.keys"
             :key-id-labels="keyIdLabels"
-            :active-keys="activeKeys"
-            :overlay-style="config.style"
+            :active-keys="staticActiveKeys"
+            :overlay-style="previewOverlayStyle"
             fit-to-container
           />
         </div>
@@ -127,8 +145,8 @@ function updateUnitPx(event: Event) {
             :rows="config.rows"
             :keys="config.keys"
             :key-id-labels="keyIdLabels"
-            :active-keys="activeKeys"
-            :overlay-style="config.style"
+            :active-keys="staticActiveKeys"
+            :overlay-style="previewOverlayStyle"
             fit-to-container
           />
         </div>
@@ -204,7 +222,12 @@ function updateUnitPx(event: Event) {
   scrollbar-gutter: stable both-edges;
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-lg);
-  background: var(--color-surface-preview);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--color-surface-control) 42%, transparent),
+      color-mix(in srgb, var(--color-surface-base) 38%, transparent)
+    );
   padding: 14px;
 }
 

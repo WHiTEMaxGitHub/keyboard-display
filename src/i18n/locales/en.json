@@ -4,16 +4,15 @@
     "tagline": "Desktop POV overlay"
   },
   "common": {
-    "chooseProfile": "Choose a profile",
-    "noRecentProfiles": "No recent profiles",
+    "chooseProfile": "Choose a config",
     "dismissNotification": "Dismiss notification",
     "workspaceNavigation": "Workspace navigation",
     "configurationPages": "Configuration pages",
     "livePreview": "Live preview"
   },
   "dialogs": {
-    "loadConfig": "Load keyboard display profile",
-    "saveConfig": "Save keyboard display profile",
+    "loadConfig": "Load keyboard display config",
+    "saveConfig": "Save keyboard display config",
     "recordingFilesFolder": "Choose recording files folder",
     "jsonFilter": "JSON"
   },
@@ -31,8 +30,8 @@
     "settings": "Settings"
   },
   "topbar": {
-    "profile": "Profile",
-    "loadConfig": "Load profile",
+    "profile": "Config",
+    "loadConfig": "Load config",
     "exportApply": "Export & Apply",
     "overwriteApply": "Overwrite & Apply"
   },
@@ -43,13 +42,12 @@
   },
   "overview": {
     "livePreview": "Live Preview",
-    "profile": "Profile",
+    "profile": "Config",
     "name": "Name",
     "status": "Status",
     "unsavedChanges": "Unsaved changes",
     "saved": "Saved",
     "visibleKeys": "Visible keys",
-    "recentProfiles": "Recent profiles",
     "quickControls": "Quick controls",
     "showOverlay": "Show POV overlay",
     "alwaysOnTop": "Always on top"
@@ -58,21 +56,26 @@
     "application": "Application",
     "appConfig": "App settings",
     "configFile": "Config file",
-    "currentProfile": "Current profile",
-    "profileStatus": "Profile status",
-    "recentProfiles": "Recent profiles",
+    "currentProfile": "Current config",
+    "profileStatus": "Config status",
     "interface": "Interface",
     "theme": "Theme",
     "activeTheme": "Current theme",
     "customTheme": "Custom colors",
     "customThemeDescription": "Use the built-in picker to tune accent colors for buttons, highlights, and focus states, including opacity.",
+    "customThemeInactiveDescription": "A preset theme is active. Enable Custom before editing the background template, panel opacity, and accent colors.",
+    "customThemeTemplate": "Background template",
+    "customThemePanelOpacity": "Panel opacity",
+    "customThemePanelOpacityDescription": "Controls the opacity of interface cards and control backplates. It does not change overall window opacity.",
+    "customThemePreview": "Live preview",
+    "activateCustomTheme": "Enable Custom",
     "resetCustomTheme": "Reset",
-    "customThemeAccentColors": "Accent colors",
+    "customThemeAccentColors": "Color channels",
     "customThemeColor": {
       "accent": "Primary",
-      "accentBlue": "Blue",
-      "accentViolet": "Violet",
-      "accentEmerald": "Green"
+      "accentBlue": "Blue channel",
+      "accentViolet": "Violet channel",
+      "accentEmerald": "Green channel"
     },
     "themeOption": {
       "vibrant": "Vibrant",
@@ -81,10 +84,13 @@
       "light": "Light",
       "custom": "Custom"
     },
+    "customThemeTemplateOption": {
+      "vibrant": "Vibrant flow",
+      "calm": "Calm flow",
+      "still": "Still glass"
+    },
     "language": "Language",
     "languageDescription": "Configuration UI language",
-    "recentConfigs": "Recent profiles",
-    "noRecentProfiles": "No recent profiles stored yet.",
     "future": "More",
     "appLevelSettings": "Planned settings",
     "recordingDefaults": "Recording defaults",
@@ -106,7 +112,7 @@
       "editor": "Editor"
     },
     "unitSize": "Unit size",
-    "gap": "Gap",
+    "gap": "Gap unit",
     "gaps": "Gap items",
     "rows": "Rows",
     "totalWidth": "Total width",
@@ -184,8 +190,7 @@
   "recording": {
     "title": "Recording",
     "saveFolder": "Save folder",
-    "defaultFolder": "Default app folder: {path}",
-    "loading": "loading...",
+    "noFolderSelected": "Not selected. Recording will use recording-files next to app config.",
     "silent": "Background recording",
     "syncFlash": "Sync flash",
     "milliseconds": "ms",
@@ -259,13 +264,14 @@
       "recording": "Recording",
       "output": "Output",
       "noRecording": "No .kbdrec selected",
-      "noOutputFolder": "No export folder selected",
+      "noOutputFolder": "No export folder selected. The default is export-videos next to app config.",
       "chooseRecording": "Choose .kbdrec",
       "chooseOutputFolder": "Choose output folder",
       "openOutputFolder": "Open output folder",
       "renderThreads": "Render threads",
-      "autoPlaceholder": "Auto",
-      "autoThreads": "0 or empty = auto (CPU cores)",
+      "autoPlaceholder": "Default",
+      "autoThreads": "Empty or 0 = CPU cores, -1 = high concurrency (CPU cores × 4)",
+      "renderThreadsCapped": "Thread count exceeded the limit and was adjusted to {max} (CPU cores × 4).",
       "renderingFrames": "Rendering frames",
       "progress": "Export progress",
       "waitingForFrames": "Waiting for frame data.",
@@ -301,7 +307,7 @@
     },
     "status": {
       "copyFontFailed": "Failed to copy font: {error}",
-      "missingExportRequirements": "Choose a recording, export folder, and available video exporter first.",
+      "missingExportRequirements": "Choose a recording and an available video exporter first.",
       "missingExporter": "Choose an available video exporter first.",
       "exporting": "Exporting overlay video...",
       "exportFailed": "Export failed: {error}",
