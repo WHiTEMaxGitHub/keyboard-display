@@ -35,6 +35,58 @@ pub fn load_app_config(app: tauri::AppHandle) -> Result<Option<String>, String> 
         .map_err(|error| error.to_string())
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InitializeAppConfigResult {
+    pub path: String,
+    pub initialized: bool,
+}
+
+#[tauri::command]
+pub fn initialize_app_config(
+    app: tauri::AppHandle,
+    contents: String,
+) -> Result<InitializeAppConfigResult, String> {
+    let path = app_config_path(&app)?;
+
+    #[cfg(debug_assertions)]
+    {
+        let _ = contents;
+        return Ok(InitializeAppConfigResult {
+            path: path.to_string_lossy().to_string(),
+            initialized: false,
+        });
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        if path.exists() && app_config_json_is_valid(&path) {
+            return Ok(InitializeAppConfigResult {
+                path: path.to_string_lossy().to_string(),
+                initialized: false,
+            });
+        }
+
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+        std::fs::write(&path, contents).map_err(|error| error.to_string())?;
+
+        Ok(InitializeAppConfigResult {
+            path: path.to_string_lossy().to_string(),
+            initialized: true,
+        })
+    }
+}
+
+#[cfg(not(debug_assertions))]
+fn app_config_json_is_valid(path: &std::path::Path) -> bool {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|contents| serde_json::from_str::<serde_json::Value>(&contents).ok())
+        .is_some()
+}
+
 #[tauri::command]
 pub fn app_config_path_string(app: tauri::AppHandle) -> Result<String, String> {
     app_config_path(&app).map(|path| path.to_string_lossy().to_string())
@@ -50,6 +102,30 @@ pub fn save_app_config(app: tauri::AppHandle, contents: String) -> Result<(), St
 }
 
 fn app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    app_config_dir(app).map(|dir| dir.join("app-config.json"))
+}
+
+fn app_config_dir(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    #[cfg(debug_assertions)]
+    {
+        return app
+            .path()
+            .app_config_dir()
+            .map_err(|error| error.to_string());
+    }
+
+    #[cfg(not(debug_assertions))]
+    {
+        let executable = std::env::current_exe().map_err(|error| error.to_string())?;
+        executable
+            .parent()
+            .map(|path| path.to_path_buf())
+            .ok_or_else(|| "failed to resolve executable directory".to_string())
+    }
+}
+
+#[allow(dead_code)]
+fn legacy_app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
     Ok(app
         .path()
         .app_config_dir()
@@ -59,11 +135,14 @@ fn app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String>
 
 #[tauri::command]
 pub fn default_recording_dir(app: tauri::AppHandle) -> Result<String, String> {
-    let path = app
-        .path()
-        .app_config_dir()
-        .map_err(|error| error.to_string())?
-        .join("recording-files");
+    let path = app_config_dir(&app)?.join("recording-files");
+
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[tauri::command]
+pub fn default_export_video_dir(app: tauri::AppHandle) -> Result<String, String> {
+    let path = app_config_dir(&app)?.join("export-videos");
 
     Ok(path.to_string_lossy().to_string())
 }
@@ -209,6 +288,10 @@ pub async fn export_overlay_video(
     ffmpeg_path: std::path::PathBuf,
     profile: ExportOverlayProfile,
 ) -> Result<ExportOverlayVideoResult, String> {
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+
     tauri::async_runtime::spawn_blocking(move || {
         video_export::export_overlay_video_with_progress(
             &recording_path,
@@ -246,7 +329,8 @@ pub fn copy_font_file(app: tauri::AppHandle, source_path: std::path::PathBuf) ->
 pub fn open_directory(path: String) -> Result<(), String> {
     let path = std::path::Path::new(&path);
     if !path.exists() {
-        return Err(format!("path does not exist: {}", path.display()));
+        std::fs::create_dir_all(path)
+            .map_err(|error| format!("failed to create directory {}: {error}", path.display()))?;
     }
     #[cfg(target_os = "macos")]
     {

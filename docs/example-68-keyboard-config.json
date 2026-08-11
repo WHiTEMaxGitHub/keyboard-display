@@ -25,7 +25,7 @@
       "backgroundColor": "#0a0c0e00",
       "backgroundOpacity": 0.72,
       "backgroundRadius": 5,
-      "idleKeyVisibility": "visible",
+      "idleKeyVisibility": "hidden",
       "alwaysOnTop": true,
       "idleColor": "#10141aa7",
       "activeColor": "#4dabf7c3",
@@ -554,6 +554,9 @@
     "defaultFormat": "webm",
     "transparentFormat": "webm",
     "compatibleFormat": "mp4",
-    "renderMarkers": true
+    "renderMarkers": true,
+    "filenameTemplate": "${profileSlug}-${recordingName}-overlay-2",
+    "fontPath": null,
+    "renderThreads": 16
   }
 }

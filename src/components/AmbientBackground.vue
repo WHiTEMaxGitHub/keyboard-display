@@ -52,6 +52,7 @@ function drawFlow(time: number) {
     dark: 0.78,
     midnight: 1.06,
     light: 0.9,
+    custom: 0.82,
   };
   const strength = themeStrength[themeId.value] ?? 1;
 
@@ -157,7 +158,7 @@ onUnmounted(() => {
 
 <style scoped>
 .ambient-canvas {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;

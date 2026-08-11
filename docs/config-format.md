@@ -223,6 +223,7 @@ source recording format; `.kbdrec` is the source of truth.
 | `compatibleFormat` | string | Format for broad compatibility export. Current planned value is `mp4`. |
 | `renderMarkers` | boolean | Whether overlay video export should render visible sync markers. |
 | `filenameTemplate` | string | Exported video filename template. Supported variables: `${recordingName}`, `${profileName}`, `${profileSlug}`, `${fps}`. |
+| `renderThreads` | number or null | Overlay video rendering workers. `null` and `0` use the available CPU core count, `-1` uses high concurrency (`CPU cores * 4`), and positive values use that exact worker count capped at `CPU cores * 4`. |
 
 ## App config
 
@@ -231,30 +232,51 @@ source recording format; `.kbdrec` is the source of truth.
 ```json
 {
   "version": 1,
-  "profiles": {},
-  "currentProfile": {},
-  "recording": {},
+  "profiles": {
+    "defaultProfileId": "default"
+  },
+  "currentProfile": {
+    "sourcePath": null
+  },
+  "recording": {
+    "outputDirectory": null,
+    "browserDirectory": null
+  },
+  "exporter": {},
   "ui": {}
 }
 ```
 
+In release builds, the app uses a fixed `app-config.json` next to the app
+executable. If that file is missing or contains invalid JSON, the app
+regenerates it from the built-in initial config. Runtime defaults such as
+`recording-files` and `export-videos` are resolved relative to the same
+directory. Debug builds keep using the platform app config directory and do not
+create a config next to the development binary.
+
+Initial app config intentionally does not prefill user storage paths. Profile
+JSON files are only created when the user exports a config. Recording files use
+`recording-files` next to app config when the user has not chosen a save
+folder. Overlay videos use `export-videos` next to app config when the user has
+not chosen an export folder.
+
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `profiles.defaultProfilePath` | string | Default profile path used by the app. |
-| `profiles.lastProfilePath` | string or null | Last loaded profile file path. |
-| `profiles.recentProfiles` | array | Recently loaded real profile paths for quick switching. |
+| `profiles.defaultProfileId` | string | Built-in profile template id used for first-run initialization. Current values are `default`, `left-keyboard`, and `68-keyboard`. |
 | `currentProfile` | object | Current active profile state. Its `overlay` and `recording` use the same schema as profile configs. |
+| `currentProfile.sourcePath` | string or null | Current profile file path. This is kept so overwrite actions can save edits back to the loaded/exported JSON file. It is not a recent or last-profile history field. |
 | `currentProfile.changed` | boolean | Whether current profile state differs from `currentProfile.sourcePath`. |
-| `recording.outputDirectory` | string or null | Folder for new `.kbdrec` recordings. |
-| `recording.browserDirectory` | string or null | Folder shown in the Recording Files browser. This is independent from the save folder. |
+| `recording.outputDirectory` | string or null | Folder for new `.kbdrec` recordings. Initial config uses `null`; when recording starts without a chosen folder, the app resolves this to `recording-files` next to app config. |
+| `recording.browserDirectory` | string or null | Optional folder shown in the Recording Files browser. When unset, the browser uses the active recording output folder. |
 | `recording.silent` | boolean | Whether recording should destroy the POV overlay window while recording. |
 | `recording.hotkeys` | object | Recording hotkey settings. |
 | `exporter.video.userSelectedPath` | string or null | User-selected ffmpeg binary path for video export. |
-| `exporter.video.outputDirectory` | string or null | Folder used for exported overlay video files. |
+| `exporter.video.outputDirectory` | string or null | Folder used for exported overlay video files. Initial config uses `null`; when exporting without a chosen folder, the app resolves this to `export-videos` next to app config. |
 | `ui.language` | string | Future UI language setting. `system` means follow system/default behavior. |
 
 Users should usually edit profile config files rather than app config. App
-config may contain local absolute paths.
+config may contain local absolute paths after the user chooses folders or saves
+a profile file, but it must not store last-profile history.
 
 ## Minimal profile example
 

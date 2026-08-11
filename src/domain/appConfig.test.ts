@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildAppConfigFile, parseAppConfigFile } from "./appConfig";
+import { buildAppConfigFile, createInitialAppConfigFile, parseAppConfigFile } from "./appConfig";
 import { createDefaultConfig } from "./defaultConfig";
 
 describe("app config", () => {
   it("builds an app config with current profile state", () => {
     const config = createDefaultConfig();
     const appConfig = buildAppConfigFile({
-      defaultProfilePath: "docs/default-config.json",
-      recentProfiles: [],
       currentProfile: {
         name: "CS POV",
         sourcePath: "/tmp/cs-pov.json",
@@ -46,10 +44,10 @@ describe("app config", () => {
       },
     });
 
-    expect(appConfig.profiles.lastProfilePath).toBe("/tmp/cs-pov.json");
-    expect(appConfig.profiles.recentProfiles).toEqual([
-      { name: "CS POV", path: "/tmp/cs-pov.json" },
-    ]);
+    expect(appConfig.profiles.defaultProfileId).toBe("default");
+    expect("lastProfilePath" in appConfig.profiles).toBe(false);
+    expect("recentProfiles" in appConfig.profiles).toBe(false);
+    expect(appConfig.currentProfile.sourcePath).toBe("/tmp/cs-pov.json");
     expect(appConfig.currentProfile.overlay.position).toBe("bottom-right");
     expect(appConfig.currentProfile.changed).toBe(true);
     expect("dirty" in appConfig.currentProfile).toBe(false);
@@ -66,109 +64,18 @@ describe("app config", () => {
     expect(appConfig.ui.language).toBe("zh-CN");
   });
 
-  it("keeps real recent profile paths deduped and newest first", () => {
-    const config = createDefaultConfig();
-    const appConfig = buildAppConfigFile({
-      defaultProfilePath: "docs/default-config.json",
-      recentProfiles: [
-        { name: "Old copy", path: "/tmp/cs-pov.json" },
-        { name: "Aim", path: "/tmp/aim.json" },
-        { name: "No path", path: "" },
-      ],
-      currentProfile: {
-        name: "CS POV",
-        sourcePath: "/tmp/cs-pov.json",
-        changed: false,
-        recording: config.recording,
-        export: config.export,
-        overlay: {
-          visible: true,
-          position: "bottom-right",
-          layout: config.layout,
-          style: config.style,
-          rows: config.rows,
-          keys: config.keys,
-          keyIdLabels: config.keyIdLabels,
-        },
-      },
-      recording: {
-        outputDirectory: null,
-        browserDirectory: null,
-        silent: false,
-        hotkeys: {
-          mode: "toggle",
-          start: ["ctrl-left", "shift-left", "r"],
-          stop: ["ctrl-left", "shift-left", "r"],
-          sync: ["f8"],
-        },
-      },
-      exporter: {
-        video: {
-          userSelectedPath: null,
-          outputDirectory: null,
-        },
-      },
-    });
+  it("creates an initial app config without user storage paths", () => {
+    const appConfig = createInitialAppConfigFile();
 
-    expect(appConfig.profiles.recentProfiles).toEqual([
-      { name: "CS POV", path: "/tmp/cs-pov.json" },
-      { name: "Aim", path: "/tmp/aim.json" },
-    ]);
-  });
-
-  it("limits recent profiles to eight entries", () => {
-    const config = createDefaultConfig();
-    const recentProfiles = Array.from({ length: 10 }, (_, index) => ({
-      name: `Profile ${index}`,
-      path: `/tmp/profile-${index}.json`,
-    }));
-    const appConfig = buildAppConfigFile({
-      defaultProfilePath: "docs/default-config.json",
-      recentProfiles,
-      currentProfile: {
-        name: "Current",
-        sourcePath: "/tmp/current.json",
-        changed: false,
-        recording: config.recording,
-        export: config.export,
-        overlay: {
-          visible: true,
-          position: "bottom-right",
-          layout: config.layout,
-          style: config.style,
-          rows: config.rows,
-          keys: config.keys,
-          keyIdLabels: config.keyIdLabels,
-        },
-      },
-      recording: {
-        outputDirectory: null,
-        browserDirectory: null,
-        silent: false,
-        hotkeys: {
-          mode: "toggle",
-          start: ["ctrl-left", "shift-left", "r"],
-          stop: ["ctrl-left", "shift-left", "r"],
-          sync: ["f8"],
-        },
-      },
-      exporter: {
-        video: {
-          userSelectedPath: null,
-          outputDirectory: null,
-        },
-      },
-    });
-
-    expect(appConfig.profiles.recentProfiles).toHaveLength(8);
-    expect(appConfig.profiles.recentProfiles[0]).toEqual({
-      name: "Current",
-      path: "/tmp/current.json",
-    });
-    expect(appConfig.profiles.recentProfiles[appConfig.profiles.recentProfiles.length - 1]).toEqual({
-      name: "Profile 6",
-      path: "/tmp/profile-6.json",
-    });
+    expect(appConfig.profiles.defaultProfileId).toBe("default");
+    expect("defaultProfilePath" in appConfig.profiles).toBe(false);
+    expect("lastProfilePath" in appConfig.profiles).toBe(false);
+    expect("recentProfiles" in appConfig.profiles).toBe(false);
+    expect(appConfig.currentProfile.sourcePath).toBeNull();
+    expect(appConfig.recording.outputDirectory).toBeNull();
+    expect(appConfig.recording.browserDirectory).toBeNull();
+    expect(appConfig.exporter.video.outputDirectory).toBeNull();
+    expect(appConfig.exporter.video.userSelectedPath).toBeNull();
   });
 
   it("parses app config json", () => {
@@ -176,9 +83,7 @@ describe("app config", () => {
       JSON.stringify({
         version: 1,
         profiles: {
-          defaultProfilePath: "docs/default-config.json",
-          lastProfilePath: null,
-          recentProfiles: [],
+          defaultProfileId: "default",
         },
         currentProfile: {
           name: "Unsaved",
@@ -233,9 +138,7 @@ describe("app config", () => {
       JSON.stringify({
         version: 1,
         profiles: {
-          defaultProfilePath: "docs/default-config.json",
-          lastProfilePath: null,
-          recentProfiles: [],
+          defaultProfileId: "default",
         },
         currentProfile: {
           name: "Unsaved",
@@ -283,7 +186,6 @@ describe("app config", () => {
         profiles: {
           defaultProfilePath: "docs/default-config.json",
           lastProfilePath: null,
-          recentProfiles: [],
         },
         currentProfile: {
           name: "Old config",

@@ -4,9 +4,7 @@ import { useI18n } from "vue-i18n";
 import type { AppConfig } from "../../domain/defaultConfig";
 import PovOverlay from "../PovOverlay.vue";
 import BaseFieldRow from "../BaseFieldRow.vue";
-import BaseSelect from "../BaseSelect.vue";
 import BaseToggleRow from "../BaseToggleRow.vue";
-import type { RecentProfile } from "../../domain/appConfig";
 
 const config = inject<AppConfig>("config")!;
 const activeKeysRef = inject<ComputedRef<Set<string>>>("activeKeys")!;
@@ -15,11 +13,9 @@ const keyIdLabels = inject<ComputedRef<AppConfig["keyIdLabels"]>>("keyIdLabels")
 const overlayVisibleRef = inject<ComputedRef<boolean>>("overlayVisible")!;
 const profileNameRef = inject<ComputedRef<string>>("profileName")!;
 const profileChangedRef = inject<ComputedRef<boolean>>("profileChanged")!;
-const recentProfilesRef = inject<ComputedRef<RecentProfile[]>>("recentProfiles")!;
 const overlayVisible = computed(() => overlayVisibleRef.value);
 const profileName = computed(() => profileNameRef.value);
 const profileChanged = computed(() => profileChangedRef.value);
-const recentProfiles = computed(() => recentProfilesRef.value);
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 const { t } = useI18n();
 
@@ -34,14 +30,6 @@ function updateAlwaysOnTop(event: Event) {
   });
 }
 
-function loadRecentProfile(event: Event) {
-  const select = event.target as HTMLSelectElement;
-  const path = select.value;
-  if (path) {
-    emit("load-recent-profile", path);
-    select.value = "";
-  }
-}
 </script>
 
 <template>
@@ -72,26 +60,6 @@ function loadRecentProfile(event: Event) {
           {{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}
         </BaseFieldRow>
         <BaseFieldRow :label="t('overview.visibleKeys')">{{ config.keys.length }}</BaseFieldRow>
-        <label class="recent-profile-control">
-          <span>{{ t("overview.recentProfiles") }}</span>
-          <BaseSelect
-            class="select-control"
-            :disabled="recentProfiles.length === 0"
-            model-value=""
-            @change="loadRecentProfile"
-          >
-            <option value="">
-              {{ recentProfiles.length ? t("common.chooseProfile") : t("common.noRecentProfiles") }}
-            </option>
-            <option
-              v-for="profile in recentProfiles"
-              :key="profile.path"
-              :value="profile.path"
-            >
-              {{ profile.name }}
-            </option>
-          </BaseSelect>
-        </label>
       </article>
 
       <article class="panel">
@@ -195,22 +163,6 @@ function loadRecentProfile(event: Event) {
   line-height: 24px;
   letter-spacing: 0;
   color: var(--color-text-primary);
-}
-
-.recent-profile-control {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 7px;
-  margin-top: 14px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.select-control {
-  justify-self: end;
-  width: min(240px, 100%);
 }
 
 @media (max-width: 920px) {

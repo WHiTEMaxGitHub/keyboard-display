@@ -44,6 +44,8 @@ const fontPathDraft = ref(props.config.export.fontPath);
 const renderThreadsDraft = ref(props.config.export.renderThreads);
 const exportStatus = ref("");
 const exportInProgress = ref(false);
+const defaultExportVideoDirectory = ref("");
+const renderThreadsNotice = ref("");
 const exportProgress = ref({
   renderedFrames: 0,
   totalFrames: 0,
@@ -52,17 +54,23 @@ const exportProgress = ref({
 });
 let unlistenExportProgress: UnlistenFn | undefined;
 
+const effectiveOutputDirectory = computed(() =>
+  props.videoExporterConfig.outputDirectory || defaultExportVideoDirectory.value,
+);
+const detectedCpuCores = computed(() => navigator.hardwareConcurrency || 4);
+const maxRenderThreads = computed(() => Math.max(1, detectedCpuCores.value * 4));
+
 const exportReady = computed(() =>
-  Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && props.videoExporterConfig.outputDirectory),
+  Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && effectiveOutputDirectory.value),
 );
 
 const outputVideoPath = computed(() => {
-  if (!props.videoExporterConfig.outputDirectory || !inputRecordingPath.value) {
+  if (!effectiveOutputDirectory.value || !inputRecordingPath.value) {
     return "";
   }
 
   return joinPath(
-    props.videoExporterConfig.outputDirectory,
+    effectiveOutputDirectory.value,
     defaultOutputFileName(inputRecordingPath.value),
   );
 });
@@ -127,6 +135,7 @@ watch(
 
 onMounted(async () => {
   void refreshExporterStatus();
+  void resolveDefaultExportVideoDirectory();
   unlistenExportProgress = await listen<{
     renderedFrames: number;
     totalFrames: number;
@@ -260,13 +269,22 @@ function clearFontFile() {
 
 function onRenderThreadsInput(event: Event) {
   const value = (event.target as HTMLInputElement).value;
-  renderThreadsDraft.value = value === "" ? null : Math.max(0, parseInt(value, 10) || 0);
+  renderThreadsDraft.value = value === "" ? null : Math.max(-1, parseInt(value, 10) || 0);
+  renderThreadsNotice.value = "";
 }
 
 function commitRenderThreads() {
-  const renderThreads = renderThreadsDraft.value === null || renderThreadsDraft.value <= 0
+  let renderThreads = renderThreadsDraft.value === null
     ? null
-    : renderThreadsDraft.value;
+    : Math.max(-1, Math.round(renderThreadsDraft.value));
+
+  if (renderThreads !== null && renderThreads > maxRenderThreads.value) {
+    renderThreadsNotice.value = t("export.overlayVideo.renderThreadsCapped", {
+      max: maxRenderThreads.value,
+    });
+    renderThreads = maxRenderThreads.value;
+  }
+
   renderThreadsDraft.value = renderThreads;
   emit("update-export-config", {
     ...props.config.export,
@@ -290,6 +308,27 @@ async function chooseOutputDirectory() {
   }
 }
 
+async function resolveDefaultExportVideoDirectory() {
+  if (!defaultExportVideoDirectory.value) {
+    defaultExportVideoDirectory.value = await tauriApi.defaultExportVideoDir();
+  }
+
+  return defaultExportVideoDirectory.value;
+}
+
+async function resolveOutputDirectory() {
+  if (props.videoExporterConfig.outputDirectory) {
+    return props.videoExporterConfig.outputDirectory;
+  }
+
+  const outputDirectory = await resolveDefaultExportVideoDirectory();
+  emit("update-video-exporter-config", normalizeVideoExporterConfig({
+    ...props.videoExporterConfig,
+    outputDirectory,
+  }));
+  return outputDirectory;
+}
+
 async function exportOverlayVideo() {
   if (exportInProgress.value) {
     return;
@@ -306,6 +345,12 @@ async function exportOverlayVideo() {
     return;
   }
 
+  const outputDirectory = await resolveOutputDirectory();
+  const resolvedOutputVideoPath = joinPath(
+    outputDirectory,
+    defaultOutputFileName(inputRecordingPath.value),
+  );
+
   exportInProgress.value = true;
   exportProgress.value = {
     renderedFrames: 0,
@@ -318,7 +363,7 @@ async function exportOverlayVideo() {
   try {
       await tauriApi.exportOverlayVideo(
       inputRecordingPath.value,
-      outputVideoPath.value,
+      resolvedOutputVideoPath,
       exporterPath,
       {
         layout: props.config.layout,
@@ -337,13 +382,14 @@ async function exportOverlayVideo() {
 }
 
 async function openOutputDirectory() {
-  if (!props.videoExporterConfig.outputDirectory) {
+  const outputDirectory = await resolveOutputDirectory();
+  if (!outputDirectory) {
     exportStatus.value = t("export.status.missingOutputFolder");
     return;
   }
 
   try {
-    await tauriApi.openDirectory(props.videoExporterConfig.outputDirectory);
+    await tauriApi.openDirectory(outputDirectory);
   } catch (error) {
     exportStatus.value = t("export.status.openFolderFailed", { error: String(error) });
   }
@@ -454,7 +500,7 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
           {{ t("export.overlayVideo.chooseOutputFolder") }}
         </BaseButton>
         <BaseButton
-          :disabled="!videoExporterConfig.outputDirectory"
+          :disabled="!effectiveOutputDirectory"
           @click="openOutputDirectory"
         >
           {{ t("export.overlayVideo.openOutputFolder") }}
@@ -466,8 +512,8 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
           <input
             class="box-border w-20 border border-border-control rounded-md bg-surface-control text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
             type="number"
-            min="0"
-            max="64"
+            min="-1"
+            :max="maxRenderThreads"
             :value="renderThreadsDraft ?? ''"
             :placeholder="t('export.overlayVideo.autoPlaceholder')"
             @input="onRenderThreadsInput"
@@ -476,6 +522,7 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
           />
           <span class="text-text-secondary text-[13px]">{{ t("export.overlayVideo.autoThreads") }}</span>
         </div>
+        <p v-if="renderThreadsNotice" class="notice-text">{{ renderThreadsNotice }}</p>
       </section>
       <div v-if="exportInProgress" class="export-progress-stack">
         <div class="flex items-center justify-between gap-3 text-text-muted text-[13px] font-extrabold">

@@ -21,7 +21,6 @@ import RecordingHotkeysPanel from "./RecordingHotkeysPanel.vue";
 const props = defineProps<{
   config: AppConfig;
   recordingDirectory: string;
-  defaultRecordingDirectory: string;
   silentRecording: boolean;
   isRecording: boolean;
   recordingCountdown: number;
@@ -175,12 +174,7 @@ function addSyncMarker() {
   <BasePanel wide>
     <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">{{ t("recording.title") }}</h2>
     <BaseFieldRow :label="t('recording.saveFolder')">
-      {{
-        recordingDirectory ||
-          t("recording.defaultFolder", {
-            path: defaultRecordingDirectory || t("recording.loading"),
-          })
-      }}
+      {{ recordingDirectory || t("recording.noFolderSelected") }}
     </BaseFieldRow>
     <div class="flex flex-wrap gap-2 my-4">
       <BaseButton @click="chooseRecordingDirectory">{{ t("recording.controls.chooseFolder") }}</BaseButton>

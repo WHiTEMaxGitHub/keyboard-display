@@ -69,7 +69,7 @@ pub struct ExportOverlayStyle {
 pub struct ExportVideoConfig {
     pub render_markers: bool,
     pub font_path: Option<String>,
-    pub render_threads: Option<u16>,
+    pub render_threads: Option<i32>,
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -198,7 +198,8 @@ pub fn export_overlay_video(
 }
 
 /// 从 `.kbdrec` 帧状态流渲染透明 WebM overlay，并在渲染过程中上报帧进度。
-/// 支持多线程并行渲染，通过 `profile.export.render_threads` 配置线程数（`None` = 自动检测 CPU 核心数）。
+/// 支持多线程并行渲染，通过 `profile.export.render_threads` 配置线程数。
+/// `None` 和 `0` 使用 CPU 核心数，`-1` 使用高并发上限。
 pub fn export_overlay_video_with_progress(
     recording_path: &Path,
     output_path: &Path,
@@ -228,11 +229,7 @@ pub fn export_overlay_video_with_progress(
     let available_threads = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
-    let num_threads = profile
-        .export
-        .render_threads
-        .map(|n| (n as usize).max(1).min(available_threads * 4))
-        .unwrap_or(available_threads);
+    let num_threads = resolve_render_thread_count(profile.export.render_threads, available_threads);
 
     use std::sync::Arc;
 
@@ -390,6 +387,18 @@ pub fn export_overlay_video_with_progress(
         height: size.height,
         fps,
     })
+}
+
+fn resolve_render_thread_count(configured_threads: Option<i32>, available_threads: usize) -> usize {
+    let available_threads = available_threads.max(1);
+    let max_render_threads = available_threads.saturating_mul(4).max(1);
+
+    match configured_threads {
+        None | Some(0) => available_threads,
+        Some(-1) => max_render_threads,
+        Some(value) if value > 0 => (value as usize).min(max_render_threads).max(1),
+        Some(_) => max_render_threads,
+    }
 }
 
 fn render_profile(
@@ -1089,8 +1098,8 @@ impl ExportOverlayItem {
 mod tests {
     use super::{
         build_webm_ffmpeg_args, estimate_export_overlay_size, export_overlay_video,
-        export_overlay_video_with_progress, render_overlay_frame, ExportOverlayItem,
-        ExportOverlayLayout, ExportOverlayProfile, ExportOverlayStyle,
+        export_overlay_video_with_progress, render_overlay_frame, resolve_render_thread_count,
+        ExportOverlayItem, ExportOverlayLayout, ExportOverlayProfile, ExportOverlayStyle,
         ExportRecordingConfig, ExportVideoConfig,
     };
     use crate::recording::{encode_kbdrec, RecordingEvent, RecordingSnapshot};
@@ -1102,6 +1111,19 @@ mod tests {
 
         assert_eq!(estimate_export_overlay_size(&profile).width, 154);
         assert_eq!(estimate_export_overlay_size(&profile).height, 74);
+    }
+
+    #[test]
+    fn resolves_render_thread_count_modes() {
+        assert_eq!(resolve_render_thread_count(None, 8), 8);
+        assert_eq!(resolve_render_thread_count(None, 1), 1);
+        assert_eq!(resolve_render_thread_count(Some(0), 8), 8);
+        assert_eq!(resolve_render_thread_count(Some(-1), 8), 32);
+        assert_eq!(resolve_render_thread_count(Some(-2), 8), 32);
+        assert_eq!(resolve_render_thread_count(Some(12), 8), 12);
+        assert_eq!(resolve_render_thread_count(Some(64), 8), 32);
+        assert_eq!(resolve_render_thread_count(Some(-1), 64), 256);
+        assert_eq!(resolve_render_thread_count(Some(512), 64), 256);
     }
 
     #[test]

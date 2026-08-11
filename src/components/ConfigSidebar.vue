@@ -20,6 +20,7 @@ type ConfigPage =
   | "recording"
   | "export"
   | "settings";
+type LayoutSubPage = "summary" | "editor";
 type RecordingSubPage = "control" | "files";
 
 const navItems: Array<{
@@ -41,13 +42,20 @@ const recordingNavItems: Array<{ id: RecordingSubPage; labelKey: string }> = [
   { id: "files", labelKey: "nav.recordingFiles" },
 ];
 
+const layoutNavItems: Array<{ id: LayoutSubPage; labelKey: string }> = [
+  { id: "summary", labelKey: "nav.layoutSummary" },
+  { id: "editor", labelKey: "nav.layoutEditor" },
+];
+
 defineProps<{
   activePage: ConfigPage;
+  layoutSubPage: LayoutSubPage;
   recordingSubPage: RecordingSubPage;
 }>();
 
 const emit = defineEmits<{
   "update-active-page": [page: ConfigPage];
+  "update-layout-sub-page": [page: LayoutSubPage];
   "update-recording-sub-page": [page: RecordingSubPage];
 }>();
 
@@ -61,11 +69,15 @@ function selectPage(page: ConfigPage) {
 function selectRecordingSubPage(page: RecordingSubPage) {
   emit("update-recording-sub-page", page);
 }
+
+function selectLayoutSubPage(page: LayoutSubPage) {
+  emit("update-layout-sub-page", page);
+}
 </script>
 
 <template>
   <aside
-    class="sidebar fixed top-0 left-0 z-50 h-screen overflow-y-auto overflow-x-hidden rounded-r-[28px] border-r border-[var(--glass-border)] bg-gradient-to-br from-[var(--glass-from)] to-[var(--glass-to)] backdrop-blur-2xl backdrop-saturate-[170%] shadow-[var(--glass-shadow)] transition-[width] duration-[300ms] ease-out py-[22px] w-[48px] hover:w-[228px]"
+    class="sidebar absolute top-0 left-0 z-50 h-full overflow-y-auto overflow-x-hidden rounded-r-[28px] border-r border-[var(--glass-border)] shadow-[var(--glass-shadow)] transition-[width] duration-[300ms] ease-out py-[22px] w-[48px] hover:w-[228px]"
     :aria-label="t('common.workspaceNavigation')"
     @mouseenter="expanded = true"
     @mouseleave="expanded = false"
@@ -95,6 +107,26 @@ function selectRecordingSubPage(page: RecordingSubPage) {
           <span class="whitespace-nowrap opacity-0 transition-opacity duration-250 delay-100" :class="{ 'opacity-100': expanded }">{{ t(item.labelKey) }}</span>
         </button>
         <div
+          v-if="item.id === 'layout' && activePage === 'layout'"
+          class="grid gap-1 -mt-0.5 mb-1 ml-10 opacity-0 transition-opacity duration-250 delay-100"
+          :class="{ 'opacity-100': expanded }"
+        >
+          <button
+            v-for="child in layoutNavItems"
+            :key="child.id"
+            :class="[
+              'min-h-[30px] border-0 rounded-md bg-transparent text-text-muted cursor-pointer text-left text-[13px] font-bold px-2.5 py-[7px] transition-[background-color,color,transform] duration-[140ms] ease whitespace-nowrap',
+              'hover:bg-white/6 hover:translate-x-0.5',
+              layoutSubPage === child.id ? 'text-accent-text bg-white/6 translate-x-0.5' : '',
+            ]"
+            type="button"
+            @pointerdown="selectLayoutSubPage(child.id)"
+            @click="selectLayoutSubPage(child.id)"
+          >
+            {{ t(child.labelKey) }}
+          </button>
+        </div>
+        <div
           v-if="item.id === 'recording' && activePage === 'recording'"
           class="grid gap-1 -mt-0.5 mb-1 ml-10 opacity-0 transition-opacity duration-250 delay-100"
           :class="{ 'opacity-100': expanded }"
@@ -118,3 +150,19 @@ function selectRecordingSubPage(page: RecordingSubPage) {
     </nav>
   </aside>
 </template>
+
+<style scoped>
+.sidebar {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-surface-base) 86%, var(--glass-from) 14%),
+      color-mix(in srgb, var(--color-surface-base) 90%, var(--glass-to) 10%)
+    );
+  backdrop-filter: blur(28px) saturate(145%);
+  -webkit-backdrop-filter: blur(28px) saturate(145%);
+  box-shadow:
+    var(--glass-shadow),
+    inset -1px 0 0 color-mix(in srgb, var(--color-border-default) 85%, transparent);
+}
+</style>

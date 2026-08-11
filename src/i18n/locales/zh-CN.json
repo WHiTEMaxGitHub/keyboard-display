@@ -1,38 +1,44 @@
 {
   "app": {
     "name": "Keyboard Display",
-    "tagline": "桌面 POV 按键叠层"
+    "tagline": "桌面 POV 按键显示层"
   },
   "common": {
     "chooseProfile": "选择配置",
-    "noRecentProfiles": "暂无最近配置",
     "dismissNotification": "关闭通知",
     "workspaceNavigation": "工作区导航",
     "configurationPages": "配置页面",
     "livePreview": "实时预览"
   },
   "dialogs": {
-    "loadConfig": "加载键盘显示配置",
-    "saveConfig": "保存键盘显示配置",
+    "loadConfig": "加载按键显示配置",
+    "saveConfig": "保存按键显示配置",
     "recordingFilesFolder": "选择录制文件目录",
     "jsonFilter": "JSON"
   },
   "nav": {
     "overview": "概览",
     "layout": "布局",
+    "layoutSummary": "摘要",
+    "layoutEditor": "编辑",
     "appearance": "外观",
     "window": "窗口",
     "recording": "录制",
     "recordingControl": "控制",
     "recordingFiles": "文件",
     "export": "导出",
-    "settings": "应用配置"
+    "settings": "设置"
   },
   "topbar": {
     "profile": "配置",
     "loadConfig": "加载配置",
     "exportApply": "导出并应用",
     "overwriteApply": "覆盖并应用"
+  },
+  "windowControls": {
+    "close": "关闭窗口",
+    "minimize": "最小化",
+    "maximize": "最大化或还原"
   },
   "overview": {
     "livePreview": "预览",
@@ -42,32 +48,56 @@
     "unsavedChanges": "未保存",
     "saved": "已保存",
     "visibleKeys": "可见按键",
-    "recentProfiles": "最近配置",
     "quickControls": "快捷项",
-    "showOverlay": "显示叠层",
+    "showOverlay": "显示 POV",
     "alwaysOnTop": "窗口置顶"
   },
   "settings": {
-    "application": "设置",
-    "appConfig": "应用",
+    "application": "应用",
+    "appConfig": "应用设置",
     "configFile": "配置文件",
     "currentProfile": "当前配置",
     "profileStatus": "状态",
-    "recentProfiles": "最近配置",
     "interface": "界面",
-    "theme": "外观",
+    "theme": "主题",
     "activeTheme": "当前主题",
+    "customTheme": "自定义配色",
+    "customThemeDescription": "使用内置调色板调整按钮、高亮和焦点状态的强调色，支持透明度。",
+    "customThemeInactiveDescription": "当前正在使用预设主题。启用自定义主题后，才可以调整背景模板、背景板透明度和强调色。",
+    "customThemeTemplate": "背景模板",
+    "customThemePanelOpacity": "背景板透明度",
+    "customThemePanelOpacityDescription": "控制界面卡片和控制区底板的不透明度，不影响窗口整体透明度。",
+    "customThemePreview": "实时预览",
+    "activateCustomTheme": "启用自定义",
+    "resetCustomTheme": "恢复默认",
+    "customThemeAccentColors": "色彩通道",
+    "customThemeColor": {
+      "accent": "主色",
+      "accentBlue": "蓝色通道",
+      "accentViolet": "紫色通道",
+      "accentEmerald": "绿色通道"
+    },
+    "themeOption": {
+      "vibrant": "霓虹",
+      "dark": "暗色",
+      "midnight": "午夜",
+      "light": "浅色",
+      "custom": "自定义"
+    },
+    "customThemeTemplateOption": {
+      "vibrant": "流动霓虹",
+      "calm": "柔和流光",
+      "still": "静态玻璃"
+    },
     "language": "语言",
     "languageDescription": "界面语言",
-    "recentConfigs": "最近配置",
-    "noRecentProfiles": "暂无最近配置。",
-    "future": "后续",
-    "appLevelSettings": "应用设置",
+    "future": "更多",
+    "appLevelSettings": "待完善设置",
     "recordingDefaults": "录制",
     "exporterSettings": "导出",
     "interfaceSettings": "界面",
     "storedInAppConfig": "已保存",
-    "readyForExpansion": "待扩展",
+    "readyForExpansion": "待完善",
     "languageOption": {
       "system": "跟随系统",
       "en": "English",
@@ -82,7 +112,13 @@
       "editor": "编辑"
     },
     "unitSize": "单位尺寸",
-    "gap": "间距",
+    "gap": "间距单位",
+    "gaps": "间距项",
+    "rows": "行数",
+    "totalWidth": "总宽度",
+    "structure": "行结构",
+    "preview": "布局预览",
+    "editorTitle": "布局编辑",
     "visibleKeys": "可见按键",
     "line": "第 {number} 行:",
     "gapItem": "间距",
@@ -100,16 +136,11 @@
       "addKey": "添加键",
       "addGap": "添加间距",
       "deleteRow": "删除行",
-      "id": "ID",
-      "label": "标签",
+      "id": "Key ID",
+      "label": "展示名",
       "width": "宽度",
       "pressKey": "按下按键...",
       "captureKey": "采集按键",
-      "hidePlatformLabels": "隐藏平台标签",
-      "platformLabels": "平台标签",
-      "macosLabel": "macOS 标签",
-      "windowsLabel": "Windows 标签",
-      "registeredLabel": "注册标签",
       "delete": "删除",
       "left": "左移",
       "right": "右移"
@@ -120,8 +151,8 @@
     "refreshPov": "刷新 POV",
     "scale": "缩放",
     "unitPx": "{px}px 单位",
-    "overlayTransparency": "叠层透明度",
-    "overlayTransparencyDescription": "控制整个 POV 叠层的透明度。",
+    "overlayTransparency": "显示层透明度",
+    "overlayTransparencyDescription": "控制整个 POV 按键显示层的透明度。",
     "backplateRadius": "底板圆角",
     "idleKeys": "未按下按键",
     "idleVisibility": {
@@ -129,7 +160,7 @@
       "hidden": "按下时显示"
     },
     "colors": {
-      "group": "叠层颜色",
+      "group": "显示层颜色",
       "idleKey": "未按下键",
       "pressedKey": "按下键",
       "idleText": "未按下文字",
@@ -142,7 +173,7 @@
     "title": "窗口",
     "positionLabel": "位置",
     "visualAdjust": "可视调整",
-    "showOverlay": "显示叠层",
+    "showOverlay": "显示 POV",
     "alwaysOnTop": "窗口置顶",
     "adjust": {
       "start": "调整位置",
@@ -159,15 +190,14 @@
   "recording": {
     "title": "录制",
     "saveFolder": "保存目录",
-    "defaultFolder": "默认目录: {path}",
-    "loading": "加载中...",
-    "silent": "静默录制",
-    "syncFlash": "同步闪框",
+    "noFolderSelected": "未选择。开始录制时会使用 app config 同目录的 recording-files。",
+    "silent": "后台录制",
+    "syncFlash": "同步闪烁",
     "milliseconds": "ms",
     "captureFrameRate": "采集帧率",
     "customFps": "自定义 FPS",
-    "rateSummary": "{fps}fps · {bytesPerSecond} 原始",
-    "primaryArtifact": "主文件",
+    "rateSummary": "{fps}fps · 原始数据 {bytesPerSecond}",
+    "primaryArtifact": "保存格式",
     "controls": {
       "chooseFolder": "选择目录",
       "startingIn": "{seconds} 秒后开始",
@@ -185,7 +215,7 @@
       "variables": "变量: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
     },
     "storage": {
-      "description": "输入帧会保存为紧凑二进制状态，再用于回放渲染或导出。",
+      "description": "输入帧会保存为紧凑的二进制状态，用于后续回放渲染或视频导出。",
       "lastRecording": "最近录制: {path}"
     },
     "hotkeys": {
@@ -211,9 +241,9 @@
   },
   "export": {
     "title": "导出",
-    "transparentOverlay": "透明叠层",
+    "transparentOverlay": "透明显示层",
     "compatibleVideo": "兼容视频",
-    "renderMarkers": "渲染同步点",
+    "renderMarkers": "显示同步点",
     "filenameTemplate": "文件名模板",
     "font": "字体",
     "systemDefault": "系统默认",
@@ -228,19 +258,20 @@
       "chooseFolder": "选择导出目录"
     },
     "overlayVideo": {
-      "title": "叠层视频",
-      "exportButton": "导出叠层视频",
+      "title": "显示层视频",
+      "exportButton": "导出显示层视频",
       "exportingButton": "导出中...",
       "recording": "录制文件",
       "output": "输出",
       "noRecording": "未选择 .kbdrec",
-      "noOutputFolder": "未选择导出目录",
+      "noOutputFolder": "未选择导出目录，默认使用 app config 同目录的 export-videos。",
       "chooseRecording": "选择 .kbdrec",
       "chooseOutputFolder": "选择输出目录",
       "openOutputFolder": "打开输出目录",
       "renderThreads": "渲染线程",
-      "autoPlaceholder": "自动",
-      "autoThreads": "0 或留空 = 自动",
+      "autoPlaceholder": "默认",
+      "autoThreads": "留空或 0 = CPU 核心数，-1 = 高并发（CPU 核心数 × 4）",
+      "renderThreadsCapped": "线程数超过上限，已按当前 CPU 核心数 × 4 调整为 {max}。",
       "renderingFrames": "渲染帧",
       "progress": "导出进度",
       "waitingForFrames": "等待帧数据。",
@@ -248,23 +279,23 @@
       "frameWithKeys": "第 {frame} 帧: {keys}"
     },
     "exporter": {
-      "title": "视频导出器",
+      "title": "视频导出工具",
       "checkAgain": "重新检查",
       "checking": "检查中...",
       "status": "状态",
       "using": "使用中",
       "notInstalled": "未安装",
-      "appManagedExporter": "应用托管导出器",
-      "userSelectedFfmpeg": "用户选择的 ffmpeg",
+      "appManagedExporter": "应用内置导出工具",
+      "userSelectedFfmpeg": "手动选择的 ffmpeg",
       "systemFfmpeg": "系统 ffmpeg",
-      "description": "视频导出需要 ffmpeg。可以选择已有二进制、使用 PATH 中的安装，或安装应用托管导出器。",
+      "description": "视频导出需要 ffmpeg。你可以选择已有程序、使用 PATH 中的安装，或安装应用内置导出工具。",
       "choosePath": "选择 ffmpeg 路径",
       "clearPath": "清除路径",
-      "uninstall": "卸载托管导出器",
+      "uninstall": "卸载内置导出工具",
       "uninstalling": "卸载中...",
-      "install": "安装托管导出器",
+      "install": "安装内置导出工具",
       "installing": "安装中...",
-      "appManaged": "应用托管",
+      "appManaged": "应用内置",
       "userSelected": "用户选择",
       "path": "PATH",
       "installed": "已安装",
@@ -276,9 +307,9 @@
     },
     "status": {
       "copyFontFailed": "复制字体失败: {error}",
-      "missingExportRequirements": "请先选择录制文件、导出目录和可用导出器。",
+      "missingExportRequirements": "请先选择录制文件和可用导出器。",
       "missingExporter": "请先选择可用的视频导出器。",
-      "exporting": "正在导出叠层视频...",
+      "exporting": "正在导出显示层视频...",
       "exportFailed": "导出失败: {error}",
       "missingOutputFolder": "请先选择导出目录。",
       "openFolderFailed": "打开导出目录失败: {error}"
@@ -286,10 +317,10 @@
     "notification": {
       "installSuccess": "视频导出器已安装: {path}",
       "installFailed": "视频导出器安装失败: {error}",
-      "uninstallSuccess": "托管视频导出器已卸载。",
-      "uninstallFailed": "视频导出器卸载失败: {error}"
+      "uninstallSuccess": "内置视频导出工具已卸载。",
+      "uninstallFailed": "视频导出工具卸载失败: {error}"
     },
-    "note": "视频由录制时间线生成，录制后仍可调整尺寸和格式。"
+    "note": "视频由输入时间线生成，录制后仍可调整尺寸和格式。"
   },
   "colorPicker": {
     "hex": "HEX",
@@ -302,7 +333,7 @@
     "apply": "应用"
   },
   "overlay": {
-    "keyOverlay": "POV 按键叠层",
+    "keyOverlay": "POV 按键显示层",
     "configuredRows": "已配置键盘行"
   },
   "recordingBrowser": {
@@ -327,20 +358,20 @@
     }
   },
   "recordingMetadata": {
-    "eyebrow": "录制元数据",
-    "title": "旁车元数据",
+    "eyebrow": "录制信息",
+    "title": "录制详情",
     "discard": "放弃并关闭",
     "save": "保存",
     "saving": "保存中...",
     "saveAndClose": "保存并关闭",
-    "displayName": "显示名",
-    "displayNamePlaceholder": "浏览器显示名",
+    "displayName": "录制名称",
+    "displayNamePlaceholder": "用于列表中显示的名称",
     "description": "描述",
     "descriptionPlaceholder": "这段录制的备注",
     "tags": "标签",
     "tagsPlaceholder": "sync, ranked, aim",
     "chooseFileFirst": "请先选择录制文件。",
-    "saved": "元数据已保存。"
+    "saved": "录制信息已保存。"
   },
   "recordingInspection": {
     "version": "版本",

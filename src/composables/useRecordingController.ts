@@ -56,14 +56,6 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     return i18n.global.t(key, params ?? {});
   }
 
-  async function initializeDefaultRecordingDirectory() {
-    if (!options.enabled) {
-      return;
-    }
-
-    defaultRecordingDirectory.value = await tauriApi.defaultRecordingDir();
-  }
-
   async function recordInputIfNeeded(keyId: string, pressed: boolean) {
     if (!options.enabled || options.isOverlayWindow.value || !isRecording.value) {
       return;
@@ -76,9 +68,17 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     return activeRecordingHotkeys.value ?? recordingHotkeys.value;
   }
 
-  async function chooseRecordingDirectory() {
+  async function resolveDefaultRecordingDirectory() {
+    if (!defaultRecordingDirectory.value) {
+      defaultRecordingDirectory.value = await tauriApi.defaultRecordingDir();
+    }
+
+    return defaultRecordingDirectory.value;
+  }
+
+  async function chooseRecordingDirectory(): Promise<boolean> {
     if (!options.enabled) {
-      return;
+      return false;
     }
 
     const selectedPath = await open({
@@ -91,7 +91,10 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
       recordingDirectory.value = selectedPath;
       recordingStatusMessage.value = "";
       options.scheduleAppConfigSave();
+      return true;
     }
+
+    return false;
   }
 
   async function resolveRecordingDirectory(): Promise<string> {
@@ -99,11 +102,11 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
       return recordingDirectory.value;
     }
 
-    const defaultDirectory =
-      defaultRecordingDirectory.value || (await tauriApi.defaultRecordingDir());
-    defaultRecordingDirectory.value = defaultDirectory;
+    const defaultDirectory = await resolveDefaultRecordingDirectory();
     recordingDirectory.value = defaultDirectory;
-    recordingStatusMessage.value = t("recording.status.usingDefaultFolder", { path: defaultDirectory });
+    recordingStatusMessage.value = t("recording.status.usingDefaultFolder", {
+      path: defaultDirectory,
+    });
     options.scheduleAppConfigSave();
 
     return defaultDirectory;
@@ -159,8 +162,9 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
 
     const recordingFps = activeRecordingFps.value ?? effectiveRecordingFps(options.config.recording);
+    const recordingOutputDirectory = await resolveRecordingDirectory();
     const result = await tauriApi.stopRecording(
-      await resolveRecordingDirectory(),
+      recordingOutputDirectory,
       options.config.recording.filenameTemplate,
       options.profileName.value,
       recordingFps,
@@ -390,7 +394,6 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     recordingInspectionError,
     recordingHotkeys,
     hotkeyCaptureTarget,
-    initializeDefaultRecordingDirectory,
     recordInputIfNeeded,
     chooseRecordingDirectory,
     startRecordingWithCountdown,

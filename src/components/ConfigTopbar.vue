@@ -17,7 +17,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <header class="sticky top-0 z-10 flex items-center justify-between gap-4 mb-5 px-6 py-4 mx-4 mt-4 rounded-[28px] bg-gradient-to-br from-[var(--glass-from)] to-[var(--glass-to)] backdrop-blur-2xl backdrop-saturate-[170%] border border-[var(--glass-border)] shadow-[var(--glass-shadow)] max-[920px]:flex-col max-[920px]:items-start">
+  <header class="config-topbar sticky top-0 z-10 flex items-center justify-between gap-4 mb-5 px-6 py-4 mx-4 mt-4 rounded-[28px] border border-[var(--glass-border)] shadow-[var(--glass-shadow)] max-[920px]:flex-col max-[920px]:items-start">
     <div>
       <p class="m-0 mb-1 text-text-muted text-xs font-bold tracking-[0.08em] uppercase">{{ t("topbar.profile") }}</p>
       <h1 class="m-0 text-[28px] leading-[34px] tracking-normal">{{ profileName }}</h1>
@@ -36,3 +36,19 @@ const { t } = useI18n();
     </div>
   </header>
 </template>
+
+<style scoped>
+.config-topbar {
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--color-surface-base) 82%, var(--glass-from) 18%),
+      color-mix(in srgb, var(--color-surface-base) 88%, var(--glass-to) 12%)
+    );
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 color-mix(in srgb, var(--color-border-default) 80%, transparent);
+}
+</style>

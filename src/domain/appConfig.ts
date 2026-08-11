@@ -13,14 +13,12 @@ import {
   type VideoExporterConfig,
 } from "./videoExporter";
 import { sanitizeExportFilenameTemplate } from "./exportFilename";
+import {
+  createProfileConfig,
+  DEFAULT_BUILT_IN_PROFILE_ID,
+  type BuiltInProfileId,
+} from "./profileTemplates";
 import { normalizeUiLanguage, type UiLanguage } from "./uiLanguage";
-
-export type RecentProfile = {
-  name: string;
-  path: string;
-};
-
-export const MAX_RECENT_PROFILES = 8;
 
 export type CurrentProfile = {
   name: string;
@@ -49,9 +47,7 @@ type PersistedCurrentProfile = Omit<CurrentProfile, "overlay"> & {
 export type AppConfigFile = {
   version: 1;
   profiles: {
-    defaultProfilePath: string;
-    lastProfilePath: string | null;
-    recentProfiles: RecentProfile[];
+    defaultProfileId: BuiltInProfileId;
   };
   currentProfile: CurrentProfile;
   recording: {
@@ -73,28 +69,22 @@ export type PersistedAppConfigFile = Omit<AppConfigFile, "currentProfile"> & {
 };
 
 export function buildAppConfigFile({
-  defaultProfilePath,
-  recentProfiles,
+  defaultProfileId = DEFAULT_BUILT_IN_PROFILE_ID,
   currentProfile,
   recording,
   exporter,
   ui,
 }: {
-  defaultProfilePath: string;
-  recentProfiles: RecentProfile[];
+  defaultProfileId?: BuiltInProfileId;
   currentProfile: CurrentProfile;
   recording: AppConfigFile["recording"];
   exporter: AppConfigFile["exporter"];
   ui?: Partial<AppConfigFile["ui"]>;
 }): PersistedAppConfigFile {
-  const nextRecentProfiles = mergeRecentProfiles(recentProfiles, currentProfile);
-
   return {
     version: 1,
     profiles: {
-      defaultProfilePath,
-      lastProfilePath: currentProfile.sourcePath,
-      recentProfiles: nextRecentProfiles,
+      defaultProfileId,
     },
     currentProfile: {
       ...currentProfile,
@@ -119,34 +109,48 @@ export function buildAppConfigFile({
   };
 }
 
-export function mergeRecentProfiles(
-  recentProfiles: RecentProfile[],
-  currentProfile: Pick<CurrentProfile, "name" | "sourcePath">,
-): RecentProfile[] {
-  const nextProfiles = currentProfile.sourcePath
-    ? [{ name: currentProfile.name, path: currentProfile.sourcePath }, ...recentProfiles]
-    : [...recentProfiles];
-  const seenPaths = new Set<string>();
-  const dedupedProfiles: RecentProfile[] = [];
+export function createInitialAppConfigFile(
+  defaultProfileId: BuiltInProfileId = DEFAULT_BUILT_IN_PROFILE_ID,
+): PersistedAppConfigFile {
+  const profile = createProfileConfig(defaultProfileId);
 
-  for (const profile of nextProfiles) {
-    const path = profile.path.trim();
-    if (!path || seenPaths.has(path)) {
-      continue;
-    }
-
-    seenPaths.add(path);
-    dedupedProfiles.push({
-      name: profile.name.trim() || profileNameFromPath(path),
-      path,
-    });
-  }
-
-  return dedupedProfiles.slice(0, MAX_RECENT_PROFILES);
+  return buildAppConfigFile({
+    defaultProfileId,
+    currentProfile: {
+      name: profile.name ?? "Keyboard Display",
+      sourcePath: null,
+      changed: false,
+      recording: profile.recording,
+      export: profile.export,
+      overlay: {
+        visible: profile.overlay.visible ?? true,
+        position: profile.overlay.position ?? "bottom-right",
+        layout: profile.overlay.layout,
+        style: profile.overlay.style,
+        rows: profile.overlay.rows,
+        keys: profile.overlay.keys,
+        keyIdLabels: profile.overlay.keyIdLabels ?? {},
+        customPosition: null,
+      },
+    },
+    recording: {
+      outputDirectory: null,
+      browserDirectory: null,
+      silent: false,
+      hotkeys: createDefaultRecordingHotkeys(),
+    },
+    exporter: {
+      video: createDefaultVideoExporterConfig(),
+    },
+    ui: {
+      language: "system",
+    },
+  });
 }
 
 export function parseAppConfigFile(text: string): AppConfigFile {
   const config = JSON.parse(text) as PersistedAppConfigFile & {
+    recording?: Partial<AppConfigFile["recording"]>;
     currentProfile: {
       dirty?: boolean;
       changed?: boolean;
@@ -164,9 +168,13 @@ export function parseAppConfigFile(text: string): AppConfigFile {
   const profileExport = normalizeExportConfig(
     config.currentProfile.export ?? createDefaultConfig().export,
   );
+  const recording = config.recording ?? {};
 
   return {
     ...config,
+    profiles: {
+      defaultProfileId: normalizeBuiltInProfileId(config.profiles?.defaultProfileId),
+    },
     currentProfile: {
       ...config.currentProfile,
       changed: config.currentProfile.changed ?? config.currentProfile.dirty ?? false,
@@ -180,9 +188,10 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       },
     },
     recording: {
-      ...config.recording,
-      browserDirectory: cleanOptionalPath(config.recording.browserDirectory),
-      hotkeys: normalizeRecordingHotkeyConfig(config.recording.hotkeys),
+      outputDirectory: cleanOptionalPath(recording.outputDirectory),
+      browserDirectory: cleanOptionalPath(recording.browserDirectory),
+      silent: recording.silent ?? false,
+      hotkeys: normalizeRecordingHotkeyConfig(recording.hotkeys),
     },
     exporter: {
       video: normalizeVideoExporterConfig(
@@ -193,6 +202,16 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       language: normalizeUiLanguage(config.ui?.language),
     },
   };
+}
+
+function createDefaultRecordingHotkeys(): RecordingHotkeyConfig {
+  return normalizeRecordingHotkeyConfig(undefined);
+}
+
+function normalizeBuiltInProfileId(value: unknown): BuiltInProfileId {
+  return value === "left-keyboard" || value === "68-keyboard" || value === "default"
+    ? value
+    : DEFAULT_BUILT_IN_PROFILE_ID;
 }
 
 function normalizeKeyIdLabels(labels: AppConfig["keyIdLabels"] | undefined): AppConfig["keyIdLabels"] {
@@ -236,10 +255,6 @@ function rowsFromKeys(keys: AppConfig["keys"]): OverlayRow[] {
     .map(([, row]) => row);
 }
 
-function profileNameFromPath(path: string): string {
-  const fileName = path.split(/[\\/]/).pop() ?? path;
-  return fileName.replace(/\.json$/i, "") || path;
-}
 
 function cleanOptionalPath(path: string | null | undefined): string | null {
   const trimmedPath = path?.trim() ?? "";

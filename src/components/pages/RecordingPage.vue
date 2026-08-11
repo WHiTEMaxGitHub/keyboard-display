@@ -10,7 +10,6 @@ type RecordingSubPage = "control" | "files";
 
 const config = inject<AppConfig>("config")!;
 const recordingDirectoryRef = inject<ComputedRef<string>>("recordingDirectory")!;
-const defaultRecordingDirectoryRef = inject<ComputedRef<string>>("defaultRecordingDirectory")!;
 const recordingBrowserDirectoryRef = inject<ComputedRef<string>>("recordingBrowserDirectory")!;
 const silentRecordingRef = inject<ComputedRef<boolean>>("silentRecording")!;
 const isRecordingRef = inject<ComputedRef<boolean>>("isRecording")!;
@@ -26,8 +25,8 @@ const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recordingDirectory = computed(() => recordingDirectoryRef.value);
-const defaultRecordingDirectory = computed(() => defaultRecordingDirectoryRef.value);
 const recordingBrowserDirectory = computed(() => recordingBrowserDirectoryRef.value);
+const recordingFilesDirectory = computed(() => recordingBrowserDirectory.value || recordingDirectory.value);
 const silentRecording = computed(() => silentRecordingRef.value);
 const isRecording = computed(() => isRecordingRef.value);
 const recordingCountdown = computed(() => recordingCountdownRef.value);
@@ -45,7 +44,6 @@ const hotkeyCaptureTarget = computed(() => hotkeyCaptureTargetRef.value);
     <RecordingPanel
       :config="config"
       :recording-directory="recordingDirectory"
-      :default-recording-directory="defaultRecordingDirectory"
       :silent-recording="silentRecording"
       :is-recording="isRecording"
       :recording-countdown="recordingCountdown"
@@ -68,7 +66,7 @@ const hotkeyCaptureTarget = computed(() => hotkeyCaptureTargetRef.value);
 
   <section v-else-if="recordingSubPage === 'files'" class="page-stack">
     <RecordingBrowserPanel
-      :recording-browser-directory="recordingBrowserDirectory"
+      :recording-browser-directory="recordingFilesDirectory"
       :current-recording-path="currentRecordingPath"
       :recording-inspection="recordingInspection"
       :recording-inspection-error="recordingInspectionError"

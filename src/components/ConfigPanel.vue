@@ -2,13 +2,17 @@
 import { computed, provide, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import type { AppConfig, ExportConfig, OverlayStyle } from "../domain/defaultConfig";
-import type { RecentProfile } from "../domain/appConfig";
 import type { UiLanguage } from "../domain/uiLanguage";
 import type { AppNotification, NotificationTone } from "../composables/useNotifications";
 import type { RecordingHotkeyConfig, RecordingHotkeyMode } from "../domain/recordingHotkeys";
 import type { VideoExporterConfig } from "../domain/videoExporter";
 import type { RecordingInspection } from "../types/recording";
-import type { ThemeId } from "../domain/theme";
+import type {
+  CustomThemeColorKey,
+  CustomThemeColors,
+  CustomThemeTemplateId,
+  ThemeId,
+} from "../domain/theme";
 import ConfigSidebar from "./ConfigSidebar.vue";
 import ConfigTopbar from "./ConfigTopbar.vue";
 import NotificationStack from "./NotificationStack.vue";
@@ -20,7 +24,6 @@ import ExportPage from "./pages/ExportPage.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
 import PovOverlay from "./PovOverlay.vue";
 import BaseFieldRow from "./BaseFieldRow.vue";
-import BaseSelect from "./BaseSelect.vue";
 import BaseToggleRow from "./BaseToggleRow.vue";
 
 type ConfigPage =
@@ -31,6 +34,7 @@ type ConfigPage =
   | "recording"
   | "export"
   | "settings";
+type LayoutSubPage = "summary" | "editor";
 type RecordingSubPage = "control" | "files";
 
 const props = defineProps<{
@@ -40,9 +44,7 @@ const props = defineProps<{
   overlayVisible: boolean;
   profileName: string;
   profileChanged: boolean;
-  recentProfiles: RecentProfile[];
   recordingDirectory: string;
-  defaultRecordingDirectory: string;
   recordingBrowserDirectory: string;
   silentRecording: boolean;
   isRecording: boolean;
@@ -59,6 +61,9 @@ const props = defineProps<{
   videoExporterConfig: VideoExporterConfig;
   notifications: AppNotification[];
   themeId: ThemeId;
+  customThemeColors: CustomThemeColors;
+  customThemeTemplate: CustomThemeTemplateId;
+  customThemePanelOpacity: number;
   uiLanguage: UiLanguage;
   appConfigPath: string;
 }>();
@@ -67,11 +72,11 @@ const emit = defineEmits<{
   "preview-overlay-style": [style: OverlayStyle];
   "update-key-id-labels": [labels: AppConfig["keyIdLabels"]];
   "update-overlay-style": [style: OverlayStyle];
+  "update-overlay-layout": [layout: AppConfig["layout"]];
   "update-overlay-rows": [rows: AppConfig["rows"]];
   "update-overlay-visible": [visible: boolean];
   "load-config": [];
   "refresh-pov": [];
-  "load-recent-profile": [path: string];
   "export-and-apply-config": [];
   "overwrite-and-apply-config": [];
   "choose-recording-directory": [];
@@ -97,10 +102,16 @@ const emit = defineEmits<{
     position: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom",
   ];
   "set-theme": [id: ThemeId];
+  "preview-custom-theme-color": [key: CustomThemeColorKey, color: string];
+  "set-custom-theme-color": [key: CustomThemeColorKey, color: string];
+  "set-custom-theme-template": [templateId: CustomThemeTemplateId];
+  "set-custom-theme-panel-opacity": [opacity: number];
+  "reset-custom-theme-colors": [];
   "set-ui-language": [language: UiLanguage];
 }>();
 
 const activePage = ref<ConfigPage>("overview");
+const layoutSubPage = ref<LayoutSubPage>("summary");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
 const { t } = useI18n();
@@ -123,6 +134,10 @@ function selectRecordingSubPage(page: RecordingSubPage) {
   recordingSubPage.value = page;
 }
 
+function selectLayoutSubPage(page: LayoutSubPage) {
+  layoutSubPage.value = page;
+}
+
 function updateOverlayVisible(event: Event) {
   emit("update-overlay-visible", (event.target as HTMLInputElement).checked);
 }
@@ -134,24 +149,13 @@ function updateAlwaysOnTop(event: Event) {
   });
 }
 
-function loadRecentProfile(event: Event) {
-  const select = event.target as HTMLSelectElement;
-  const path = select.value;
-  if (path) {
-    emit("load-recent-profile", path);
-    select.value = "";
-  }
-}
-
 provide("config", props.config);
 provide("activeKeys", computed(() => props.activeKeys));
 provide("keyIdLabels", computed(() => props.keyIdLabels));
 provide("overlayVisible", computed(() => props.overlayVisible));
 provide("profileName", computed(() => props.profileName));
 provide("profileChanged", computed(() => props.profileChanged));
-provide("recentProfiles", computed(() => props.recentProfiles));
 provide("recordingDirectory", computed(() => props.recordingDirectory));
-provide("defaultRecordingDirectory", computed(() => props.defaultRecordingDirectory));
 provide("recordingBrowserDirectory", computed(() => props.recordingBrowserDirectory));
 provide("silentRecording", computed(() => props.silentRecording));
 provide("isRecording", computed(() => props.isRecording));
@@ -167,7 +171,11 @@ provide("recordingHotkeys", computed(() => props.recordingHotkeys));
 provide("hotkeyCaptureTarget", computed(() => props.hotkeyCaptureTarget));
 provide("videoExporterConfig", computed(() => props.videoExporterConfig));
 provide("recentColors", recentColors);
+provide("layoutSubPage", computed(() => layoutSubPage.value));
 provide("themeId", computed(() => props.themeId));
+provide("customThemeColors", computed(() => props.customThemeColors));
+provide("customThemeTemplate", computed(() => props.customThemeTemplate));
+provide("customThemePanelOpacity", computed(() => props.customThemePanelOpacity));
 provide("uiLanguage", computed(() => props.uiLanguage));
 provide("appConfigPath", computed(() => props.appConfigPath));
 provide("emit", relay);
@@ -193,8 +201,10 @@ const pageComponent = computed(() => {
     />
     <ConfigSidebar
       :active-page="activePage"
+      :layout-sub-page="layoutSubPage"
       :recording-sub-page="recordingSubPage"
       @update-active-page="selectActivePage"
+      @update-layout-sub-page="selectLayoutSubPage"
       @update-recording-sub-page="selectRecordingSubPage"
     />
 
@@ -236,26 +246,6 @@ const pageComponent = computed(() => {
                 {{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}
               </BaseFieldRow>
               <BaseFieldRow :label="t('overview.visibleKeys')">{{ config.keys.length }}</BaseFieldRow>
-              <label class="recent-profile-control">
-                <span>{{ t("overview.recentProfiles") }}</span>
-                <BaseSelect
-                  class="select-control"
-                  :disabled="recentProfiles.length === 0"
-                  model-value=""
-                  @change="loadRecentProfile"
-                >
-                  <option value="">
-                    {{ recentProfiles.length ? t("common.chooseProfile") : t("common.noRecentProfiles") }}
-                  </option>
-                  <option
-                    v-for="profile in recentProfiles"
-                    :key="profile.path"
-                    :value="profile.path"
-                  >
-                    {{ profile.name }}
-                  </option>
-                </BaseSelect>
-              </label>
             </article>
 
             <article class="panel">
@@ -278,7 +268,8 @@ const pageComponent = computed(() => {
 <style scoped>
 .config-shell {
   position: relative;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   background: transparent;
   color: var(--color-text-primary);
@@ -291,7 +282,7 @@ const pageComponent = computed(() => {
 }
 
 .workspace {
-  height: 100vh;
+  height: 100%;
   min-width: 0;
   overflow-y: auto;
   padding: 0 24px 24px;
@@ -391,22 +382,6 @@ const pageComponent = computed(() => {
   line-height: 24px;
   letter-spacing: 0;
   color: var(--color-text-primary);
-}
-
-.recent-profile-control {
-  display: grid;
-  grid-template-columns: minmax(110px, 1fr) minmax(180px, 240px);
-  align-items: center;
-  gap: 7px;
-  margin-top: 14px;
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.select-control {
-  justify-self: end;
-  width: min(240px, 100%);
 }
 
 @media (max-width: 920px) {

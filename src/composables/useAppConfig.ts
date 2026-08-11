@@ -3,10 +3,7 @@ import { open, save } from "@tauri-apps/plugin-dialog";
 import { reactive, ref, type ComputedRef } from "vue";
 import { tauriApi } from "../api/tauri";
 import { i18n } from "../i18n";
-import {
-  parseAppConfigFile,
-  type RecentProfile,
-} from "../domain/appConfig";
+import { parseAppConfigFile } from "../domain/appConfig";
 import { buildConfigFileJson, parseConfigFile } from "../domain/configFile";
 import {
   createDefaultConfig,
@@ -58,7 +55,6 @@ export function useAppConfig(options: {
   const profileName = ref("CS POV");
   const profileSourcePath = ref<string | null>(null);
   const profileChanged = ref(false);
-  const recentProfiles = ref<RecentProfile[]>([]);
   const overlayPosition = ref<OverlayPosition>("bottom-right");
   const customOverlayPosition = ref<OverlayCustomPosition | null>(null);
   const syncFeedbackActive = ref(false);
@@ -205,24 +201,8 @@ export function useAppConfig(options: {
     );
   }
 
-  async function loadRecentProfile(
-    path: string,
-    overlay: OverlayCallbacks,
-    onSave: () => void,
-  ) {
-    const text = await tauriApi.readConfigFile(path);
-    await applyLoadedConfig(
-      text,
-      path.split(/[\\/]/).pop() ?? path,
-      path,
-      overlay,
-      onSave,
-    );
-  }
-
   async function restoreAppConfig(
     overlay: OverlayCallbacks,
-    initializeDefaultRecordingDirectory: () => Promise<void>,
     onRestore: (recording: {
       directory: string;
       browserDirectory: string;
@@ -230,7 +210,6 @@ export function useAppConfig(options: {
       hotkeys: any;
     }) => void,
   ) {
-    await initializeDefaultRecordingDirectory();
     const savedConfig = await tauriApi.loadAppConfig();
     if (!savedConfig) {
       return;
@@ -240,7 +219,6 @@ export function useAppConfig(options: {
     profileName.value = appConfig.currentProfile.name;
     profileSourcePath.value = appConfig.currentProfile.sourcePath;
     profileChanged.value = appConfig.currentProfile.changed;
-    recentProfiles.value = appConfig.profiles.recentProfiles;
     overlayPosition.value = normalizeOverlayPosition(
       appConfig.currentProfile.overlay.position,
     );
@@ -387,7 +365,6 @@ export function useAppConfig(options: {
     profileName,
     profileSourcePath,
     profileChanged,
-    recentProfiles,
     overlayPosition,
     customOverlayPosition,
     syncFeedbackActive,
@@ -404,7 +381,6 @@ export function useAppConfig(options: {
     scheduleAppConfigSave,
     applyLoadedConfig,
     loadConfig,
-    loadRecentProfile,
     restoreAppConfig,
     applyConfigToOverlay,
     exportAndApplyConfig,
