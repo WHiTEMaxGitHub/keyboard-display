@@ -1,13 +1,11 @@
 {
   "version": 1,
   "profiles": {
-    "defaultProfilePath": "docs/default-config.json",
-    "lastProfilePath": null,
-    "recentProfiles": []
+    "defaultProfileId": "default"
   },
   "currentProfile": {
     "name": "CS POV",
-    "sourcePath": "docs/default-config.json",
+    "sourcePath": null,
     "overlay": {
       "visible": true,
       "position": "bottom-right",

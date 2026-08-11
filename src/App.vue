@@ -17,7 +17,7 @@ import { useNotifications } from "./composables/useNotifications";
 import { useAppConfig } from "./composables/useAppConfig";
 import { useTheme } from "./composables/useTheme";
 import AmbientBackground from "./components/AmbientBackground.vue";
-import { buildAppConfigFile } from "./domain/appConfig";
+import { buildAppConfigFile, createInitialAppConfigFile } from "./domain/appConfig";
 import { type OverlayStyle } from "./domain/defaultConfig";
 import { setI18nLanguage } from "./i18n";
 import {
@@ -40,10 +40,14 @@ const { notifications, notify, dismissNotification } = useNotifications();
 const {
   themeId,
   customThemeColors,
+  customThemeTemplate,
+  customThemePanelOpacity,
   loadTheme,
   setTheme,
   previewCustomThemeColor,
   setCustomThemeColor,
+  setCustomThemeTemplate,
+  setCustomThemePanelOpacity,
   resetCustomThemeColors,
 } = useTheme();
 const appConfigPath = ref("");
@@ -54,7 +58,6 @@ const {
   profileName,
   profileSourcePath,
   profileChanged,
-  recentProfiles,
   overlayPosition,
   customOverlayPosition,
   syncFeedbackActive,
@@ -69,7 +72,6 @@ const {
   isBackplateVisible,
   scheduleAppConfigSave,
   loadConfig,
-  loadRecentProfile,
   restoreAppConfig,
   applyConfigToOverlay,
   exportAndApplyConfig,
@@ -131,7 +133,6 @@ const {
 
 const {
   recordingDirectory,
-  defaultRecordingDirectory,
   silentRecording,
   isRecording,
   recordingCountdown,
@@ -142,7 +143,6 @@ const {
   recordingInspectionError,
   recordingHotkeys,
   hotkeyCaptureTarget,
-  initializeDefaultRecordingDirectory,
   recordInputIfNeeded,
   chooseRecordingDirectory,
   startRecordingWithCountdown,
@@ -232,8 +232,6 @@ async function updateKeyIdLabels(keyIdLabels: typeof config.keyIdLabels) {
 
 async function saveAppConfig() {
   const appConfig = buildAppConfigFile({
-    defaultProfilePath: "docs/default-config.json",
-    recentProfiles: recentProfiles.value,
     currentProfile: {
       name: profileName.value,
       sourcePath: profileSourcePath.value,
@@ -264,7 +262,6 @@ async function saveAppConfig() {
       language: uiLanguage.value,
     },
   });
-  recentProfiles.value = appConfig.profiles.recentProfiles;
 
   await tauriApi.saveAppConfig(`${JSON.stringify(appConfig, null, 2)}\n`);
 }
@@ -283,13 +280,23 @@ onMounted(async () => {
   loadTheme();
   if (!isOverlayWindow.value) {
     try {
+      const initialAppConfig = createInitialAppConfigFile();
+      const initialization = await tauriApi.initializeAppConfig(
+        `${JSON.stringify(initialAppConfig, null, 2)}\n`,
+      );
+      appConfigPath.value = initialization.path;
+      if (initialization.initialized) {
+        await tauriApi.writeDebugLog(
+          "app-config",
+          `initialized app config at ${initialization.path}`,
+        );
+      }
       appConfigPath.value = await tauriApi.appConfigPath();
     } catch (error) {
       console.warn("Failed to resolve app config path", error);
     }
     await restoreAppConfig(
       overlayCallbacks,
-      initializeDefaultRecordingDirectory,
       (recording) => {
         recordingDirectory.value = recording.directory;
         recordingBrowserDirectory.value = recording.browserDirectory;
@@ -400,9 +407,7 @@ onUnmounted(() => {
         :overlay-visible="isOverlayVisible"
         :profile-name="profileName"
         :profile-changed="profileChanged"
-        :recent-profiles="recentProfiles"
         :recording-directory="recordingDirectory"
-        :default-recording-directory="defaultRecordingDirectory"
         :recording-browser-directory="recordingBrowserDirectory"
         :silent-recording="silentRecording"
         :is-recording="isRecording"
@@ -420,6 +425,8 @@ onUnmounted(() => {
         :notifications="notifications"
         :theme-id="themeId"
         :custom-theme-colors="customThemeColors"
+        :custom-theme-template="customThemeTemplate"
+        :custom-theme-panel-opacity="customThemePanelOpacity"
         :ui-language="uiLanguage"
         :app-config-path="appConfigPath"
         @preview-overlay-style="previewOverlayStyle"
@@ -430,7 +437,6 @@ onUnmounted(() => {
         @update-overlay-visible="setOverlayVisible"
         @load-config="loadConfig(overlayCallbacks, scheduleSave)"
         @refresh-pov="applyConfigToOverlay(overlayCallbacks)"
-        @load-recent-profile="(path: string) => loadRecentProfile(path, overlayCallbacks, scheduleSave)"
         @export-and-apply-config="exportAndApplyConfig(overlayCallbacks, scheduleSave)"
         @overwrite-and-apply-config="overwriteAndApplyConfig(overlayCallbacks, scheduleSave)"
         @choose-recording-directory="chooseRecordingDirectory"
@@ -445,6 +451,8 @@ onUnmounted(() => {
         @set-theme="(id: any) => setTheme(id)"
         @preview-custom-theme-color="(key: any, color: string) => previewCustomThemeColor(key, color)"
         @set-custom-theme-color="(key: any, color: string) => setCustomThemeColor(key, color)"
+        @set-custom-theme-template="(templateId: any) => setCustomThemeTemplate(templateId)"
+        @set-custom-theme-panel-opacity="setCustomThemePanelOpacity"
         @reset-custom-theme-colors="resetCustomThemeColors"
         @start-recording="startRecordingWithCountdown"
         @stop-recording="stopRecording"

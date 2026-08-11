@@ -23,6 +23,11 @@ export type ExportOverlayVideoResult = {
   fps: number;
 };
 
+export type InitializeAppConfigResult = {
+  path: string;
+  initialized: boolean;
+};
+
 /// 集中管理 Tauri command 名称，避免组件直接散落 invoke 字符串。
 export const tauriApi = {
   saveConfigFile(path: string, contents: string) {
@@ -41,6 +46,10 @@ export const tauriApi = {
     return invoke<string | null>("load_app_config");
   },
 
+  initializeAppConfig(contents: string) {
+    return invoke<InitializeAppConfigResult>("initialize_app_config", { contents });
+  },
+
   appConfigPath() {
     return invoke<string>("app_config_path_string");
   },
@@ -51,6 +60,10 @@ export const tauriApi = {
 
   defaultRecordingDir() {
     return invoke<string>("default_recording_dir");
+  },
+
+  defaultExportVideoDir() {
+    return invoke<string>("default_export_video_dir");
   },
 
   startRecording(fps: number) {
