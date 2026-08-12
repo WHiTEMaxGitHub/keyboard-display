@@ -1,13 +1,15 @@
 use core_foundation::runloop::CFRunLoop;
 use core_graphics::event::{
-    CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions,
-    CGEventTapPlacement, CGEventType, CallbackResult, EventField,
+    CGEvent, CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement,
+    CGEventType, CallbackResult, EventField,
 };
 use std::{
     collections::HashSet,
     sync::{Arc, Mutex},
 };
 use tauri::AppHandle;
+
+use crate::debug_log;
 
 use super::{emit_input_state, mapping};
 
@@ -39,6 +41,10 @@ pub fn start(app_handle: AppHandle) {
         );
 
         if result.is_err() {
+            debug_log::warn(
+                "input-backend",
+                "macos-event-tap-failed check Accessibility/Input Monitoring permissions",
+            );
             eprintln!(
                 "macOS native input backend failed to start; check Accessibility/Input Monitoring permissions"
             );
@@ -105,7 +111,8 @@ fn handle_event(
             }
         }
         CGEventType::OtherMouseDown | CGEventType::OtherMouseUp => {
-            let button = event.get_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER) as u16;
+            let button =
+                event.get_integer_value_field(EventField::MOUSE_EVENT_BUTTON_NUMBER) as u16;
             if let Some(key_id) = mapping::key_id_from_mouse_button(button) {
                 emit_input_state(
                     app_handle,

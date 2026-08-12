@@ -10,10 +10,7 @@ mod windows;
 mod unsupported;
 
 use serde::Serialize;
-use std::{
-    collections::BTreeSet,
-    sync::Mutex,
-};
+use std::{collections::BTreeSet, sync::Mutex};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::debug_log;
@@ -87,12 +84,18 @@ fn emit_input_state(app_handle: &AppHandle, key_id: impl Into<String>, pressed: 
 
     if let Some(state) = app_handle.try_state::<InputStateBridge>() {
         if let Err(error) = state.update(app_handle, key_id, pressed) {
-            debug_log::write("input", &format!("failed to update overlay input state: {error}"));
+            debug_log::error(
+                "input",
+                &format!("failed to update overlay input state: {error}"),
+            );
         }
     }
 
     if let Err(error) = app_handle.emit(INPUT_STATE_EVENT, payload) {
-        debug_log::write("input", &format!("failed to emit input state to config: {error}"));
+        debug_log::error(
+            "input",
+            &format!("failed to emit input state to config: {error}"),
+        );
     }
 }
 
@@ -108,5 +111,5 @@ fn emit_backend_log(
         .map(|(key, value)| (key.into(), value))
         .collect::<std::collections::BTreeMap<String, String>>();
 
-    debug_log::write("input-backend", &format!("{message} {details:?}"));
+    debug_log::warn("input-backend", &format!("{message} {details:?}"));
 }

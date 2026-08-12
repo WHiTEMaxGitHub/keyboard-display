@@ -119,6 +119,8 @@ In release builds, if the user does not manually choose any folders, the applica
 ```text
 Keyboard Display directory/
 ├─ app-config.json
+├─ log/
+│  └─ keyboard-display-YYYY-MM-DD.log
 ├─ recording-files/
 │  └─ *.kbdrec
 └─ export-videos/
@@ -126,6 +128,27 @@ Keyboard Display directory/
 ```
 
 Exported profile JSON files can live anywhere chosen by the system save dialog. `app-config.json` stores only the current profile `sourcePath`; it does not keep recent-profile history.
+
+## Logging
+
+Logs are written to the `log/` folder next to app config and are split by date:
+
+```text
+log/keyboard-display-YYYY-MM-DD.log
+```
+
+The current logging policy is diagnostic-oriented:
+
+- `INFO` is reserved for key lifecycle events, such as recording start/end,
+  export start/end, and exporter install/uninstall.
+- `WARN` is used for recoverable problems, such as missing or invalid app config
+  regeneration and unavailable input backends.
+- `ERROR` is used for failed paths, such as config read/write errors,
+  recording/export failures, metadata failures, font copy failures, and open
+  directory failures.
+
+High-frequency input events are not logged per event, so recording performance
+is not affected by log IO.
 
 ## Development
 

@@ -9,7 +9,13 @@ use crate::{
 
 #[tauri::command]
 pub fn save_config_file(path: std::path::PathBuf, contents: String) -> Result<(), String> {
-    std::fs::write(path, contents).map_err(|error| error.to_string())
+    std::fs::write(&path, contents).map_err(|error| {
+        log_error(
+            "profile-config",
+            &format!("save path={}", path.display()),
+            error,
+        )
+    })
 }
 
 #[tauri::command]
@@ -19,7 +25,13 @@ pub fn write_debug_log(source: String, message: String) {
 
 #[tauri::command]
 pub fn read_config_file(path: std::path::PathBuf) -> Result<String, String> {
-    std::fs::read_to_string(path).map_err(|error| error.to_string())
+    std::fs::read_to_string(&path).map_err(|error| {
+        log_error(
+            "profile-config",
+            &format!("read path={}", path.display()),
+            error,
+        )
+    })
 }
 
 #[tauri::command]
@@ -27,12 +39,20 @@ pub fn load_app_config(app: tauri::AppHandle) -> Result<Option<String>, String> 
     let path = app_config_path(&app)?;
 
     if !path.exists() {
+        debug_log::warn(
+            "app-config",
+            &format!("load-missing path={}", path.display()),
+        );
         return Ok(None);
     }
 
-    std::fs::read_to_string(path)
-        .map(Some)
-        .map_err(|error| error.to_string())
+    std::fs::read_to_string(&path).map(Some).map_err(|error| {
+        log_error(
+            "app-config",
+            &format!("load path={}", path.display()),
+            error,
+        )
+    })
 }
 
 #[derive(serde::Serialize)]
@@ -60,17 +80,38 @@ pub fn initialize_app_config(
 
     #[cfg(not(debug_assertions))]
     {
-        if path.exists() && app_config_json_is_valid(&path) {
+        let state = app_config_json_state(&path);
+        if matches!(state, AppConfigJsonState::Valid) {
             return Ok(InitializeAppConfigResult {
                 path: path.to_string_lossy().to_string(),
                 initialized: false,
             });
         }
 
+        let reason = state.reason();
+        debug_log::warn(
+            "app-config",
+            &format!(
+                "initialize-regenerate reason={reason} path={}",
+                path.display()
+            ),
+        );
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+            std::fs::create_dir_all(parent).map_err(|error| {
+                log_error(
+                    "app-config",
+                    &format!("create-parent path={}", parent.display()),
+                    error,
+                )
+            })?;
         }
-        std::fs::write(&path, contents).map_err(|error| error.to_string())?;
+        std::fs::write(&path, contents).map_err(|error| {
+            log_error(
+                "app-config",
+                &format!("initialize path={}", path.display()),
+                error,
+            )
+        })?;
 
         Ok(InitializeAppConfigResult {
             path: path.to_string_lossy().to_string(),
@@ -80,11 +121,36 @@ pub fn initialize_app_config(
 }
 
 #[cfg(not(debug_assertions))]
-fn app_config_json_is_valid(path: &std::path::Path) -> bool {
-    std::fs::read_to_string(path)
+enum AppConfigJsonState {
+    Missing,
+    Valid,
+    Invalid,
+}
+
+#[cfg(not(debug_assertions))]
+impl AppConfigJsonState {
+    fn reason(&self) -> &'static str {
+        match self {
+            Self::Missing => "missing",
+            Self::Valid => "valid",
+            Self::Invalid => "invalid-json",
+        }
+    }
+}
+
+#[cfg(not(debug_assertions))]
+fn app_config_json_state(path: &std::path::Path) -> AppConfigJsonState {
+    if !path.exists() {
+        return AppConfigJsonState::Missing;
+    }
+
+    match std::fs::read_to_string(path)
         .ok()
         .and_then(|contents| serde_json::from_str::<serde_json::Value>(&contents).ok())
-        .is_some()
+    {
+        Some(_) => AppConfigJsonState::Valid,
+        None => AppConfigJsonState::Invalid,
+    }
 }
 
 #[tauri::command]
@@ -96,9 +162,21 @@ pub fn app_config_path_string(app: tauri::AppHandle) -> Result<String, String> {
 pub fn save_app_config(app: tauri::AppHandle, contents: String) -> Result<(), String> {
     let path = app_config_path(&app)?;
     if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        std::fs::create_dir_all(parent).map_err(|error| {
+            log_error(
+                "app-config",
+                &format!("create-parent path={}", parent.display()),
+                error,
+            )
+        })?;
     }
-    std::fs::write(path, contents).map_err(|error| error.to_string())
+    std::fs::write(&path, contents).map_err(|error| {
+        log_error(
+            "app-config",
+            &format!("save path={}", path.display()),
+            error,
+        )
+    })
 }
 
 fn app_config_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
@@ -149,11 +227,14 @@ pub fn default_export_video_dir(app: tauri::AppHandle) -> Result<String, String>
 
 #[tauri::command]
 pub fn start_recording(state: tauri::State<'_, RecordingManager>, fps: u16) -> Result<(), String> {
-    state.start(
-        fps,
-        recording::unix_now_ms()?,
-        recording::monotonic_now_ms(),
-    )
+    debug_log::write("recording", &format!("start fps={fps}"));
+    state
+        .start(
+            fps,
+            recording::unix_now_ms()?,
+            recording::monotonic_now_ms(),
+        )
+        .map_err(|error| log_error("recording", "start", error))
 }
 
 #[tauri::command]
@@ -170,7 +251,9 @@ pub fn add_recording_marker(
     state: tauri::State<'_, RecordingManager>,
     name: String,
 ) -> Result<(), String> {
-    state.add_marker(recording::monotonic_now_ms(), name)
+    state
+        .add_marker(recording::monotonic_now_ms(), name)
+        .map_err(|error| log_error("recording", "marker", error))
 }
 
 #[tauri::command]
@@ -178,7 +261,9 @@ pub fn suppress_recording_keys(
     state: tauri::State<'_, RecordingManager>,
     key_ids: Vec<String>,
 ) -> Result<(), String> {
-    state.suppress_recent_keys(key_ids)
+    state
+        .suppress_recent_keys(key_ids)
+        .map_err(|error| log_error("recording", "suppress-keys", error))
 }
 
 #[tauri::command]
@@ -189,28 +274,54 @@ pub fn stop_recording(
     profile_name: String,
     fps: u16,
 ) -> Result<recording::StopRecordingResult, String> {
-    state.stop_with_filename_template(
-        output_dir,
-        recording::unix_now_ms()?,
-        &filename_template,
-        &profile_name,
-        fps,
-    )
+    debug_log::write(
+        "recording",
+        &format!(
+            "stop output_dir={} fps={} profile={}",
+            output_dir.display(),
+            fps,
+            profile_name
+        ),
+    );
+    let result = state
+        .stop_with_filename_template(
+            output_dir,
+            recording::unix_now_ms()?,
+            &filename_template,
+            &profile_name,
+            fps,
+        )
+        .map_err(|error| log_error("recording", "stop", error))?;
+    debug_log::write("recording", &format!("saved path={}", result.path));
+    Ok(result)
 }
 
 #[tauri::command]
 pub fn inspect_recording_file(
     path: std::path::PathBuf,
 ) -> Result<recording::RecordingInspection, String> {
-    let bytes = std::fs::read(path).map_err(|error| error.to_string())?;
-    recording::inspect_kbdrec(&bytes)
+    let bytes = std::fs::read(&path).map_err(|error| {
+        log_error(
+            "recording",
+            &format!("inspect-read path={}", path.display()),
+            error,
+        )
+    })?;
+    recording::inspect_kbdrec(&bytes).map_err(|error| {
+        log_error(
+            "recording",
+            &format!("inspect-parse path={}", path.display()),
+            error,
+        )
+    })
 }
 
 #[tauri::command]
 pub fn list_recording_files(
     root: std::path::PathBuf,
 ) -> Result<recording::RecordingTreeNode, String> {
-    recording::list_recording_files(root)
+    recording::list_recording_files(root.clone())
+        .map_err(|error| log_error("recording", &format!("list root={}", root.display()), error))
 }
 
 #[tauri::command]
@@ -218,14 +329,26 @@ pub fn create_recording_folder(
     root: std::path::PathBuf,
     folder_name: String,
 ) -> Result<recording::RecordingTreeNode, String> {
-    recording::create_recording_folder(root, folder_name)
+    recording::create_recording_folder(root.clone(), folder_name.clone()).map_err(|error| {
+        log_error(
+            "recording",
+            &format!("create-folder root={} name={folder_name}", root.display()),
+            error,
+        )
+    })
 }
 
 #[tauri::command]
 pub fn read_recording_metadata(
     path: std::path::PathBuf,
 ) -> Result<recording::RecordingMetadata, String> {
-    recording::read_recording_metadata(path)
+    recording::read_recording_metadata(path.clone()).map_err(|error| {
+        log_error(
+            "recording-metadata",
+            &format!("read path={}", path.display()),
+            error,
+        )
+    })
 }
 
 #[tauri::command]
@@ -233,7 +356,13 @@ pub fn save_recording_metadata(
     path: std::path::PathBuf,
     metadata: recording::RecordingMetadata,
 ) -> Result<recording::RecordingMetadata, String> {
-    recording::save_recording_metadata(path, metadata)
+    recording::save_recording_metadata(path.clone(), metadata).map_err(|error| {
+        log_error(
+            "recording-metadata",
+            &format!("save path={}", path.display()),
+            error,
+        )
+    })
 }
 
 #[tauri::command]
@@ -244,7 +373,7 @@ pub fn detect_video_exporter(
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| log_error("exporter", "resolve-app-data-dir", error))?;
 
     Ok(exporter::detect_video_exporter(
         app_data_dir,
@@ -256,28 +385,41 @@ pub fn detect_video_exporter(
 pub async fn install_app_managed_video_exporter(
     app: tauri::AppHandle,
 ) -> Result<InstallVideoExporterResult, String> {
+    debug_log::write("exporter", "install-start");
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| log_error("exporter", "resolve-app-data-dir", error))?;
 
-    tauri::async_runtime::spawn_blocking(move || exporter::install_app_managed_ffmpeg(app_data_dir))
-        .await
-        .map_err(|error| error.to_string())?
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        exporter::install_app_managed_ffmpeg(app_data_dir)
+    })
+    .await
+    .map_err(|error| log_error("exporter", "install-join", error))?
+    .map_err(|error| log_error("exporter", "install", error))?;
+    debug_log::write(
+        "exporter",
+        &format!("install-complete path={}", result.path),
+    );
+    Ok(result)
 }
 
 #[tauri::command]
 pub async fn uninstall_app_managed_video_exporter(app: tauri::AppHandle) -> Result<(), String> {
+    debug_log::write("exporter", "uninstall-start");
     let app_data_dir = app
         .path()
         .app_data_dir()
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| log_error("exporter", "resolve-app-data-dir", error))?;
 
     tauri::async_runtime::spawn_blocking(move || {
         exporter::uninstall_app_managed_ffmpeg(app_data_dir)
     })
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| log_error("exporter", "uninstall-join", error))?
+    .map_err(|error| log_error("exporter", "uninstall", error))?;
+    debug_log::write("exporter", "uninstall-complete");
+    Ok(())
 }
 
 #[tauri::command]
@@ -289,9 +431,25 @@ pub async fn export_overlay_video(
     profile: ExportOverlayProfile,
 ) -> Result<ExportOverlayVideoResult, String> {
     if let Some(parent) = output_path.parent() {
-        std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        std::fs::create_dir_all(parent).map_err(|error| {
+            log_error(
+                "export",
+                &format!("create-output-parent path={}", parent.display()),
+                error,
+            )
+        })?;
     }
 
+    debug_log::write(
+        "export",
+        &format!(
+            "overlay-start recording={} output={} ffmpeg={} render_threads={:?}",
+            recording_path.display(),
+            output_path.display(),
+            ffmpeg_path.display(),
+            profile.export.render_threads
+        ),
+    );
     tauri::async_runtime::spawn_blocking(move || {
         video_export::export_overlay_video_with_progress(
             &recording_path,
@@ -305,23 +463,58 @@ pub async fn export_overlay_video(
         )
     })
     .await
-    .map_err(|error| error.to_string())?
+    .map_err(|error| log_error("export", "overlay-join", error))?
+    .map_err(|error| log_error("export", "overlay", error))
+    .map(|result| {
+        debug_log::write(
+            "export",
+            &format!(
+                "overlay-complete output={} frames={} size={}x{} fps={}",
+                result.output_path, result.frame_count, result.width, result.height, result.fps
+            ),
+        );
+        result
+    })
 }
 
 #[tauri::command]
-pub fn copy_font_file(app: tauri::AppHandle, source_path: std::path::PathBuf) -> Result<String, String> {
+pub fn copy_font_file(
+    app: tauri::AppHandle,
+    source_path: std::path::PathBuf,
+) -> Result<String, String> {
     let fonts_dir = app
         .path()
         .app_data_dir()
-        .map_err(|error| error.to_string())?
+        .map_err(|error| log_error("font", "resolve-app-data-dir", error))?
         .join("fonts");
-    std::fs::create_dir_all(&fonts_dir).map_err(|error| error.to_string())?;
+    std::fs::create_dir_all(&fonts_dir).map_err(|error| {
+        log_error(
+            "font",
+            &format!("create-font-dir path={}", fonts_dir.display()),
+            error,
+        )
+    })?;
 
-    let file_name = source_path
-        .file_name()
-        .ok_or_else(|| "invalid font file path".to_string())?;
+    let file_name = source_path.file_name().ok_or_else(|| {
+        let error = "invalid font file path".to_string();
+        debug_log::error(
+            "font",
+            &format!("copy error={error} path={}", source_path.display()),
+        );
+        error
+    })?;
     let dest = fonts_dir.join(file_name);
-    std::fs::copy(&source_path, &dest).map_err(|error| error.to_string())?;
+    std::fs::copy(&source_path, &dest).map_err(|error| {
+        log_error(
+            "font",
+            &format!(
+                "copy source={} dest={}",
+                source_path.display(),
+                dest.display()
+            ),
+            error,
+        )
+    })?;
     Ok(dest.to_string_lossy().to_string())
 }
 
@@ -329,29 +522,58 @@ pub fn copy_font_file(app: tauri::AppHandle, source_path: std::path::PathBuf) ->
 pub fn open_directory(path: String) -> Result<(), String> {
     let path = std::path::Path::new(&path);
     if !path.exists() {
-        std::fs::create_dir_all(path)
-            .map_err(|error| format!("failed to create directory {}: {error}", path.display()))?;
+        std::fs::create_dir_all(path).map_err(|error| {
+            log_error(
+                "filesystem",
+                &format!("open-directory-create path={}", path.display()),
+                error,
+            )
+        })?;
     }
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
             .arg(path)
             .spawn()
-            .map_err(|error| format!("failed to open directory: {error}"))?;
+            .map_err(|error| {
+                log_error(
+                    "filesystem",
+                    &format!("open-directory path={}", path.display()),
+                    error,
+                )
+            })?;
     }
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("explorer")
             .arg(path)
             .spawn()
-            .map_err(|error| format!("failed to open directory: {error}"))?;
+            .map_err(|error| {
+                log_error(
+                    "filesystem",
+                    &format!("open-directory path={}", path.display()),
+                    error,
+                )
+            })?;
     }
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
             .arg(path)
             .spawn()
-            .map_err(|error| format!("failed to open directory: {error}"))?;
+            .map_err(|error| {
+                log_error(
+                    "filesystem",
+                    &format!("open-directory path={}", path.display()),
+                    error,
+                )
+            })?;
     }
     Ok(())
+}
+
+fn log_error(source: &str, action: &str, error: impl std::fmt::Display) -> String {
+    let message = error.to_string();
+    debug_log::error(source, &format!("{action} error={message}"));
+    message
 }

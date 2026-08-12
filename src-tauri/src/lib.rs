@@ -43,6 +43,7 @@ pub fn run() {
             commands::open_directory
         ])
         .setup(|app| {
+            debug_log::init(app.handle());
             input::start_native_input_backend(app.handle().clone());
             Ok(())
         })

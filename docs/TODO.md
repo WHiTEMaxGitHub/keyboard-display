@@ -416,6 +416,27 @@
     - app wrapper: `src-tauri/src/debug_log.rs`
     - app flushes the buffered writer on Tauri `RunEvent::Exit`
 
+- [x] Add a baseline runtime logging policy.
+  - Store logs beside app config under `log/`.
+  - Split log files by date with `keyboard-display-YYYY-MM-DD.log`.
+  - Keep normal info logging limited to recording/export/exporter lifecycle
+    events.
+  - Record warnings for recoverable states such as missing/invalid app config
+    regeneration and unavailable input backends.
+  - Record errors for failed config IO, recording/export operations, metadata
+    operations, font copy, and directory open failures.
+  - Avoid per-input-event logging in hot paths.
+
+- [ ] Refine log coverage after the baseline.
+  - Review each user-facing failure path and ensure it writes a useful warning
+    or error line with enough context.
+  - Split frontend and backend logs, or add a clear source namespace convention
+    before adding frontend runtime error capture.
+  - Add frontend error capture for Vue runtime errors and unhandled promise
+    rejections.
+  - Add a UI action to open the log directory.
+  - Consider log retention by date and/or size once real log volume is known.
+
 ## Commit chain plan
 
 After cleaning up the current working tree, split the work into a logical commit

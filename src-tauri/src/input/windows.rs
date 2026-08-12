@@ -10,13 +10,13 @@ use windows_sys::Win32::{
     UI::{
         Input::{
             GetRawInputData, RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE,
-            RAWINPUTHEADER, RID_INPUT, RIDEV_INPUTSINK, RIM_TYPEKEYBOARD,
+            RAWINPUTHEADER, RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEKEYBOARD,
         },
         WindowsAndMessaging::{
             CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
-            RegisterClassW, SetWindowsHookExW, TranslateMessage, MSG, WNDCLASSW, WH_MOUSE_LL,
-            WM_INPUT, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN,
-            WM_MBUTTONUP, WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+            RegisterClassW, SetWindowsHookExW, TranslateMessage, MSG, WH_MOUSE_LL, WM_INPUT,
+            WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MBUTTONDOWN, WM_MBUTTONUP,
+            WM_RBUTTONDOWN, WM_RBUTTONUP, WM_SYSKEYDOWN, WM_SYSKEYUP, WNDCLASSW,
         },
     },
 };
@@ -26,15 +26,13 @@ use super::{emit_backend_log, emit_input_state, mapping};
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
 const RAW_INPUT_CLASS_NAME: &[u16] = &[
-    'K' as u16, 'e' as u16, 'y' as u16, 'b' as u16, 'o' as u16, 'a' as u16, 'r' as u16,
-    'd' as u16, 'D' as u16, 'i' as u16, 's' as u16, 'p' as u16, 'l' as u16, 'a' as u16,
-    'y' as u16, 'R' as u16, 'a' as u16, 'w' as u16, 'I' as u16, 'n' as u16, 'p' as u16,
-    'u' as u16, 't' as u16, 0,
+    'K' as u16, 'e' as u16, 'y' as u16, 'b' as u16, 'o' as u16, 'a' as u16, 'r' as u16, 'd' as u16,
+    'D' as u16, 'i' as u16, 's' as u16, 'p' as u16, 'l' as u16, 'a' as u16, 'y' as u16, 'R' as u16,
+    'a' as u16, 'w' as u16, 'I' as u16, 'n' as u16, 'p' as u16, 'u' as u16, 't' as u16, 0,
 ];
 
 pub fn start(app_handle: AppHandle) {
     let _ = APP_HANDLE.set(app_handle.clone());
-    emit_backend_log(&app_handle, "windows-backend-starting", std::iter::empty::<(&str, String)>());
 
     std::thread::spawn(move || unsafe {
         let module = GetModuleHandleW(null());
@@ -49,8 +47,6 @@ pub fn start(app_handle: AppHandle) {
                     [("lastError", GetLastError().to_string())],
                 );
             }
-        } else if let Some(app_handle) = APP_HANDLE.get() {
-            emit_backend_log(app_handle, "windows-raw-input-window-started", std::iter::empty::<(&str, String)>());
         }
 
         if mouse_hook.is_null() {
@@ -62,8 +58,6 @@ pub fn start(app_handle: AppHandle) {
                 );
             }
             eprintln!("Windows mouse hook failed to start");
-        } else if let Some(app_handle) = APP_HANDLE.get() {
-            emit_backend_log(app_handle, "windows-mouse-hook-started", std::iter::empty::<(&str, String)>());
         }
 
         let mut message = std::mem::zeroed::<MSG>();
@@ -125,8 +119,6 @@ unsafe fn register_raw_keyboard_input(hwnd: HWND) {
                 [("lastError", GetLastError().to_string())],
             );
         }
-    } else if let Some(app_handle) = APP_HANDLE.get() {
-        emit_backend_log(app_handle, "windows-raw-input-registered", std::iter::empty::<(&str, String)>());
     }
 }
 

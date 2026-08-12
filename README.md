@@ -119,6 +119,8 @@ Release 下，如果用户不手动选择任何目录，应用目录通常会形
 ```text
 Keyboard Display 所在目录/
 ├─ app-config.json
+├─ log/
+│  └─ keyboard-display-YYYY-MM-DD.log
 ├─ recording-files/
 │  └─ *.kbdrec
 └─ export-videos/
@@ -126,6 +128,22 @@ Keyboard Display 所在目录/
 ```
 
 用户导出的 profile JSON 可以在任意位置，由系统保存对话框决定。`app-config.json` 只记录当前 profile 的 `sourcePath`，不维护“最近配置”历史。
+
+## 日志
+
+日志写在 app config 同目录下的 `log/` 文件夹，并按日期生成：
+
+```text
+log/keyboard-display-YYYY-MM-DD.log
+```
+
+当前日志策略偏诊断用途：
+
+- `INFO` 只记录关键生命周期，例如开始/结束录制、开始/结束导出、安装/卸载导出器。
+- `WARN` 记录可恢复异常，例如 app config 缺失或非法 JSON 触发重建、输入后端不可用。
+- `ERROR` 记录失败路径，例如配置读写失败、录制/导出失败、metadata 失败、字体复制失败、打开目录失败。
+
+高频输入热路径不会逐事件写日志，避免影响录制性能。
 
 ## 开发
 
