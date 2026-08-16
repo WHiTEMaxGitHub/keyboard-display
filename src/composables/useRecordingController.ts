@@ -27,8 +27,8 @@ type UseRecordingControllerOptions = {
   isOverlayVisible: Ref<boolean>;
   overlayPosition: Ref<OverlayPosition>;
   destroyOverlayWindow: () => Promise<void>;
-  setOverlayVisible: (visible: boolean, markChanged?: boolean) => Promise<void>;
-  moveOverlay: (position: OverlayPosition, markChanged?: boolean, show?: boolean) => Promise<void>;
+  setOverlayVisible: (visible: boolean, updateConfig?: boolean) => Promise<void>;
+  moveOverlay: (position: OverlayPosition, updateConfig?: boolean, show?: boolean) => Promise<void>;
   scheduleAppConfigSave: () => void;
 };
 
@@ -176,8 +176,8 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     recordingStatusMessage.value = t("recording.status.saved", { path: result.path });
 
     if (silentRecording.value && restoreOverlayAfterRecording.value) {
-      await options.setOverlayVisible(true);
-      await options.moveOverlay(options.overlayPosition.value);
+      await options.setOverlayVisible(true, false);
+      await options.moveOverlay(options.overlayPosition.value, false);
     }
     restoreOverlayAfterRecording.value = false;
   }

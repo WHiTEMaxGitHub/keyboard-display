@@ -1,6 +1,6 @@
 import { emitTo } from "@tauri-apps/api/event";
 import { open, save } from "@tauri-apps/plugin-dialog";
-import { reactive, ref, type ComputedRef } from "vue";
+import { computed, reactive, ref, type ComputedRef } from "vue";
 import { tauriApi } from "../api/tauri";
 import { i18n } from "../i18n";
 import { parseAppConfigFile } from "../domain/appConfig";
@@ -32,10 +32,10 @@ export type OverlayCallbacks = {
   resizeOverlayWindow: () => Promise<void>;
   syncOverlayStyle: (style: OverlayStyle, mode: OverlayStyleSyncMode) => Promise<void>;
   syncOverlayRows: () => Promise<void>;
-  setOverlayVisible: (visible: boolean, markChanged?: boolean) => Promise<void>;
+  setOverlayVisible: (visible: boolean, updateConfig?: boolean) => Promise<void>;
   moveOverlay: (
     position: OverlayPosition,
-    markChanged?: boolean,
+    updateConfig?: boolean,
     show?: boolean,
   ) => Promise<void>;
 };
@@ -54,7 +54,6 @@ export function useAppConfig(options: {
   const isOverlayVisible = ref(true);
   const profileName = ref("CS POV");
   const profileSourcePath = ref<string | null>(null);
-  const profileChanged = ref(false);
   const overlayPosition = ref<OverlayPosition>("bottom-right");
   const customOverlayPosition = ref<OverlayCustomPosition | null>(null);
   const syncFeedbackActive = ref(false);
@@ -65,6 +64,8 @@ export function useAppConfig(options: {
   const uiLanguage = ref<UiLanguage>("system");
 
   let appConfigSaveTimer: number | undefined;
+  const savedProfileJson = ref(buildCurrentProfileJson());
+  const profileChanged = computed(() => buildCurrentProfileJson() !== savedProfileJson.value);
 
   function t(key: string, params?: Record<string, unknown>) {
     return i18n.global.t(key, params ?? {});
@@ -95,8 +96,18 @@ export function useAppConfig(options: {
     config.export = { ...exportConfig };
   }
 
-  function markProfileChanged() {
-    profileChanged.value = true;
+  function setSavedProfileJson(json = buildCurrentProfileJson()) {
+    savedProfileJson.value = json;
+  }
+
+  function buildCurrentProfileJson() {
+    return buildConfigFileJson({
+      name: profileName.value,
+      visible: isOverlayVisible.value,
+      position: overlayPosition.value,
+      customPosition: customOverlayPosition.value,
+      config,
+    });
   }
 
   function profileNameFromFileName(fileName: string): string {
@@ -146,7 +157,6 @@ export function useAppConfig(options: {
     profileName.value =
       loadedConfig.name || profileNameFromFileName(fileName);
     profileSourcePath.value = sourcePath;
-    profileChanged.value = false;
     overlayPosition.value = normalizeOverlayPosition(
       loadedConfig.overlay.position,
     );
@@ -170,6 +180,8 @@ export function useAppConfig(options: {
     };
     await emitTo("pov", OVERLAY_CONFIG_EVENT, overlayConfig);
     const visible = loadedConfig.overlay.visible ?? true;
+    isOverlayVisible.value = visible;
+    setSavedProfileJson();
     await overlay.setOverlayVisible(visible, false);
     if (visible) {
       await overlay.moveOverlay(overlayPosition.value, false);
@@ -218,7 +230,6 @@ export function useAppConfig(options: {
     const appConfig = parseAppConfigFile(savedConfig);
     profileName.value = appConfig.currentProfile.name;
     profileSourcePath.value = appConfig.currentProfile.sourcePath;
-    profileChanged.value = appConfig.currentProfile.changed;
     overlayPosition.value = normalizeOverlayPosition(
       appConfig.currentProfile.overlay.position,
     );
@@ -252,6 +263,8 @@ export function useAppConfig(options: {
     };
     await emitTo("pov", OVERLAY_CONFIG_EVENT, overlayConfig);
 
+    isOverlayVisible.value = appConfig.currentProfile.overlay.visible;
+    savedProfileJson.value = await restoreSavedProfileJson(appConfig.currentProfile.sourcePath);
     await overlay.setOverlayVisible(
       appConfig.currentProfile.overlay.visible,
       false,
@@ -271,19 +284,13 @@ export function useAppConfig(options: {
       style: config.style,
     };
     await emitTo("pov", OVERLAY_CONFIG_EVENT, overlayConfig);
-    await overlay.setOverlayVisible(isOverlayVisible.value);
+    await overlay.setOverlayVisible(isOverlayVisible.value, false);
   }
 
   async function exportAndApplyConfig(overlay: OverlayCallbacks, onSave: () => void) {
     await applyConfigToOverlay(overlay);
 
-    const json = buildConfigFileJson({
-      name: profileName.value,
-      config,
-      visible: isOverlayVisible.value,
-      position: overlayPosition.value,
-      customPosition: customOverlayPosition.value,
-    });
+    const json = buildCurrentProfileJson();
     const path = await save({
       title: t("dialogs.saveConfig"),
       defaultPath: `${profileName.value || "keyboard-display"}.json`,
@@ -296,7 +303,7 @@ export function useAppConfig(options: {
 
     await tauriApi.saveConfigFile(path, json);
     profileSourcePath.value = path;
-    profileChanged.value = false;
+    setSavedProfileJson(json);
     onSave();
   }
 
@@ -311,30 +318,55 @@ export function useAppConfig(options: {
       return;
     }
 
-    const json = buildConfigFileJson({
-      name: profileName.value,
-      config,
-      visible: isOverlayVisible.value,
-      position: overlayPosition.value,
-      customPosition: customOverlayPosition.value,
-    });
+    const json = buildCurrentProfileJson();
     await tauriApi.saveConfigFile(profileSourcePath.value, json);
-    profileChanged.value = false;
+    setSavedProfileJson(json);
     onSave();
+  }
+
+  async function restoreSavedProfileJson(sourcePath: string | null) {
+    if (!sourcePath) {
+      return buildCurrentProfileJson();
+    }
+
+    try {
+      const text = await tauriApi.readConfigFile(sourcePath);
+      const loadedConfig = parseConfigFile(text);
+      return buildConfigFileJson({
+        name: loadedConfig.name || profileNameFromFileName(sourcePath.split(/[\\/]/).pop() ?? sourcePath),
+        config: {
+          ...config,
+          layout: loadedConfig.overlay.layout,
+          rows: loadedConfig.overlay.rows,
+          keys: loadedConfig.overlay.keys,
+          keyIdLabels: loadedConfig.overlay.keyIdLabels ?? {},
+          style: loadedConfig.overlay.style,
+          recording: loadedConfig.recording,
+          export: loadedConfig.export,
+        },
+        visible: loadedConfig.overlay.visible ?? true,
+        position: normalizeOverlayPosition(loadedConfig.overlay.position),
+        customPosition: loadedConfig.overlay.customPosition ?? null,
+      });
+    } catch {
+      return "";
+    }
   }
 
   function updateRecordingConfig(recording: RecordingConfig) {
     applyRecordingConfig(recording);
-    markProfileChanged();
   }
 
   function updateExportConfig(exportConfig: ExportConfig) {
     applyExportConfig(exportConfig);
-    markProfileChanged();
   }
 
   function updateVideoExporterConfig(exporterConfig: VideoExporterConfig) {
     videoExporterConfig.value = exporterConfig;
+  }
+
+  function updateProfileName(name: string) {
+    profileName.value = name;
   }
 
   function updateUiLanguage(language: UiLanguage) {
@@ -375,7 +407,6 @@ export function useAppConfig(options: {
     applyOverlayLayout,
     applyOverlayRows,
     applyKeyIdLabels,
-    markProfileChanged,
     isBackplateVisible,
     overlayStyleSyncMode,
     scheduleAppConfigSave,
@@ -388,6 +419,7 @@ export function useAppConfig(options: {
     updateRecordingConfig,
     updateExportConfig,
     updateVideoExporterConfig,
+    updateProfileName,
     updateUiLanguage,
     chooseRecordingBrowserDirectory,
     dispose,

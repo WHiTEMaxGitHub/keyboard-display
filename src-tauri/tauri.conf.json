@@ -22,21 +22,6 @@
         "decorations": false,
         "transparent": true,
         "backgroundColor": [0, 0, 0, 0]
-      },
-      {
-        "label": "pov",
-        "title": "POV Overlay",
-        "url": "/?surface=pov",
-        "width": 300,
-        "height": 330,
-        "decorations": false,
-        "transparent": true,
-        "backgroundColor": [0, 0, 0, 0],
-        "shadow": false,
-        "alwaysOnTop": false,
-        "visibleOnAllWorkspaces": true,
-        "resizable": false,
-        "skipTaskbar": true
       }
     ],
     "security": {

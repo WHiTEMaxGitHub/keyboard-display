@@ -358,10 +358,11 @@
     - Use `SetWindowsHookExW(WH_MOUSE_LL)` for mouse button events.
     - Emit the same normalized `input-state` payload used by macOS.
 
-- [ ] Harden Windows native input backend.
+- [x] Harden Windows native input backend.
   - Confirm Raw Input message-window lifetime in dev and release builds.
   - Confirm background keyboard capture when the app is not focused.
   - Confirm mouse hook lifetime and message loop behavior.
+  - User verification completed on Windows.
 
 - [ ] Verify macOS native input backend behavior.
   - Confirm Accessibility/Input Monitoring permission requirements.
@@ -369,11 +370,12 @@
   - Confirm raw key codes map correctly on common keyboard layouts.
   - Confirm no crash path like the removed `rdev` dependency.
 
-- [ ] Verify Windows overlay window behavior.
+- [x] Verify Windows overlay window behavior.
   - Transparent window background.
   - Click-through via `setIgnoreCursorEvents(true)`.
   - Always-on-top via `setAlwaysOnTop`.
   - Window sizing and position controls.
+  - User verification completed on Windows.
 
 - [x] Evaluate mature cross-platform input capture libraries.
   - Keep current native hook backends as the baseline while experimenting.

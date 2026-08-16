@@ -1,4 +1,4 @@
-import { emitTo } from "@tauri-apps/api/event";
+import { emitTo, listen } from "@tauri-apps/api/event";
 import {
   LogicalPosition,
   LogicalSize,
@@ -11,6 +11,7 @@ import { ref, type Ref } from "vue";
 import {
   OVERLAY_ADJUST_MODE_EVENT,
   OVERLAY_CONFIG_EVENT,
+  OVERLAY_READY_EVENT,
   OVERLAY_VISIBLE_EVENT,
 } from "../domain/inputEvents";
 import { estimateOverlaySize } from "../domain/overlaySize";
@@ -39,7 +40,6 @@ type UseOverlayWindowOptions = {
   isOverlayVisible: Ref<boolean>;
   overlayPosition: Ref<OverlayPosition>;
   customOverlayPosition: Ref<OverlayCustomPosition | null>;
-  markProfileChanged: () => void;
   scheduleAppConfigSave: () => void;
 };
 
@@ -153,6 +153,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       return existingWindow;
     }
 
+    const ready = await createOverlayReadyWaiter();
     const size = estimateOverlaySize(
       options.config.layout,
       options.config.rows,
@@ -178,8 +179,27 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       createdWindow.once("tauri://created", () => resolve());
       createdWindow.once("tauri://error", (event) => reject(event.payload));
     });
+    await ready.wait();
 
     return createdWindow;
+  }
+
+  async function createOverlayReadyWaiter(timeoutMs = 1600) {
+    let resolveReady: () => void;
+    const ready = new Promise<void>((resolve) => {
+      resolveReady = resolve;
+    });
+    const unlisten = await listen(OVERLAY_READY_EVENT, () => resolveReady());
+
+    return {
+      wait: async () => {
+        await Promise.race([
+          ready,
+          new Promise<void>((resolve) => window.setTimeout(resolve, timeoutMs)),
+        ]);
+        unlisten?.();
+      },
+    };
   }
 
   async function syncOverlayWindow(overlayWindow?: Window | null) {
@@ -208,11 +228,13 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     await overlayWindow?.destroy();
   }
 
-  async function setOverlayVisible(visible: boolean, markChanged = true) {
+  async function setOverlayVisible(visible: boolean, updateConfig = true) {
     const overlayWindow = visible ? await ensureOverlayWindow() : await Window.getByLabel("pov");
 
     if (!overlayWindow) {
-      options.isOverlayVisible.value = false;
+      if (updateConfig) {
+        options.isOverlayVisible.value = false;
+      }
       return;
     }
 
@@ -223,17 +245,16 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       await overlayWindow.hide();
     }
 
-    options.isOverlayVisible.value = visible;
-    if (markChanged) {
-      options.markProfileChanged();
+    if (updateConfig) {
+      options.isOverlayVisible.value = visible;
     }
     await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, visible);
   }
 
-  async function moveOverlay(position: OverlayPosition, markChanged = true, show = true) {
-    options.overlayPosition.value = position;
-    if (markChanged) {
-      options.markProfileChanged();
+  async function moveOverlay(position: OverlayPosition, updateConfig = true, show = true) {
+    const targetPosition = updateConfig ? position : options.overlayPosition.value;
+    if (updateConfig) {
+      options.overlayPosition.value = position;
     }
     const overlayWindow = await ensureOverlayWindow();
     const monitor = (await currentMonitor()) ?? (await primaryMonitor());
@@ -253,7 +274,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       monitor.workArea.size.toLogical(monitor.scaleFactor),
     );
 
-    if (position === "custom" && options.customOverlayPosition.value) {
+    if (targetPosition === "custom" && options.customOverlayPosition.value) {
       const mappedPosition = resolveCustomOverlayPosition(
         options.customOverlayPosition.value,
         workArea,
@@ -264,12 +285,11 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       }
       await overlayWindow.setPosition(new LogicalPosition(mappedPosition.x, mappedPosition.y));
       if (show) {
-        options.isOverlayVisible.value = true;
         await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
       }
       return;
     }
-    const presetPosition = position === "custom" ? "bottom-right" : position;
+    const presetPosition = targetPosition === "custom" ? "bottom-right" : targetPosition;
 
     const horizontalMargin = 6;
     const topMargin = 3;
@@ -294,7 +314,6 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     }
     await overlayWindow.setPosition(positions[presetPosition]);
     if (show) {
-      options.isOverlayVisible.value = true;
       await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
     }
   }
@@ -318,7 +337,7 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
       await overlayWindow.setPosition(new LogicalPosition(previousPosition.x, previousPosition.y));
     }
     await overlayWindow.show();
-    options.isOverlayVisible.value = true;
+    await emitTo<boolean>("pov", OVERLAY_VISIBLE_EVENT, true);
     await setOverlayClickThrough(false);
     await emitAdjustMode(true);
   }
@@ -357,7 +376,6 @@ export function useOverlayWindow(options: UseOverlayWindowOptions) {
     };
     options.overlayPosition.value = "custom";
     overlayAdjusting.value = false;
-    options.markProfileChanged();
     options.scheduleAppConfigSave();
     await setOverlayClickThrough(true);
     await emitAdjustMode(false);

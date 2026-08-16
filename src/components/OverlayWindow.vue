@@ -13,6 +13,7 @@ import type {
 import PovOverlay from "./PovOverlay.vue";
 
 defineProps<{
+  visible?: boolean;
   layout: OverlayLayout;
   rows: OverlayRow[];
   keys: KeyBinding[];
@@ -76,7 +77,7 @@ async function setClickThrough(enabled: boolean) {
 
 <template>
   <main
-    :class="['overlay-root', { adjusting }]"
+    :class="['overlay-root', { adjusting, visible }]"
     @mousedown.prevent.stop="startDrag"
   >
     <PovOverlay
@@ -102,6 +103,19 @@ async function setClickThrough(enabled: boolean) {
   justify-items: center;
   padding: 12px;
   background: transparent;
+  opacity: 0;
+  transform: translateY(6px) scale(0.985);
+  filter: blur(5px);
+  transition:
+    opacity 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 520ms cubic-bezier(0.16, 1, 0.3, 1),
+    filter 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.overlay-root.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0);
 }
 
 .overlay-root.adjusting,
@@ -110,4 +124,13 @@ async function setClickThrough(enabled: boolean) {
   -webkit-user-select: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .overlay-root,
+  .overlay-root.visible {
+    opacity: 1;
+    transform: none;
+    filter: none;
+    transition-duration: 1ms;
+  }
+}
 </style>
