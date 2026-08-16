@@ -41,6 +41,24 @@ const customThemePanelOpacityPercent = computed(() => Math.round(customThemePane
 const uiLanguage = computed(() => uiLanguageRef.value);
 const themeOptions = Object.values(THEMES);
 const customThemeTemplateOptions = Object.values(CUSTOM_THEME_TEMPLATES);
+const themeSelectOptions = computed(() =>
+  themeOptions.map((theme) => ({
+    value: theme.id,
+    label: themeLabel(theme.id),
+  })),
+);
+const languageSelectOptions = computed(() =>
+  LOCALE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+  })),
+);
+const customThemeTemplateSelectOptions = computed(() =>
+  customThemeTemplateOptions.map((template) => ({
+    value: template.id,
+    label: customThemeTemplateLabel(template.id),
+  })),
+);
 const selectedTheme = computed(() => THEMES[themeId.value]);
 const isCustomThemeActive = computed(() => themeId.value === "custom");
 const customThemeColorOptions: Array<{
@@ -70,12 +88,12 @@ const configDirectory = computed(() => {
   return separatorIndex >= 0 ? path.slice(0, separatorIndex) : path || "Resolving...";
 });
 
-function updateTheme(event: Event) {
-  emit("set-theme", (event.target as HTMLSelectElement).value as ThemeId);
+function updateTheme(value: string) {
+  emit("set-theme", value as ThemeId);
 }
 
-function updateUiLanguage(event: Event) {
-  emit("set-ui-language", (event.target as HTMLSelectElement).value as UiLanguage);
+function updateUiLanguage(value: string) {
+  emit("set-ui-language", value as UiLanguage);
 }
 
 function previewCustomThemeColor(key: CustomThemeColorKey, color: string) {
@@ -86,8 +104,8 @@ function updateCustomThemeColor(key: CustomThemeColorKey, color: string) {
   emit("set-custom-theme-color", key, color);
 }
 
-function updateCustomThemeTemplate(event: Event) {
-  emit("set-custom-theme-template", (event.target as HTMLSelectElement).value as CustomThemeTemplateId);
+function updateCustomThemeTemplate(value: string) {
+  emit("set-custom-theme-template", value as CustomThemeTemplateId);
 }
 
 function updateCustomThemePanelOpacity(event: Event) {
@@ -160,28 +178,22 @@ function customThemeTemplateLabel(id: CustomThemeTemplateId) {
 
       <label class="setting-row">
         <span>{{ t("settings.theme") }}</span>
-        <BaseSelect class="select-control" :model-value="themeId" @change="updateTheme">
-          <option
-            v-for="theme in themeOptions"
-            :key="theme.id"
-            :value="theme.id"
-          >
-            {{ themeLabel(theme.id) }}
-          </option>
-        </BaseSelect>
+        <BaseSelect
+          class="select-control"
+          :model-value="themeId"
+          :options="themeSelectOptions"
+          @update:model-value="updateTheme"
+        />
       </label>
 
       <label class="setting-row mt-3">
         <span>{{ t("settings.language") }}</span>
-        <BaseSelect class="select-control" :model-value="uiLanguage" @change="updateUiLanguage">
-          <option
-            v-for="option in LOCALE_OPTIONS"
-            :key="option.value"
-            :value="option.value"
-          >
-            {{ t(option.labelKey) }}
-          </option>
-        </BaseSelect>
+        <BaseSelect
+          class="select-control"
+          :model-value="uiLanguage"
+          :options="languageSelectOptions"
+          @update:model-value="updateUiLanguage"
+        />
       </label>
 
       <div class="theme-preview">
@@ -221,16 +233,9 @@ function customThemeTemplateLabel(id: CustomThemeTemplateId) {
             <BaseSelect
               class="select-control"
               :model-value="customThemeTemplate"
-              @change="updateCustomThemeTemplate"
-            >
-              <option
-                v-for="template in customThemeTemplateOptions"
-                :key="template.id"
-                :value="template.id"
-              >
-                {{ customThemeTemplateLabel(template.id) }}
-              </option>
-            </BaseSelect>
+              :options="customThemeTemplateSelectOptions"
+              @update:model-value="updateCustomThemeTemplate"
+            />
           </label>
 
           <label class="setting-row custom-opacity-row">

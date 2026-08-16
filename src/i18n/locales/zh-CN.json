@@ -44,13 +44,15 @@
     "livePreview": "预览",
     "profile": "配置",
     "name": "名称",
+    "namePlaceholder": "配置名称",
     "status": "状态",
     "unsavedChanges": "未保存",
     "saved": "已保存",
     "visibleKeys": "可见按键",
     "quickControls": "快捷项",
     "showOverlay": "显示 POV",
-    "alwaysOnTop": "窗口置顶"
+    "alwaysOnTop": "窗口置顶",
+    "language": "语言"
   },
   "settings": {
     "application": "应用",
@@ -116,6 +118,8 @@
     "gaps": "间距项",
     "rows": "行数",
     "totalWidth": "总宽度",
+    "configName": "配置名称",
+    "configStatus": "配置状态",
     "structure": "行结构",
     "preview": "布局预览",
     "editorTitle": "布局编辑",
@@ -123,6 +127,7 @@
     "line": "第 {number} 行:",
     "gapItem": "间距",
     "unitSuffix": "单位",
+    "asPx": "as {px}px",
     "editorPanel": {
       "row": "第 {number} 行",
       "rowSummary": "{keyCount} 键 · {gapCount} 间距 · {itemCount} 项",
@@ -212,7 +217,21 @@
     },
     "filename": {
       "label": "文件名模板",
-      "variables": "变量: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
+      "configure": "点击配置录制文件名",
+      "template": "模板",
+      "variables": "支持的变量",
+      "close": "关闭",
+      "variableHelp": {
+        "start": "录制开始时间戳",
+        "end": "录制结束时间戳",
+        "startDate": "录制开始日期",
+        "startTime": "录制开始时间",
+        "endTime": "录制结束时间",
+        "duration": "录制持续时长",
+        "profileName": "当前配置名称",
+        "profileSlug": "适合文件名的配置名称",
+        "fps": "录制帧率"
+      }
     },
     "storage": {
       "description": "输入帧会保存为紧凑的二进制状态，用于后续回放渲染或视频导出。",

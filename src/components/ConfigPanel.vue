@@ -24,7 +24,10 @@ import ExportPage from "./pages/ExportPage.vue";
 import SettingsPage from "./pages/SettingsPage.vue";
 import PovOverlay from "./PovOverlay.vue";
 import BaseFieldRow from "./BaseFieldRow.vue";
+import BaseInput from "./BaseInput.vue";
+import BaseSelect from "./BaseSelect.vue";
 import BaseToggleRow from "./BaseToggleRow.vue";
+import { LOCALE_OPTIONS } from "../i18n";
 
 type ConfigPage =
   | "overview"
@@ -85,6 +88,7 @@ const emit = defineEmits<{
   "update-recording-config": [recording: AppConfig["recording"]];
   "update-export-config": [exportConfig: ExportConfig];
   "update-video-exporter-config": [exporterConfig: VideoExporterConfig];
+  "update-profile-name": [name: string];
   notify: [tone: NotificationTone, message: string];
   "dismiss-notification": [id: number];
   "start-recording": [];
@@ -115,6 +119,12 @@ const layoutSubPage = ref<LayoutSubPage>("summary");
 const recordingSubPage = ref<RecordingSubPage>("control");
 const recentColors = ref<string[]>([]);
 const { t } = useI18n();
+const languageSelectOptions = computed(() =>
+  LOCALE_OPTIONS.map((option) => ({
+    value: option.value,
+    label: t(option.labelKey),
+  })),
+);
 
 function relay(event: string, ...args: unknown[]) {
   (emit as any)(event, ...args);
@@ -147,6 +157,14 @@ function updateAlwaysOnTop(event: Event) {
     ...props.config.style,
     alwaysOnTop: (event.target as HTMLInputElement).checked,
   });
+}
+
+function updateProfileName(value: string | number) {
+  emit("update-profile-name", String(value));
+}
+
+function updateUiLanguage(value: string) {
+  emit("set-ui-language", value as UiLanguage);
 }
 
 provide("config", props.config);
@@ -241,7 +259,14 @@ const pageComponent = computed(() => {
           <section class="panel-grid">
             <article class="panel">
               <h2 class="m-0">{{ t("overview.profile") }}</h2>
-              <BaseFieldRow :label="t('overview.name')">{{ profileName }}</BaseFieldRow>
+              <BaseFieldRow :label="t('overview.name')">
+                <BaseInput
+                  block
+                  :model-value="profileName"
+                  :placeholder="t('overview.namePlaceholder')"
+                  @update:model-value="updateProfileName"
+                />
+              </BaseFieldRow>
               <BaseFieldRow :label="t('overview.status')">
                 {{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}
               </BaseFieldRow>
@@ -256,6 +281,15 @@ const pageComponent = computed(() => {
               <BaseToggleRow :checked="config.style.alwaysOnTop" @change="updateAlwaysOnTop">
                 {{ t("overview.alwaysOnTop") }}
               </BaseToggleRow>
+              <label class="quick-control-row">
+                <span>{{ t("overview.language") }}</span>
+                <BaseSelect
+                  class="quick-control-select"
+                  :model-value="uiLanguage"
+                  :options="languageSelectOptions"
+                  @update:model-value="updateUiLanguage"
+                />
+              </label>
             </article>
           </section>
         </section>
@@ -384,6 +418,21 @@ const pageComponent = computed(() => {
   color: var(--color-text-primary);
 }
 
+.quick-control-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.quick-control-select {
+  width: 100%;
+}
+
 @media (max-width: 920px) {
   .preview-band {
     min-height: 280px;
@@ -403,6 +452,11 @@ const pageComponent = computed(() => {
 
   .panel-grid {
     grid-template-columns: 1fr;
+  }
+
+  .quick-control-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
 }
 </style>

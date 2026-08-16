@@ -5,6 +5,7 @@ import type { AppConfig } from "../../domain/defaultConfig";
 import { isKeyBinding } from "../../domain/defaultConfig";
 import BasePanel from "../BasePanel.vue";
 import BasePanelHeader from "../BasePanelHeader.vue";
+import BaseInput from "../BaseInput.vue";
 import PovOverlay from "../PovOverlay.vue";
 import LayoutEditor from "../LayoutEditor.vue";
 
@@ -12,6 +13,8 @@ type LayoutSubPage = "summary" | "editor";
 
 const config = inject<AppConfig>("config")!;
 const keyIdLabels = inject<ComputedRef<AppConfig["keyIdLabels"]>>("keyIdLabels")!;
+const profileNameRef = inject<ComputedRef<string>>("profileName")!;
+const profileChangedRef = inject<ComputedRef<boolean>>("profileChanged")!;
 const layoutSubPageRef = inject<ComputedRef<LayoutSubPage>>("layoutSubPage")!;
 const emit = inject<(event: string, ...args: unknown[]) => void>("emit")!;
 const { t } = useI18n();
@@ -22,11 +25,16 @@ const layoutRows = computed(() => {
 });
 
 const layoutSubPage = computed(() => layoutSubPageRef.value);
+const profileName = computed(() => profileNameRef.value);
+const profileChanged = computed(() => profileChangedRef.value);
 const totalUnits = computed(() => {
   return config.rows
     .flat()
     .reduce((sum, item) => sum + item.widthUnit, 0);
 });
+const totalWidthPx = computed(() => Math.round(
+  totalUnits.value * config.layout.unitPx * config.style.scale,
+));
 const previewOverlayStyle = computed(() => ({
   ...config.style,
   idleKeyVisibility: "visible" as const,
@@ -51,6 +59,10 @@ function updateGapUnit(event: Event) {
     gapUnit,
   });
 }
+
+function updateProfileName(value: string | number) {
+  emit("update-profile-name", String(value));
+}
 </script>
 
 <template>
@@ -60,9 +72,25 @@ function updateGapUnit(event: Event) {
         <BasePanelHeader
           :eyebrow="t('layout.views.summary')"
           :title="t('layout.title')"
-        />
+        >
+          <template #actions>
+            <label class="layout-title-name-field">
+              <span>{{ t("layout.configName") }}</span>
+              <BaseInput
+                block
+                :model-value="profileName"
+                :placeholder="t('overview.namePlaceholder')"
+                @update:model-value="updateProfileName"
+              />
+            </label>
+          </template>
+        </BasePanelHeader>
 
         <div class="layout-metric-grid">
+          <div class="layout-metric">
+            <span>{{ t("layout.configStatus") }}</span>
+            <strong>{{ profileChanged ? t("overview.unsavedChanges") : t("overview.saved") }}</strong>
+          </div>
           <div class="layout-metric">
             <span>{{ t("layout.visibleKeys") }}</span>
             <strong>{{ config.keys.length }}</strong>
@@ -98,6 +126,7 @@ function updateGapUnit(event: Event) {
           <div class="layout-metric">
             <span>{{ t("layout.totalWidth") }}</span>
             <strong>{{ totalUnits.toFixed(1) }}{{ t("layout.unitSuffix") }}</strong>
+            <small>{{ t("layout.asPx", { px: totalWidthPx }) }}</small>
           </div>
         </div>
 
@@ -171,15 +200,17 @@ function updateGapUnit(event: Event) {
 
 .layout-metric-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   gap: 10px;
   margin-bottom: 16px;
 }
 
 .layout-metric {
+  position: relative;
   display: grid;
   gap: 5px;
   min-width: 0;
+  min-height: 76px;
   border: 1px solid var(--color-border-dim);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-surface-control) 72%, transparent);
@@ -196,6 +227,16 @@ function updateGapUnit(event: Event) {
   color: var(--color-text-primary);
   font-size: 18px;
   line-height: 1.2;
+}
+
+.layout-metric small {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  color: color-mix(in srgb, var(--color-text-muted) 78%, transparent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .layout-metric-control input {
@@ -229,6 +270,17 @@ function updateGapUnit(event: Event) {
       color-mix(in srgb, var(--color-surface-base) 38%, transparent)
     );
   padding: 14px;
+}
+
+.layout-title-name-field {
+  display: grid;
+  grid-template-columns: auto minmax(180px, 260px);
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .layout-preview-card :deep(.pov-shell) {
@@ -275,6 +327,12 @@ function updateGapUnit(event: Event) {
 }
 
 @media (max-width: 720px) {
+  .layout-title-name-field {
+    grid-template-columns: 1fr;
+    justify-self: stretch;
+    width: min(100%, 320px);
+  }
+
   .layout-line {
     grid-template-columns: 1fr;
   }

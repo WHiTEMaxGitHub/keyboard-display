@@ -45,6 +45,10 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const rememberedBackplateAlpha = ref(alphaFromHex(props.config.style.backgroundColor) || 255);
+const idleKeyVisibilityOptions = [
+  { value: "visible", labelKey: "appearance.idleVisibility.visible" },
+  { value: "hidden", labelKey: "appearance.idleVisibility.hidden" },
+];
 
 watch(
   () => props.config.style.backgroundColor,
@@ -79,9 +83,8 @@ function updateBackgroundRadius(backgroundRadius: number) {
   });
 }
 
-function updateIdleKeyVisibility(event: Event) {
-  const idleKeyVisibility = (event.target as HTMLSelectElement)
-    .value as OverlayStyle["idleKeyVisibility"];
+function updateIdleKeyVisibility(value: string) {
+  const idleKeyVisibility = value as OverlayStyle["idleKeyVisibility"];
   emit("update-overlay-style", { ...props.config.style, idleKeyVisibility });
 }
 
@@ -189,11 +192,9 @@ function alphaFromHex(color: string) {
         class="w-full"
         compact
         :model-value="config.style.idleKeyVisibility"
-        @change="updateIdleKeyVisibility"
-      >
-        <option value="visible">{{ t("appearance.idleVisibility.visible") }}</option>
-        <option value="hidden">{{ t("appearance.idleVisibility.hidden") }}</option>
-      </BaseSelect>
+        :options="idleKeyVisibilityOptions.map((option) => ({ value: option.value, label: t(option.labelKey) }))"
+        @update:model-value="updateIdleKeyVisibility"
+      />
     </BaseFormRow>
 
     <BaseControlGrid :aria-label="t('appearance.colors.group')">

@@ -436,7 +436,7 @@ function updateGapWidth(
     minmax(clamp(96px, 11vw, 132px), 0.75fr)
     minmax(clamp(112px, 13vw, 150px), 1fr)
     minmax(clamp(96px, 11vw, 120px), 0.82fr)
-    clamp(72px, 8vw, 82px)
+    clamp(108px, 9vw, 126px)
     auto
     auto;
   align-items: center;
@@ -516,7 +516,7 @@ function updateGapWidth(
 }
 
 .width-field {
-  grid-template-columns: auto 48px;
+  grid-template-columns: minmax(44px, auto) 56px;
 }
 
 .row-collapse-enter-active,

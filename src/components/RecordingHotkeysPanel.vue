@@ -16,8 +16,14 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-function updateRecordingHotkeyMode(event: Event) {
-  emit("update-recording-hotkey-mode", (event.target as HTMLSelectElement).value as RecordingHotkeyMode);
+const hotkeyModeOptions: Array<{ value: RecordingHotkeyMode; labelKey: string }> = [
+  { value: "disabled", labelKey: "recording.hotkeys.disabled" },
+  { value: "toggle", labelKey: "recording.hotkeys.toggle" },
+  { value: "separate", labelKey: "recording.hotkeys.separate" },
+];
+
+function updateRecordingHotkeyMode(value: string) {
+  emit("update-recording-hotkey-mode", value as RecordingHotkeyMode);
 }
 
 function beginHotkeyCapture(target: "start" | "stop" | "sync") {
@@ -36,12 +42,9 @@ function formatHotkey(keys: string[]) {
       <BaseSelect
         class="select-control justify-self-end w-[min(240px,100%)]"
         :model-value="recordingHotkeys.mode"
-        @change="updateRecordingHotkeyMode"
-      >
-        <option value="disabled">{{ t("recording.hotkeys.disabled") }}</option>
-        <option value="toggle">{{ t("recording.hotkeys.toggle") }}</option>
-        <option value="separate">{{ t("recording.hotkeys.separate") }}</option>
-      </BaseSelect>
+        :options="hotkeyModeOptions.map((option) => ({ value: option.value, label: t(option.labelKey) }))"
+        @update:model-value="updateRecordingHotkeyMode"
+      />
     </label>
     <div v-if="recordingHotkeys.mode !== 'disabled'" class="grid grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-2.5">
       <span class="text-text-muted text-[13px] font-extrabold">{{ t("recording.hotkeys.start") }}</span>

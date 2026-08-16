@@ -44,13 +44,15 @@
     "livePreview": "Live Preview",
     "profile": "Config",
     "name": "Name",
+    "namePlaceholder": "Config name",
     "status": "Status",
     "unsavedChanges": "Unsaved changes",
     "saved": "Saved",
     "visibleKeys": "Visible keys",
     "quickControls": "Quick controls",
     "showOverlay": "Show POV overlay",
-    "alwaysOnTop": "Always on top"
+    "alwaysOnTop": "Always on top",
+    "language": "Language"
   },
   "settings": {
     "application": "Application",
@@ -116,6 +118,8 @@
     "gaps": "Gap items",
     "rows": "Rows",
     "totalWidth": "Total width",
+    "configName": "Config name",
+    "configStatus": "Config status",
     "structure": "Row structure",
     "preview": "Layout preview",
     "editorTitle": "Layout editor",
@@ -123,6 +127,7 @@
     "line": "Line {number}:",
     "gapItem": "Gap",
     "unitSuffix": "unit",
+    "asPx": "as {px}px",
     "editorPanel": {
       "row": "Row {number}",
       "rowSummary": "{keyCount} keys · {gapCount} gaps · {itemCount} items",
@@ -212,7 +217,21 @@
     },
     "filename": {
       "label": "Filename template",
-      "variables": "Variables: ${start}, ${end}, ${startDate}, ${startTime}, ${endTime}, ${duration}, ${profileName}, ${profileSlug}, ${fps}"
+      "configure": "Configure recording filename",
+      "template": "Template",
+      "variables": "Supported variables",
+      "close": "Close",
+      "variableHelp": {
+        "start": "Recording start timestamp",
+        "end": "Recording end timestamp",
+        "startDate": "Recording start date",
+        "startTime": "Recording start time",
+        "endTime": "Recording end time",
+        "duration": "Recording duration",
+        "profileName": "Current config name",
+        "profileSlug": "Filename-safe config name",
+        "fps": "Recording frame rate"
+      }
     },
     "storage": {
       "description": "Input frames are stored as compact binary state and replayed later for rendering or video export.",
