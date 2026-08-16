@@ -20,8 +20,9 @@ import {
 
 const POPOVER_GAP = 8;
 const POPOVER_MARGIN = 16;
-const POPOVER_MAX_HEIGHT = 360;
-const POPOVER_MIN_WIDTH = 260;
+const POPOVER_MAX_HEIGHT = 460;
+const POPOVER_MIN_WIDTH = 420;
+const POPOVER_PREFERRED_WIDTH = 460;
 
 const PRESET_COLORS = [
   "#25d366",
@@ -183,6 +184,7 @@ function updatePopoverPosition() {
       margin: POPOVER_MARGIN,
       maxHeight: POPOVER_MAX_HEIGHT,
       minWidth: POPOVER_MIN_WIDTH,
+      preferredWidth: POPOVER_PREFERRED_WIDTH,
       panelHeight: pickerPanel.value?.offsetHeight,
     },
   );
@@ -290,69 +292,75 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
           :aria-label="label"
           @keydown.esc.prevent.stop="closePicker"
         >
-          <label class="hex-row">
-            <span>{{ t("colorPicker.hex") }}</span>
-            <input
-              :value="hexDraft"
-              spellcheck="false"
-              @blur="commitHex"
-              @change="commitHex"
-              @input="updateHex"
-            />
-          </label>
-          <div class="current-color-preview">
-            <span class="preview-swatch color-checkerboard" aria-hidden="true">
-              <span :style="{ backgroundColor: previewColorCss }" />
-            </span>
-            <div>
-              <strong>{{ normalizeHexColor(hexDraft) }}</strong>
-              <span>{{ previewRgbaLabel }}</span>
+          <div class="picker-layout">
+            <div class="picker-main">
+              <label class="hex-row">
+                <span>{{ t("colorPicker.hex") }}</span>
+                <input
+                  :value="hexDraft"
+                  spellcheck="false"
+                  @blur="commitHex"
+                  @change="commitHex"
+                  @input="updateHex"
+                />
+              </label>
+              <div class="current-color-preview">
+                <span class="preview-swatch color-checkerboard" aria-hidden="true">
+                  <span :style="{ backgroundColor: previewColorCss }" />
+                </span>
+                <div>
+                  <strong>{{ normalizeHexColor(hexDraft) }}</strong>
+                  <span>{{ previewRgbaLabel }}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div class="slider-list">
-            <label>
-              <span>{{ t("colorPicker.red") }}</span>
-              <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
-            </label>
-            <label>
-              <span>{{ t("colorPicker.green") }}</span>
-              <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
-            </label>
-            <label>
-              <span>{{ t("colorPicker.blue") }}</span>
-              <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
-            </label>
-            <label v-if="alphaEnabled">
-              <span>{{ t("colorPicker.alpha") }}</span>
-              <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
-            </label>
-          </div>
-          <div class="swatch-section">
-            <span>{{ t("colorPicker.presets") }}</span>
-            <div class="swatch-grid">
-              <button
-                v-for="color in PRESET_COLORS"
-                :key="color"
-                :aria-label="color"
-                class="swatch-button"
-                type="button"
-                :style="{ backgroundColor: color }"
-                @click="chooseColor(color)"
-              />
-            </div>
-          </div>
-          <div v-if="recentColors.length" class="swatch-section">
-            <span>{{ t("colorPicker.recent") }}</span>
-            <div class="swatch-grid">
-              <button
-                v-for="color in recentColors"
-                :key="color"
-                :aria-label="color"
-                class="swatch-button"
-                type="button"
-                :style="{ backgroundColor: color }"
-                @click="chooseColor(color)"
-              />
+            <div class="picker-controls">
+              <div class="slider-list">
+                <label>
+                  <span>{{ t("colorPicker.red") }}</span>
+                  <input :value="rgb.r" min="0" max="255" type="range" @input="updateChannel('r', $event)" />
+                </label>
+                <label>
+                  <span>{{ t("colorPicker.green") }}</span>
+                  <input :value="rgb.g" min="0" max="255" type="range" @input="updateChannel('g', $event)" />
+                </label>
+                <label>
+                  <span>{{ t("colorPicker.blue") }}</span>
+                  <input :value="rgb.b" min="0" max="255" type="range" @input="updateChannel('b', $event)" />
+                </label>
+                <label v-if="alphaEnabled">
+                  <span>{{ t("colorPicker.alpha") }}</span>
+                  <input :value="rgb.a ?? 255" min="0" max="255" type="range" @input="updateChannel('a', $event)" />
+                </label>
+              </div>
+              <div class="swatch-section">
+                <span>{{ t("colorPicker.presets") }}</span>
+                <div class="swatch-grid">
+                  <button
+                    v-for="color in PRESET_COLORS"
+                    :key="color"
+                    :aria-label="color"
+                    class="swatch-button"
+                    type="button"
+                    :style="{ backgroundColor: color }"
+                    @click="chooseColor(color)"
+                  />
+                </div>
+              </div>
+              <div v-if="recentColors.length" class="swatch-section">
+                <span>{{ t("colorPicker.recent") }}</span>
+                <div class="swatch-grid">
+                  <button
+                    v-for="color in recentColors"
+                    :key="color"
+                    :aria-label="color"
+                    class="swatch-button"
+                    type="button"
+                    :style="{ backgroundColor: color }"
+                    @click="chooseColor(color)"
+                  />
+                </div>
+              </div>
             </div>
           </div>
           <div class="flex justify-end">
@@ -440,12 +448,28 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
   display: grid;
   gap: 12px;
   box-sizing: border-box;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   background: #151a20;
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.34);
   padding: 12px;
+}
+
+.picker-layout {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.86fr) minmax(210px, 1.14fr);
+  gap: 14px;
+  min-width: 0;
+}
+
+.picker-main,
+.picker-controls {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
 }
 
 .picker-popover-enter-active,
@@ -543,7 +567,7 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 }
 
 .slider-list label {
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(160px, 1fr);
   align-items: center;
 }
 
@@ -588,5 +612,15 @@ function normalizePickerColor(color: string, fallback = normalizeHexColor(props.
 .apply-button:hover {
   border-color: rgba(37, 211, 102, 0.7);
   background: rgba(37, 211, 102, 0.18);
+}
+
+@media (max-width: 520px) {
+  .picker-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .slider-list label {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
 }
 </style>

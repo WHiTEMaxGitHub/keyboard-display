@@ -27,6 +27,7 @@ export type ColorPopoverPlacementOptions = {
   maxHeight?: number;
   minHeight?: number;
   minWidth?: number;
+  preferredWidth?: number;
   panelHeight?: number;
 };
 
@@ -46,8 +47,9 @@ export function placeColorPopover(
   const maxHeight = options.maxHeight ?? DEFAULT_MAX_HEIGHT;
   const minHeight = options.minHeight ?? DEFAULT_MIN_HEIGHT;
   const minWidth = options.minWidth ?? DEFAULT_MIN_WIDTH;
+  const preferredWidth = options.preferredWidth ?? minWidth;
   const availableWidth = Math.max(0, viewport.width - margin * 2);
-  const width = Math.min(Math.max(triggerRect.width, minWidth), availableWidth);
+  const width = Math.min(Math.max(triggerRect.width, minWidth, preferredWidth), availableWidth);
   const left = clamp(triggerRect.left, margin, viewport.width - margin - width);
   const preferredHeight = Math.min(options.panelHeight ?? maxHeight, maxHeight);
   const spaceBelow = viewport.height - triggerRect.bottom - margin - gap;
