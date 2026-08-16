@@ -269,6 +269,89 @@ pub fn key_id_from_mouse_button(button: u16) -> Option<&'static str> {
     }
 }
 
+/// Physical `RAWMOUSE.usButtonFlags` bits (Win32 `RI_MOUSE_*`).
+const RI_MOUSE_LEFT_BUTTON_DOWN: u16 = 0x0001;
+const RI_MOUSE_LEFT_BUTTON_UP: u16 = 0x0002;
+const RI_MOUSE_RIGHT_BUTTON_DOWN: u16 = 0x0004;
+const RI_MOUSE_RIGHT_BUTTON_UP: u16 = 0x0008;
+const RI_MOUSE_MIDDLE_BUTTON_DOWN: u16 = 0x0010;
+const RI_MOUSE_MIDDLE_BUTTON_UP: u16 = 0x0020;
+
+/// Map a Raw Input mouse packet's button flags to overlay key events.
+///
+/// Raw Input flags are physical. Overlay ids match the previous `WH_MOUSE_LL`
+/// path, which used logical `WM_*BUTTON*` messages (`SM_SWAPBUTTON`).
+/// Move/wheel bits are ignored; XButtons 4/5 have no overlay ids.
+#[cfg_attr(not(any(test, target_os = "windows")), allow(dead_code))]
+pub fn overlay_events_from_raw_mouse_flags(
+    us_button_flags: u16,
+    swap_buttons: bool,
+) -> Vec<(&'static str, bool)> {
+    let (left_id, right_id) = if swap_buttons {
+        ("mouse-right", "mouse-left")
+    } else {
+        ("mouse-left", "mouse-right")
+    };
+
+    let mut events = Vec::new();
+    push_raw_mouse_flag(
+        &mut events,
+        us_button_flags,
+        RI_MOUSE_LEFT_BUTTON_DOWN,
+        left_id,
+        true,
+    );
+    push_raw_mouse_flag(
+        &mut events,
+        us_button_flags,
+        RI_MOUSE_LEFT_BUTTON_UP,
+        left_id,
+        false,
+    );
+    push_raw_mouse_flag(
+        &mut events,
+        us_button_flags,
+        RI_MOUSE_RIGHT_BUTTON_DOWN,
+        right_id,
+        true,
+    );
+    push_raw_mouse_flag(
+        &mut events,
+        us_button_flags,
+        RI_MOUSE_RIGHT_BUTTON_UP,
+        right_id,
+        false,
+    );
+    push_raw_mouse_flag(
+        &mut events,
+        us_button_flags,
+        RI_MOUSE_MIDDLE_BUTTON_DOWN,
+        "mouse-middle",
+        true,
+    );
+    push_raw_mouse_flag(
+        &mut events,
+        us_button_flags,
+        RI_MOUSE_MIDDLE_BUTTON_UP,
+        "mouse-middle",
+        false,
+    );
+    events
+}
+
+#[cfg_attr(not(any(test, target_os = "windows")), allow(dead_code))]
+fn push_raw_mouse_flag(
+    events: &mut Vec<(&'static str, bool)>,
+    flags: u16,
+    bit: u16,
+    key_id: &'static str,
+    pressed: bool,
+) {
+    if flags & bit != 0 {
+        events.push((key_id, pressed));
+    }
+}
+
 // These ids are stable layout handles for native hardware codes that do not
 // have a semantic key mapping. They are not key names.
 pub fn layout_id_from_macos_keycode(keycode: u16) -> String {
@@ -289,7 +372,9 @@ mod tests {
     use super::{
         key_id_from_macos_keycode, key_id_from_mouse_button, key_id_from_windows_event,
         key_id_from_windows_scancode, key_id_from_windows_vk, layout_id_from_macos_keycode,
-        layout_id_from_windows_codes,
+        layout_id_from_windows_codes, overlay_events_from_raw_mouse_flags,
+        RI_MOUSE_LEFT_BUTTON_DOWN, RI_MOUSE_LEFT_BUTTON_UP, RI_MOUSE_MIDDLE_BUTTON_DOWN,
+        RI_MOUSE_MIDDLE_BUTTON_UP, RI_MOUSE_RIGHT_BUTTON_DOWN, RI_MOUSE_RIGHT_BUTTON_UP,
     };
 
     #[test]
@@ -404,6 +489,74 @@ mod tests {
     }
 
     #[test]
+    fn maps_raw_mouse_down_and_up_flags() {
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_LEFT_BUTTON_DOWN, false),
+            vec![("mouse-left", true)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_LEFT_BUTTON_UP, false),
+            vec![("mouse-left", false)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_RIGHT_BUTTON_DOWN, false),
+            vec![("mouse-right", true)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_RIGHT_BUTTON_UP, false),
+            vec![("mouse-right", false)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_MIDDLE_BUTTON_DOWN, false),
+            vec![("mouse-middle", true)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_MIDDLE_BUTTON_UP, false),
+            vec![("mouse-middle", false)]
+        );
+    }
+
+    #[test]
+    fn emits_each_raw_mouse_button_flag_independently() {
+        let flags = RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_RIGHT_BUTTON_UP;
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(flags, false),
+            vec![("mouse-left", true), ("mouse-right", false)]
+        );
+
+        let down_and_up = RI_MOUSE_LEFT_BUTTON_DOWN | RI_MOUSE_LEFT_BUTTON_UP;
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(down_and_up, false),
+            vec![("mouse-left", true), ("mouse-left", false)]
+        );
+    }
+
+    #[test]
+    fn ignores_raw_mouse_move_and_wheel_packets() {
+        assert!(overlay_events_from_raw_mouse_flags(0, false).is_empty());
+        // RI_MOUSE_WHEEL / RI_MOUSE_HWHEEL
+        assert!(overlay_events_from_raw_mouse_flags(0x0400, false).is_empty());
+        assert!(overlay_events_from_raw_mouse_flags(0x0800, false).is_empty());
+        assert!(overlay_events_from_raw_mouse_flags(0x0400 | 0x0800, false).is_empty());
+    }
+
+    #[test]
+    fn remaps_raw_mouse_left_right_when_buttons_are_swapped() {
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_LEFT_BUTTON_DOWN, true),
+            vec![("mouse-right", true)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_RIGHT_BUTTON_UP, true),
+            vec![("mouse-left", false)]
+        );
+        assert_eq!(
+            overlay_events_from_raw_mouse_flags(RI_MOUSE_MIDDLE_BUTTON_DOWN, true),
+            vec![("mouse-middle", true)]
+        );
+    }
+
+    #[test]
     fn leaves_unmapped_native_keys_for_unknown_id_fallback() {
         assert_eq!(key_id_from_macos_keycode(10_000), None);
         assert_eq!(key_id_from_windows_event(0, 10_000), None);
@@ -412,7 +565,10 @@ mod tests {
     #[test]
     fn builds_stable_unknown_native_key_ids() {
         assert_eq!(layout_id_from_macos_keycode(123), "macos-keycode-123");
-        assert_eq!(layout_id_from_windows_codes(0xFF, 91), "windows-scancode-91");
+        assert_eq!(
+            layout_id_from_windows_codes(0xFF, 91),
+            "windows-scancode-91"
+        );
         assert_eq!(layout_id_from_windows_codes(0xFF, 0), "windows-vk-255");
     }
 }

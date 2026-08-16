@@ -11,6 +11,21 @@ pub fn init(app: &tauri::AppHandle) {
     let _ = LOG_WRITER.set(BufferedDebugLogWriter::new(path));
 }
 
+pub fn input_debug_enabled() -> bool {
+    static ENABLED: OnceLock<bool> = OnceLock::new();
+    *ENABLED.get_or_init(|| match std::env::var("KEYBOARD_DISPLAY_INPUT_DEBUG") {
+        Ok(value) => matches!(value.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"),
+        Err(_) => false,
+    })
+}
+
+pub fn debug(source: &str, message: &str) {
+    if !input_debug_enabled() {
+        return;
+    }
+    write_with_level("DEBUG", source, message);
+}
+
 pub fn write(source: &str, message: &str) {
     write_with_level("INFO", source, message);
 }

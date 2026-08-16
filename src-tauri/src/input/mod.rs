@@ -48,19 +48,40 @@ impl InputStateBridge {
         key_id: String,
         pressed: bool,
     ) -> Result<(), String> {
-        let mut active_keys = self.active_keys.lock().map_err(|error| error.to_string())?;
-        if pressed {
-            active_keys.insert(key_id.clone());
-        } else {
-            active_keys.remove(&key_id);
-        }
+        let key_ids = self.apply_key(&key_id, pressed)?;
+        log_input_debug(&key_id, pressed, &key_ids);
 
-        let payload = OverlayActiveKeysPayload {
-            key_ids: active_keys.iter().cloned().collect(),
-        };
+        let payload = OverlayActiveKeysPayload { key_ids };
         app_handle
             .emit_to("pov", OVERLAY_ACTIVE_KEYS_EVENT, payload)
             .map_err(|error| error.to_string())
+    }
+
+    /// Overlay-set mutation used by `emit_input_state` via `update`.
+    fn apply_key(&self, key_id: &str, pressed: bool) -> Result<Vec<String>, String> {
+        let mut active_keys = self.active_keys.lock().map_err(|error| error.to_string())?;
+        if pressed {
+            active_keys.insert(key_id.to_string());
+        } else {
+            active_keys.remove(key_id);
+        }
+        Ok(active_keys.iter().cloned().collect())
+    }
+
+    #[cfg_attr(not(target_os = "windows"), allow(dead_code))]
+    pub(super) fn is_active(&self, key_id: &str) -> bool {
+        self.active_keys
+            .lock()
+            .map(|keys| keys.contains(key_id))
+            .unwrap_or(false)
+    }
+
+    #[cfg(test)]
+    fn snapshot(&self) -> Vec<String> {
+        self.active_keys
+            .lock()
+            .map(|keys| keys.iter().cloned().collect())
+            .unwrap_or_default()
     }
 }
 
@@ -112,4 +133,49 @@ fn emit_backend_log(
         .collect::<std::collections::BTreeMap<String, String>>();
 
     debug_log::warn("input-backend", &format!("{message} {details:?}"));
+}
+
+fn log_input_debug(key_id: &str, pressed: bool, active_keys: &[String]) {
+    if !debug_log::input_debug_enabled() {
+        return;
+    }
+    debug_log::debug(
+        "input",
+        &format!("key_id={key_id} pressed={pressed} active_keys={active_keys:?}"),
+    );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::InputStateBridge;
+    use std::{thread, time::Duration};
+
+    fn keys(ids: &[&str]) -> Vec<String> {
+        ids.iter().map(|id| (*id).to_string()).collect()
+    }
+
+    #[test]
+    fn jump_throw_sequence_clears_mouse_left_and_space() {
+        let bridge = InputStateBridge::new();
+
+        assert_eq!(
+            bridge.apply_key("mouse-left", true).unwrap(),
+            keys(&["mouse-left"])
+        );
+        assert_eq!(
+            bridge.apply_key("space", true).unwrap(),
+            keys(&["mouse-left", "space"])
+        );
+        assert_eq!(
+            bridge.apply_key("space", false).unwrap(),
+            keys(&["mouse-left"])
+        );
+
+        thread::sleep(Duration::from_millis(80));
+
+        assert_eq!(bridge.apply_key("mouse-left", false).unwrap(), keys(&[]));
+        assert!(bridge.snapshot().is_empty());
+        assert!(!bridge.is_active("mouse-left"));
+        assert!(!bridge.is_active("space"));
+    }
 }
