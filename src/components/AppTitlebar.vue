@@ -105,17 +105,25 @@ function waitForCloseAnimation() {
 }
 
 .titlebar-title {
-  grid-column: 2;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: grid;
+  place-items: center;
   min-width: 0;
   overflow: hidden;
   font-size: 12px;
   font-weight: 800;
+  line-height: 1;
+  pointer-events: none;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .window-controls {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   height: 100%;
