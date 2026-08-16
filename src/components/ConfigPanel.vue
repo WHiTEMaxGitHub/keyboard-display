@@ -319,8 +319,23 @@ const pageComponent = computed(() => {
   height: 100%;
   min-width: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   padding: 0 24px 24px;
   padding-left: calc(48px + 24px);
+}
+
+.workspace::-webkit-scrollbar {
+  width: 8px;
+}
+
+.workspace::-webkit-scrollbar-track {
+  margin: 8px 0 12px;
+  background: color-mix(in srgb, var(--color-surface-base) 86%, transparent);
+}
+
+.workspace::-webkit-scrollbar-thumb {
+  border-width: 2px;
+  background: color-mix(in srgb, var(--color-text-muted) 36%, transparent);
 }
 
 .page-container {

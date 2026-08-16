@@ -104,6 +104,38 @@
     font: inherit;
   }
 
+  * {
+    scrollbar-color:
+      color-mix(in srgb, var(--color-text-muted) 42%, transparent)
+      color-mix(in srgb, var(--color-surface-base) 72%, transparent);
+    scrollbar-width: thin;
+  }
+
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--color-surface-base) 82%, transparent);
+    border-radius: 999px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    min-height: 42px;
+    border: 2px solid color-mix(in srgb, var(--color-surface-base) 82%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-text-muted) 46%, transparent);
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--color-text-secondary) 58%, transparent);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
   .app-surface:not(.overlay-surface) {
     position: relative;
     background: var(--theme-bg-base, #0d1117);

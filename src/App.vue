@@ -501,9 +501,10 @@ onUnmounted(() => {
 
 <style scoped>
 .app-surface:not(.overlay-surface) {
-  border: 1px solid var(--color-border-dim);
   border-radius: 16px;
-  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.34);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-border-dim) 72%, transparent),
+    0 22px 70px rgba(0, 0, 0, 0.34);
   clip-path: inset(0 round 16px);
   contain: paint;
   overflow: hidden;
@@ -525,6 +526,7 @@ onUnmounted(() => {
   min-width: 0;
   clip-path: inset(0 round 16px);
   overflow: hidden;
+  background: var(--theme-bg-base, #0d1117);
 }
 
 .config-content {
