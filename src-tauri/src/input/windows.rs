@@ -2,6 +2,8 @@ use std::{
     mem::size_of,
     ptr::{null, null_mut},
     sync::OnceLock,
+    thread,
+    time::Duration,
 };
 use tauri::AppHandle;
 use windows_sys::Win32::{
@@ -9,8 +11,10 @@ use windows_sys::Win32::{
     System::LibraryLoader::GetModuleHandleW,
     UI::{
         Input::{
-            GetRawInputData, RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE,
-            RAWINPUTHEADER, RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEKEYBOARD,
+            GetRawInputData,
+            KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
+            RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE, RAWINPUTHEADER,
+            RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEKEYBOARD,
         },
         WindowsAndMessaging::{
             CallNextHookEx, CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW,
@@ -25,6 +29,9 @@ use super::{emit_backend_log, emit_input_state, mapping};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
+const MOUSE_POLL_INTERVAL: Duration = Duration::from_millis(16);
+const ASYNC_KEY_DOWN_MASK: u16 = 0x8000;
+
 const RAW_INPUT_CLASS_NAME: &[u16] = &[
     'K' as u16, 'e' as u16, 'y' as u16, 'b' as u16, 'o' as u16, 'a' as u16, 'r' as u16, 'd' as u16,
     'D' as u16, 'i' as u16, 's' as u16, 'p' as u16, 'l' as u16, 'a' as u16, 'y' as u16, 'R' as u16,
@@ -33,6 +40,8 @@ const RAW_INPUT_CLASS_NAME: &[u16] = &[
 
 pub fn start(app_handle: AppHandle) {
     let _ = APP_HANDLE.set(app_handle.clone());
+
+    start_mouse_state_poller();
 
     std::thread::spawn(move || unsafe {
         let module = GetModuleHandleW(null());
@@ -66,6 +75,43 @@ pub fn start(app_handle: AppHandle) {
             DispatchMessageW(&message);
         }
     });
+}
+
+fn start_mouse_state_poller() {
+    thread::spawn(move || {
+        let mut last_states = sample_mouse_button_states();
+
+        loop {
+            thread::sleep(MOUSE_POLL_INTERVAL);
+
+            // 游戏内低级鼠标 hook 可能漏掉抬起事件；轮询只在真实状态变化时补发。
+            let next_states = sample_mouse_button_states();
+            for (index, (key_id, pressed)) in next_states.iter().enumerate() {
+                if last_states[index].1 == *pressed {
+                    continue;
+                }
+
+                if let Some(app_handle) = APP_HANDLE.get() {
+                    emit_input_state(app_handle, *key_id, *pressed);
+                }
+            }
+
+            last_states = next_states;
+        }
+    });
+}
+
+fn sample_mouse_button_states() -> [(&'static str, bool); 3] {
+    [
+        ("mouse-left", is_mouse_button_down(VK_LBUTTON)),
+        ("mouse-right", is_mouse_button_down(VK_RBUTTON)),
+        ("mouse-middle", is_mouse_button_down(VK_MBUTTON)),
+    ]
+}
+
+fn is_mouse_button_down(virtual_key: u16) -> bool {
+    let state = unsafe { GetAsyncKeyState(i32::from(virtual_key)) };
+    (state as u16 & ASYNC_KEY_DOWN_MASK) != 0
 }
 
 unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
