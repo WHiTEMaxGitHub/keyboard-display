@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { computed, onMounted, onUnmounted, ref, watch, type WatchStopHandle } from "vue";
 import { tauriApi } from "./api/tauri";
@@ -371,6 +371,10 @@ onMounted(async () => {
       unlistenSyncFeedback();
       unlistenOverlayVisible();
     };
+    // Signal readiness only after every initialization event listener exists.
+    // Otherwise config can emit the first config/visibility snapshot while
+    // this WebView is still mounting, leaving a shown native window transparent.
+    await emitTo("config", OVERLAY_READY_EVENT);
   }
 
   if (!isOverlayWindow.value) {

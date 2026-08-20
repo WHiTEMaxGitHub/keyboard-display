@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { onMounted, onUnmounted, ref } from "vue";
-import { OVERLAY_ADJUST_MODE_EVENT, OVERLAY_READY_EVENT } from "../domain/inputEvents";
+import { OVERLAY_ADJUST_MODE_EVENT } from "../domain/inputEvents";
 import type {
   KeyBinding,
   KeyIdLabelRegistry,
@@ -40,7 +40,6 @@ onMounted(async () => {
       await setClickThrough(!event.payload.enabled);
     },
   );
-  await emitTo("config", OVERLAY_READY_EVENT);
 });
 
 onUnmounted(() => {
