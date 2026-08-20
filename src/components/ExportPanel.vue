@@ -591,7 +591,7 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
         {{ inputRecordingPath || t("export.overlayVideo.noRecording") }}
       </BaseFieldRow>
       <BaseFieldRow :label="t('export.overlayVideo.output')">
-        {{ outputVideoPath || t("export.overlayVideo.noOutputFolder") }}
+        {{ outputVideoPath || effectiveOutputDirectory || t("export.overlayVideo.noOutputFolder") }}
       </BaseFieldRow>
       <div class="flex flex-wrap gap-2">
         <BaseButton @click="chooseInputRecording">
