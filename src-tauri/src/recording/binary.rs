@@ -2,10 +2,14 @@ use super::{
     session::{event_frame, sample_frames},
     types::{RecordingEvent, RecordingFrame, RecordingSnapshot},
 };
+use serde::Serialize;
 
 const MAGIC: &[u8; 4] = b"KBDR";
 const VERSION: u8 = 1;
 const FLAGS: u8 = 0;
+const MAX_KEY_COUNT: u64 = 65_536;
+const MAX_RUN_COUNT: u64 = 1_000_000;
+const MAX_MARKER_COUNT: u64 = 1_000_000;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DecodedKbdrec {
@@ -27,6 +31,83 @@ pub struct DecodedFrameRun {
 pub struct DecodedMarker {
     pub frame: u64,
     pub name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) struct ExportDecodedKbdrec {
+    pub fps: u16,
+    pub key_ids: Vec<String>,
+    pub frame_count: u64,
+    pub runs: Vec<DecodedFrameRun>,
+    pub markers: Vec<DecodedMarker>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecordingExportInfo {
+    pub fps: u16,
+    pub frame_count: u64,
+}
+
+impl ExportDecodedKbdrec {
+    pub fn frames_in_range(
+        &self,
+        start: u64,
+        end: u64,
+    ) -> Result<ExportFrameRangeIter<'_>, String> {
+        if start > end {
+            return Err(format!("frame range start {start} exceeds end {end}"));
+        }
+        if end > self.frame_count {
+            return Err(format!(
+                "frame range end {end} exceeds frame count {}",
+                self.frame_count
+            ));
+        }
+
+        Ok(ExportFrameRangeIter {
+            runs: &self.runs,
+            range_start: start,
+            range_end: end,
+            run_index: 0,
+            run_start: 0,
+            next_frame: start,
+        })
+    }
+}
+
+pub(crate) struct ExportFrameRangeIter<'a> {
+    runs: &'a [DecodedFrameRun],
+    range_start: u64,
+    range_end: u64,
+    run_index: usize,
+    run_start: u64,
+    next_frame: u64,
+}
+
+impl<'a> Iterator for ExportFrameRangeIter<'a> {
+    type Item = (u64, &'a [String]);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.next_frame >= self.range_end {
+            return None;
+        }
+
+        while let Some(run) = self.runs.get(self.run_index) {
+            let run_end = self.run_start + run.run_len;
+            if run_end <= self.range_start || self.next_frame >= run_end {
+                self.run_start = run_end;
+                self.run_index += 1;
+                continue;
+            }
+
+            let frame = self.next_frame.max(self.run_start);
+            self.next_frame = frame + 1;
+            return Some((frame, &run.keys));
+        }
+
+        None
+    }
 }
 
 pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
@@ -112,6 +193,32 @@ pub fn encode_kbdrec(snapshot: &RecordingSnapshot) -> Result<Vec<u8>, String> {
 }
 
 pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
+    let export = decode_kbdrec_for_export(bytes)?;
+    let mut frames = Vec::with_capacity(
+        usize::try_from(export.frame_count).map_err(|_| "frame count is too large".to_string())?,
+    );
+    let mut frame_index = 0_u64;
+    for run in &export.runs {
+        for _ in 0..run.run_len {
+            frames.push(RecordingFrame {
+                frame: frame_index,
+                keys: run.keys.clone(),
+            });
+            frame_index += 1;
+        }
+    }
+
+    Ok(DecodedKbdrec {
+        fps: export.fps,
+        key_ids: export.key_ids,
+        frame_count: export.frame_count,
+        runs: export.runs,
+        frames,
+        markers: export.markers,
+    })
+}
+
+pub(crate) fn decode_kbdrec_for_export(bytes: &[u8]) -> Result<ExportDecodedKbdrec, String> {
     let mut reader = Reader::new(bytes);
     reader.expect_bytes(MAGIC)?;
     let version = reader.read_u8()?;
@@ -120,10 +227,20 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
     }
     let _flags = reader.read_u8()?;
     let fps = reader.read_u16_le()?;
-    let key_count = reader.read_varint()? as usize;
+    if fps == 0 {
+        return Err("kbdrec fps must be greater than zero".to_string());
+    }
+    let key_count_value = reader.read_varint()?;
     let frame_count = reader.read_varint()?;
-    let run_count = reader.read_varint()? as usize;
-    let marker_count = reader.read_varint()? as usize;
+    let run_count_value = reader.read_varint()?;
+    let marker_count_value = reader.read_varint()?;
+    let key_count = validate_collection_count(
+        "key",
+        key_count_value,
+        MAX_KEY_COUNT,
+        reader.remaining().len(),
+        1,
+    )?;
 
     let mut key_ids = Vec::with_capacity(key_count);
     for _ in 0..key_count {
@@ -131,26 +248,44 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
     }
 
     let bitset_len = key_ids.len().div_ceil(8);
+    let minimum_run_bytes = bitset_len
+        .checked_add(1)
+        .ok_or_else(|| "kbdrec run size overflow".to_string())?;
+    let run_count = validate_collection_count(
+        "run",
+        run_count_value,
+        MAX_RUN_COUNT,
+        reader.remaining().len(),
+        minimum_run_bytes,
+    )?;
     let mut runs = Vec::with_capacity(run_count);
-    let mut frames = Vec::new();
-    let mut frame_index = 0_u64;
+    let mut decoded_frame_count = 0_u64;
 
     for _ in 0..run_count {
         let run_len = reader.read_varint()?;
+        if run_len == 0 {
+            return Err("kbdrec frame run length must be greater than zero".to_string());
+        }
         let bits = reader.read_bytes(bitset_len)?;
         let keys = decode_frame_bits(&bits, &key_ids)?;
-
-        for _ in 0..run_len {
-            frames.push(RecordingFrame {
-                frame: frame_index,
-                keys: keys.clone(),
-            });
-            frame_index += 1;
-        }
-
+        decoded_frame_count = decoded_frame_count
+            .checked_add(run_len)
+            .ok_or_else(|| "kbdrec frame run count overflow".to_string())?;
         runs.push(DecodedFrameRun { run_len, keys });
     }
+    if decoded_frame_count != frame_count {
+        return Err(format!(
+            "kbdrec frame count mismatch: header={frame_count}, runs={decoded_frame_count}"
+        ));
+    }
 
+    let marker_count = validate_collection_count(
+        "marker",
+        marker_count_value,
+        MAX_MARKER_COUNT,
+        reader.remaining().len(),
+        2,
+    )?;
     let mut markers = Vec::with_capacity(marker_count);
     for _ in 0..marker_count {
         let frame = reader.read_varint()?;
@@ -162,13 +297,42 @@ pub fn decode_kbdrec(bytes: &[u8]) -> Result<DecodedKbdrec, String> {
 
     reader.expect_end()?;
 
-    Ok(DecodedKbdrec {
+    Ok(ExportDecodedKbdrec {
         fps,
         key_ids,
         frame_count,
         runs,
-        frames,
         markers,
+    })
+}
+
+fn validate_collection_count(
+    name: &str,
+    value: u64,
+    hard_limit: u64,
+    remaining_bytes: usize,
+    minimum_encoded_bytes: usize,
+) -> Result<usize, String> {
+    if value > hard_limit {
+        return Err(format!(
+            "kbdrec {name} count {value} exceeds safety limit {hard_limit}"
+        ));
+    }
+    let count = usize::try_from(value).map_err(|_| format!("kbdrec {name} count is too large"))?;
+    let byte_bound = remaining_bytes / minimum_encoded_bytes.max(1);
+    if count > byte_bound {
+        return Err(format!(
+            "kbdrec {name} count {value} exceeds remaining payload capacity"
+        ));
+    }
+    Ok(count)
+}
+
+pub fn inspect_kbdrec_export_info(bytes: &[u8]) -> Result<RecordingExportInfo, String> {
+    let decoded = decode_kbdrec_for_export(bytes)?;
+    Ok(RecordingExportInfo {
+        fps: decoded.fps,
+        frame_count: decoded.frame_count,
     })
 }
 
@@ -330,7 +494,8 @@ impl<'a> Reader<'a> {
     }
 
     fn read_string(&mut self) -> Result<String, String> {
-        let len = self.read_varint()? as usize;
+        let len = usize::try_from(self.read_varint()?)
+            .map_err(|_| "string length is too large".to_string())?;
         if self.remaining().len() < len {
             return Err("unexpected end of file".to_string());
         }

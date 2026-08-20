@@ -2,15 +2,16 @@
 
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-    io::Write,
+    collections::{BTreeMap, HashMap, HashSet, VecDeque},
+    io::{Read, Write},
     path::Path,
     process::{Command, Stdio},
-    sync::atomic::AtomicUsize,
-    sync::mpsc,
-    sync::Mutex,
+    sync::{mpsc, Arc, Mutex, OnceLock},
+    time::{Duration, Instant},
 };
-use tiny_skia::{Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Rect, Stroke, Transform};
+use tiny_skia::{
+    Color, FillRule, LineCap, LineJoin, Paint, PathBuilder, Pixmap, Rect, Stroke, Transform,
+};
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -104,12 +105,26 @@ pub struct ExportOverlayProgress {
     pub active_key_ids: Vec<String>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportFrameRange {
+    pub start_frame: u64,
+    pub end_frame_exclusive: u64,
+}
+
 const BACKPLATE_PADDING: f32 = 10.0 * 2.0;
 const OVERLAY_BLEED: f32 = 12.0 * 2.0;
 const FLOAT_EPSILON: f32 = 0.000001;
 const KEY_BORDER_RGBA: (u8, u8, u8, u8) = (255, 255, 255, 41);
 const KEY_ACTIVE_BORDER_RGBA: (u8, u8, u8, u8) = (255, 255, 255, 128);
 const TEXT_FONT_SIZE_FACTOR: f32 = 15.0;
+const FRAME_CACHE_BUDGET_BYTES: usize = 128 * 1024 * 1024;
+const PREFETCH_BUDGET_BYTES: usize = 64 * 1024 * 1024;
+const MAX_PREFETCH_FRAMES: usize = 16;
+const MAX_FFMPEG_STDERR_BYTES: usize = 1024 * 1024;
+const RENDER_RESULT_TIMEOUT: Duration = Duration::from_secs(120);
+const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
+static EXPORT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 pub fn estimate_export_overlay_size(profile: &ExportOverlayProfile) -> ExportOverlaySize {
     let unit = profile.layout.unit_px * profile.style.scale;
@@ -143,7 +158,13 @@ pub fn render_overlay_frame(
         .ok_or_else(|| "failed to allocate export frame".to_string())?;
     let font = load_font(profile.export.font_path.as_deref());
 
-    render_profile(&mut pixmap, profile, active_keys, marker_active, font.as_ref())?;
+    render_profile(
+        &mut pixmap,
+        profile,
+        active_keys,
+        marker_active,
+        font.as_ref(),
+    )?;
 
     Ok((size, premultiplied_to_straight_rgba(pixmap.take())))
 }
@@ -194,7 +215,13 @@ pub fn export_overlay_video(
     ffmpeg_path: &Path,
     profile: &ExportOverlayProfile,
 ) -> Result<ExportOverlayVideoResult, String> {
-    export_overlay_video_with_progress(recording_path, output_path, ffmpeg_path, profile, |_| Ok(()))
+    export_overlay_video_with_progress(
+        recording_path,
+        output_path,
+        ffmpeg_path,
+        profile,
+        |_| Ok(()),
+    )
 }
 
 /// 从 `.kbdrec` 帧状态流渲染透明 WebM overlay，并在渲染过程中上报帧进度。
@@ -207,10 +234,34 @@ pub fn export_overlay_video_with_progress(
     profile: &ExportOverlayProfile,
     mut on_progress: impl FnMut(ExportOverlayProgress) -> Result<(), String>,
 ) -> Result<ExportOverlayVideoResult, String> {
+    export_overlay_video_with_progress_range(
+        recording_path,
+        output_path,
+        ffmpeg_path,
+        profile,
+        None,
+        &mut on_progress,
+    )
+}
+
+pub fn export_overlay_video_with_progress_range(
+    recording_path: &Path,
+    output_path: &Path,
+    ffmpeg_path: &Path,
+    profile: &ExportOverlayProfile,
+    range: Option<ExportFrameRange>,
+    mut on_progress: impl FnMut(ExportOverlayProgress) -> Result<(), String>,
+) -> Result<ExportOverlayVideoResult, String> {
+    let _export_guard = EXPORT_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .map_err(|_| "export lock poisoned".to_string())?;
     let bytes = std::fs::read(recording_path).map_err(|error| error.to_string())?;
-    let decoded = crate::recording::decode_kbdrec(&bytes)?;
+    let decoded = crate::recording::decode_kbdrec_for_export(&bytes)?;
+    let (start_frame, end_frame_exclusive) = validate_export_range(range, decoded.frame_count)?;
     let size = estimate_export_overlay_size(profile);
-    let total_frames = decoded.frames.len() as u64;
+    let frame_bytes = frame_byte_len(size)?;
+    let total_frames = end_frame_exclusive - start_frame;
     let marker_ranges = marker_frame_ranges(
         decoded.markers.iter().map(|marker| marker.frame),
         decoded.fps,
@@ -225,168 +276,427 @@ pub fn export_overlay_video_with_progress(
         .stderr(Stdio::piped())
         .spawn()
         .map_err(|error| format!("failed to start ffmpeg: {error}"))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "failed to open ffmpeg stderr".to_string())?;
+    let stderr_handle =
+        std::thread::spawn(move || drain_reader_limited(stderr, MAX_FFMPEG_STDERR_BYTES));
 
     let available_threads = std::thread::available_parallelism()
         .map(|n| n.get())
         .unwrap_or(4);
     let num_threads = resolve_render_thread_count(profile.export.render_threads, available_threads);
-
-    use std::sync::Arc;
-
-    let next_frame_index = Arc::new(AtomicUsize::new(0));
-    let frames = Arc::new(decoded.frames);
-    let marker_ranges = Arc::new(marker_ranges);
-    let frame_count = decoded.frame_count;
     let fps = decoded.fps;
-    // Channel: workers send rendered frames to collector
-    let (render_tx, render_rx) = mpsc::channel::<(usize, u64, Vec<String>, Vec<u8>)>();
-    // Channel: collector sends progress updates to main thread
+    let prefetch_capacity = resolve_prefetch_capacity(num_threads, frame_bytes);
+    let worker_count = num_threads.min(prefetch_capacity).max(1);
     let (progress_tx, progress_rx) = mpsc::channel::<ExportOverlayProgress>();
 
-    // Collector thread: receives frames from channel, writes to ffmpeg stdin in order,
-    // and sends progress updates back to the main thread.
-    let collector = std::thread::spawn(move || {
-        let stdin = child
-            .stdin
-            .as_mut()
-            .ok_or_else(|| "failed to open ffmpeg stdin".to_string())?;
-        let mut pending: BTreeMap<usize, (u64, Vec<String>, Vec<u8>)> = BTreeMap::new();
-        let mut next_write_index = 0usize;
-        let mut rendered_frames = 0u64;
+    let profile_owned = profile.clone();
+    let coordinator = std::thread::spawn(move || -> Result<(), String> {
+        let pipeline_result = (|| -> Result<(), String> {
+            let (job_tx, job_rx) = mpsc::sync_channel::<RenderJob>(prefetch_capacity);
+            let job_rx = Arc::new(Mutex::new(job_rx));
+            let (render_tx, render_rx) =
+                mpsc::sync_channel::<Result<RenderedFrame, String>>(prefetch_capacity);
+            let cache = Arc::new(Mutex::new(FrameCache::new(FRAME_CACHE_BUDGET_BYTES)));
+            let font = load_font(profile_owned.export.font_path.as_deref()).map(Arc::new);
+            let mut worker_handles = Vec::with_capacity(worker_count);
 
-        loop {
-            match render_rx.recv() {
-                Ok((index, frame_number, active_keys, rgba)) => {
-                    pending.insert(index, (frame_number, active_keys, rgba));
-                    // Write all consecutive frames that are ready
-                    while let Some((frame_number, mut active_keys, rgba)) = pending.remove(&next_write_index) {
-                        stdin.write_all(&rgba).map_err(|error| error.to_string())?;
-                        rendered_frames += 1;
-                        active_keys.sort();
-                        let _ = progress_tx.send(ExportOverlayProgress {
-                            rendered_frames,
-                            total_frames,
-                            current_frame: frame_number,
-                            active_key_ids: active_keys,
-                        });
-                        next_write_index += 1;
+            for _ in 0..worker_count {
+                let job_rx = Arc::clone(&job_rx);
+                let render_tx = render_tx.clone();
+                let cache = Arc::clone(&cache);
+                let profile = profile_owned.clone();
+                let font = font.clone();
+                worker_handles.push(std::thread::spawn(move || {
+                    render_worker(job_rx, render_tx, cache, profile, font)
+                }));
+            }
+            drop(render_tx);
+
+            let mut stdin = child
+                .stdin
+                .take()
+                .ok_or_else(|| "failed to open ffmpeg stdin".to_string())?;
+            let mut frames = decoded.frames_in_range(start_frame, end_frame_exclusive)?;
+            let mut next_index = 0usize;
+            let mut rendered_frames = 0u64;
+            let mut last_progress = Instant::now();
+
+            loop {
+                let mut batch_len = 0usize;
+                while batch_len < prefetch_capacity {
+                    let Some((frame_number, keys)) = frames.next() else {
+                        break;
+                    };
+                    let marker_active = marker_is_active(frame_number, &marker_ranges);
+                    let active_key_ids = normalize_active_keys(keys);
+                    job_tx
+                        .send(RenderJob {
+                            index: next_index + batch_len,
+                            frame_number,
+                            active_key_ids,
+                            marker_active,
+                        })
+                        .map_err(|_| "render job channel disconnected".to_string())?;
+                    batch_len += 1;
+                }
+                if batch_len == 0 {
+                    break;
+                }
+
+                let mut pending =
+                    collect_render_batch(&render_rx, batch_len, RENDER_RESULT_TIMEOUT)?;
+                for expected_index in next_index..next_index + batch_len {
+                    let rendered = pending
+                        .remove(&expected_index)
+                        .ok_or_else(|| format!("missing rendered frame index {expected_index}"))?;
+                    stdin
+                        .write_all(&rendered.rgba)
+                        .map_err(|error| format!("failed to write ffmpeg stdin: {error}"))?;
+                    rendered_frames += 1;
+                    let is_final = rendered_frames == total_frames;
+                    if is_final || last_progress.elapsed() >= PROGRESS_INTERVAL {
+                        progress_tx
+                            .send(ExportOverlayProgress {
+                                rendered_frames,
+                                total_frames,
+                                current_frame: rendered.frame_number,
+                                active_key_ids: rendered.active_key_ids,
+                            })
+                            .map_err(|_| "export progress receiver disconnected".to_string())?;
+                        last_progress = Instant::now();
                     }
                 }
-                Err(mpsc::RecvError) => break, // All senders closed, no more frames incoming
+                next_index += batch_len;
             }
-        }
 
-        // Drain any remaining out-of-order frames
-        for (_index, (frame_number, mut active_keys, rgba)) in pending.into_iter() {
-            stdin.write_all(&rgba).map_err(|error| error.to_string())?;
-            rendered_frames += 1;
-            active_keys.sort();
-            let _ = progress_tx.send(ExportOverlayProgress {
-                rendered_frames,
-                total_frames,
-                current_frame: frame_number,
-                active_key_ids: active_keys,
-            });
-        }
+            drop(job_tx);
+            for handle in worker_handles {
+                handle
+                    .join()
+                    .map_err(|_| "render worker panicked outside a job".to_string())??;
+            }
+            if rendered_frames != total_frames {
+                return Err(format!(
+                    "missing rendered frames: expected {total_frames}, wrote {rendered_frames}"
+                ));
+            }
+            drop(stdin);
+            Ok(())
+        })();
 
-        let output = child
-            .wait_with_output()
-            .map_err(|error| format!("failed to finish ffmpeg export: {error}"))?;
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("ffmpeg export failed: {}", stderr.trim()));
+        if pipeline_result.is_err() {
+            let _ = child.kill();
         }
-        drop(progress_tx);
+        let wait_result = child
+            .wait()
+            .map_err(|error| format!("failed to finish ffmpeg export: {error}"));
+        let stderr = stderr_handle
+            .join()
+            .map_err(|_| "ffmpeg stderr reader panicked".to_string())??;
+
+        pipeline_result.map_err(|error| append_ffmpeg_stderr(error, &stderr))?;
+        let status = wait_result?;
+        if !status.success() {
+            return Err(append_ffmpeg_stderr(
+                format!("ffmpeg export failed with status {status}"),
+                &stderr,
+            ));
+        }
         Ok(())
     });
 
-    // Render workers on a dedicated thread so the main thread can process
-    // progress events in real-time (std::thread::scope blocks the caller).
-    let profile_owned = profile.clone();
-    let render_handle = std::thread::spawn(move || {
-        let font = Arc::new(Mutex::new(load_font(profile_owned.export.font_path.as_deref())));
-        // 帧缓存：按键状态 → RGBA 数据，避免连续相同状态重复渲染
-        let frame_cache: Arc<Mutex<HashMap<(Vec<String>, bool), Vec<u8>>>> = Arc::new(Mutex::new(HashMap::new()));
-        let mut worker_handles = Vec::new();
-
-        for _ in 0..num_threads {
-            let render_tx = render_tx.clone();
-            let next_frame_index = next_frame_index.clone();
-            let frames = frames.clone();
-            let marker_ranges = marker_ranges.clone();
-            let profile_owned = profile_owned.clone();
-            let font = font.clone();
-            let frame_cache = frame_cache.clone();
-
-            worker_handles.push(std::thread::spawn(move || {
-                loop {
-                    let index = next_frame_index.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-                    if index >= frames.len() {
-                        break;
-                    }
-
-                    let frame = &frames[index];
-                    let marker_active = marker_ranges
-                        .iter()
-                        .any(|(start, end)| frame.frame >= *start && frame.frame <= *end);
-                    let mut sorted_keys = frame.keys.clone();
-                    sorted_keys.sort();
-                    let cache_key = (sorted_keys, marker_active);
-
-                    // 查缓存，命中则 clone 已有数据
-                    {
-                        let cache = frame_cache.lock().unwrap();
-                        if let Some(rgba) = cache.get(&cache_key) {
-                            let _ = render_tx.send((index, frame.frame, frame.keys.clone(), rgba.clone()));
-                            continue;
-                        }
-                    }
-
-                    // 缓存未命中，渲染并写入缓存
-                    let active_keys_set: HashSet<String> = frame.keys.iter().cloned().collect();
-                    let font_guard = font.lock().unwrap();
-                    let (_, rgba) = render_overlay_frame_with_font(
-                        &profile_owned,
-                        &active_keys_set,
-                        marker_active,
-                        font_guard.as_ref(),
-                    )
-                    .expect("frame rendering failed");
-                    drop(font_guard);
-
-                    let mut cache = frame_cache.lock().unwrap();
-                    cache.insert(cache_key, rgba.clone());
-
-                    let _ = render_tx.send((index, frame.frame, frame.keys.clone(), rgba));
-                }
-            }));
-        }
-
-        for handle in worker_handles {
-            handle.join().expect("render worker panicked");
-        }
-    });
-
-    // Main thread: process progress events in real-time while rendering happens
-    // on the render thread. The collector drops progress_tx when done, which
-    // terminates this loop.
+    let mut progress_error = None;
     while let Ok(progress) = progress_rx.recv() {
-        on_progress(progress)?;
+        if progress_error.is_none() {
+            if let Err(error) = on_progress(progress) {
+                progress_error = Some(error);
+            }
+        }
     }
-
-    // Wait for the render thread to finish
-    render_handle.join().map_err(|_| "render thread panicked".to_string())?;
-
-    // Wait for the collector to finish and propagate its result
-    collector.join().map_err(|error| format!("collector thread panicked: {error:?}"))??;
+    let coordinator_result = coordinator
+        .join()
+        .map_err(|_| "export coordinator panicked".to_string())?;
+    coordinator_result?;
+    if let Some(error) = progress_error {
+        return Err(error);
+    }
 
     Ok(ExportOverlayVideoResult {
         output_path: output_path_string,
-        frame_count,
+        frame_count: total_frames,
         width: size.width,
         height: size.height,
         fps,
     })
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+struct VisualStateKey {
+    active_key_ids: Vec<String>,
+    marker_active: bool,
+}
+
+struct RenderJob {
+    index: usize,
+    frame_number: u64,
+    active_key_ids: Vec<String>,
+    marker_active: bool,
+}
+
+struct RenderedFrame {
+    index: usize,
+    frame_number: u64,
+    active_key_ids: Vec<String>,
+    rgba: Arc<Vec<u8>>,
+}
+
+struct FrameCache {
+    max_bytes: usize,
+    current_bytes: usize,
+    entries: HashMap<VisualStateKey, Arc<Vec<u8>>>,
+    order: VecDeque<VisualStateKey>,
+}
+
+impl FrameCache {
+    fn new(max_bytes: usize) -> Self {
+        Self {
+            max_bytes,
+            current_bytes: 0,
+            entries: HashMap::new(),
+            order: VecDeque::new(),
+        }
+    }
+
+    fn get(&self, key: &VisualStateKey) -> Option<Arc<Vec<u8>>> {
+        self.entries.get(key).cloned()
+    }
+
+    fn insert(&mut self, key: VisualStateKey, rgba: Arc<Vec<u8>>) {
+        let entry_bytes = rgba.len();
+        if self.entries.contains_key(&key) || entry_bytes > self.max_bytes {
+            return;
+        }
+        while self.current_bytes.saturating_add(entry_bytes) > self.max_bytes {
+            if let Some(oldest) = self.order.pop_front() {
+                if let Some(removed) = self.entries.remove(&oldest) {
+                    self.current_bytes = self.current_bytes.saturating_sub(removed.len());
+                }
+            } else {
+                break;
+            }
+        }
+        self.order.push_back(key.clone());
+        self.current_bytes = self.current_bytes.saturating_add(entry_bytes);
+        self.entries.insert(key, rgba);
+    }
+}
+
+fn render_worker(
+    job_rx: Arc<Mutex<mpsc::Receiver<RenderJob>>>,
+    render_tx: mpsc::SyncSender<Result<RenderedFrame, String>>,
+    cache: Arc<Mutex<FrameCache>>,
+    profile: ExportOverlayProfile,
+    font: Option<Arc<fontdue::Font>>,
+) -> Result<(), String> {
+    loop {
+        let job = {
+            let receiver = job_rx
+                .lock()
+                .map_err(|_| "render job receiver lock poisoned".to_string())?;
+            receiver.recv()
+        };
+        let job = match job {
+            Ok(job) => job,
+            Err(_) => return Ok(()),
+        };
+        let rendered = catch_job_panic(job.index, || {
+            render_job(job, &profile, font.as_deref(), &cache)
+        });
+        let failed = rendered.is_err();
+        render_tx
+            .send(rendered)
+            .map_err(|_| "render result receiver disconnected".to_string())?;
+        if failed {
+            return Ok(());
+        }
+    }
+}
+
+fn render_job(
+    job: RenderJob,
+    profile: &ExportOverlayProfile,
+    font: Option<&fontdue::Font>,
+    cache: &Mutex<FrameCache>,
+) -> Result<RenderedFrame, String> {
+    let cache_key = VisualStateKey {
+        active_key_ids: job.active_key_ids.clone(),
+        marker_active: job.marker_active,
+    };
+    let cached = cache
+        .lock()
+        .map_err(|_| "frame cache lock poisoned".to_string())?
+        .get(&cache_key);
+    let rgba = if let Some(rgba) = cached {
+        rgba
+    } else {
+        let active_keys = job.active_key_ids.iter().cloned().collect::<HashSet<_>>();
+        let (_, rgba) =
+            render_overlay_frame_with_font(profile, &active_keys, job.marker_active, font)?;
+        let rgba = Arc::new(rgba);
+        cache
+            .lock()
+            .map_err(|_| "frame cache lock poisoned".to_string())?
+            .insert(cache_key, Arc::clone(&rgba));
+        rgba
+    };
+    Ok(RenderedFrame {
+        index: job.index,
+        frame_number: job.frame_number,
+        active_key_ids: job.active_key_ids,
+        rgba,
+    })
+}
+
+fn catch_job_panic<T>(
+    job_index: usize,
+    work: impl FnOnce() -> Result<T, String>,
+) -> Result<T, String> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(work)).unwrap_or_else(|payload| {
+        let detail = payload
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+            .unwrap_or("unknown panic");
+        Err(format!("render job {job_index} panicked: {detail}"))
+    })
+}
+
+fn collect_render_batch(
+    render_rx: &mpsc::Receiver<Result<RenderedFrame, String>>,
+    batch_len: usize,
+    timeout: Duration,
+) -> Result<BTreeMap<usize, RenderedFrame>, String> {
+    let deadline = Instant::now() + timeout;
+    let mut pending = BTreeMap::new();
+    for _ in 0..batch_len {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        let rendered = render_rx
+            .recv_timeout(remaining)
+            .map_err(|error| match error {
+                mpsc::RecvTimeoutError::Timeout => {
+                    format!("timed out waiting for rendered frame after {timeout:?}")
+                }
+                mpsc::RecvTimeoutError::Disconnected => {
+                    "render result channel disconnected before completing batch".to_string()
+                }
+            })??;
+        if pending.insert(rendered.index, rendered).is_some() {
+            return Err("render worker returned a duplicate frame".to_string());
+        }
+    }
+    Ok(pending)
+}
+
+fn frame_byte_len(size: ExportOverlaySize) -> Result<usize, String> {
+    usize::try_from(size.width)
+        .ok()
+        .and_then(|width| {
+            usize::try_from(size.height)
+                .ok()
+                .and_then(|height| width.checked_mul(height))
+        })
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| "export frame dimensions are too large".to_string())
+}
+
+fn resolve_prefetch_capacity(render_threads: usize, frame_bytes: usize) -> usize {
+    let budget_frames = if frame_bytes == 0 {
+        1
+    } else {
+        (PREFETCH_BUDGET_BYTES / frame_bytes).max(1)
+    };
+    render_threads
+        .saturating_mul(2)
+        .min(MAX_PREFETCH_FRAMES)
+        .min(budget_frames)
+        .max(1)
+}
+
+fn drain_reader_limited(mut reader: impl Read, max_bytes: usize) -> Result<String, String> {
+    let mut retained = VecDeque::with_capacity(max_bytes.min(8192));
+    let mut buffer = [0_u8; 8192];
+    let mut truncated = false;
+    loop {
+        let read = reader
+            .read(&mut buffer)
+            .map_err(|error| format!("failed to read ffmpeg stderr: {error}"))?;
+        if read == 0 {
+            break;
+        }
+        for byte in &buffer[..read] {
+            if retained.len() == max_bytes {
+                retained.pop_front();
+                truncated = true;
+            }
+            if max_bytes > 0 {
+                retained.push_back(*byte);
+            }
+        }
+    }
+    let bytes = retained.into_iter().collect::<Vec<_>>();
+    let text = String::from_utf8_lossy(&bytes);
+    if truncated {
+        Ok(format!(
+            "[ffmpeg stderr truncated to last {max_bytes} bytes]\n{text}"
+        ))
+    } else {
+        Ok(text.into_owned())
+    }
+}
+
+fn append_ffmpeg_stderr(error: String, stderr: &str) -> String {
+    let stderr = stderr.trim();
+    if stderr.is_empty() {
+        error
+    } else {
+        format!("{error}: {stderr}")
+    }
+}
+
+fn validate_export_range(
+    range: Option<ExportFrameRange>,
+    frame_count: u64,
+) -> Result<(u64, u64), String> {
+    let range = range.unwrap_or(ExportFrameRange {
+        start_frame: 0,
+        end_frame_exclusive: frame_count,
+    });
+    if range.start_frame >= range.end_frame_exclusive {
+        return Err("export frame range must not be empty".to_string());
+    }
+    if range.end_frame_exclusive > frame_count {
+        return Err(format!(
+            "export frame range end {} exceeds frame count {frame_count}",
+            range.end_frame_exclusive
+        ));
+    }
+    Ok((range.start_frame, range.end_frame_exclusive))
+}
+
+fn normalize_active_keys(keys: &[String]) -> Vec<String> {
+    let mut keys = keys.to_vec();
+    keys.sort();
+    keys.dedup();
+    keys
+}
+
+fn marker_is_active(frame: u64, ranges: &[(u64, u64)]) -> bool {
+    ranges
+        .iter()
+        .any(|(start, end)| frame >= *start && frame <= *end)
 }
 
 fn resolve_render_thread_count(configured_threads: Option<i32>, available_threads: usize) -> usize {
@@ -447,7 +757,11 @@ fn render_profile(
             if let ExportOverlayItem::Key { id, label, .. } = item {
                 let active = active_keys.contains(id);
                 if active || profile.style.idle_key_visibility != "hidden" {
-                    let key_y = y + if active { 2.0 * profile.style.scale } else { 0.0 };
+                    let key_y = y + if active {
+                        2.0 * profile.style.scale
+                    } else {
+                        0.0
+                    };
                     let color = if active {
                         &profile.style.active_color
                     } else {
@@ -459,7 +773,16 @@ fn render_profile(
                         &profile.style.idle_text_color
                     };
 
-                    draw_key(pixmap, x, key_y, width, unit, color, active, profile.style.opacity)?;
+                    draw_key(
+                        pixmap,
+                        x,
+                        key_y,
+                        width,
+                        unit,
+                        color,
+                        active,
+                        profile.style.opacity,
+                    )?;
                     draw_key_label(
                         pixmap,
                         label,
@@ -500,11 +823,20 @@ fn marker_frame_ranges(
     fps: u16,
     duration_ms: u64,
 ) -> Vec<(u64, u64)> {
-    let duration_frames = ((duration_ms * u64::from(fps)).saturating_add(999) / 1000).max(1);
+    let duration_frames = (duration_ms
+        .saturating_mul(u64::from(fps))
+        .saturating_add(999)
+        / 1000)
+        .max(1);
 
     marker_frames
         .into_iter()
-        .map(|frame| (frame, frame + duration_frames.saturating_sub(1)))
+        .map(|frame| {
+            (
+                frame,
+                frame.saturating_add(duration_frames.saturating_sub(1)),
+            )
+        })
         .collect()
 }
 
@@ -523,7 +855,13 @@ fn draw_rect(
     let mut paint = Paint::default();
     paint.set_color(parse_color(color, opacity)?);
     let path = rounded_rect_path(rect, radius.max(0.0));
-    pixmap.fill_path(&path, &paint, FillRule::Winding, Transform::identity(), None);
+    pixmap.fill_path(
+        &path,
+        &paint,
+        FillRule::Winding,
+        Transform::identity(),
+        None,
+    );
     Ok(())
 }
 
@@ -579,7 +917,13 @@ fn draw_blurred_rect(
                 continue;
             }
             let mi = (ty * main_w + tx) as usize * 4;
-            alpha_blend_pixel(&mut main_data[mi..mi + 4], temp_data[ti], temp_data[ti + 1], temp_data[ti + 2], src_alpha);
+            alpha_blend_pixel(
+                &mut main_data[mi..mi + 4],
+                temp_data[ti],
+                temp_data[ti + 1],
+                temp_data[ti + 2],
+                src_alpha,
+            );
         }
     }
 
@@ -597,7 +941,13 @@ fn box_blur_alpha(data: &mut [u8], width: usize, height: usize, radius: u32, pas
     }
 }
 
-fn box_blur_alpha_horizontal(data: &mut [u8], temp: &mut [u8], width: usize, height: usize, radius: u32) {
+fn box_blur_alpha_horizontal(
+    data: &mut [u8],
+    temp: &mut [u8],
+    width: usize,
+    height: usize,
+    radius: u32,
+) {
     let r = radius as usize;
     let div = (r * 2 + 1) as f32;
     for y in 0..height {
@@ -636,7 +986,13 @@ fn box_blur_alpha_horizontal(data: &mut [u8], temp: &mut [u8], width: usize, hei
     data.copy_from_slice(temp);
 }
 
-fn box_blur_alpha_vertical(data: &mut [u8], temp: &mut [u8], width: usize, height: usize, radius: u32) {
+fn box_blur_alpha_vertical(
+    data: &mut [u8],
+    temp: &mut [u8],
+    width: usize,
+    height: usize,
+    radius: u32,
+) {
     let r = radius as usize;
     let div = (r * 2 + 1) as f32;
     for x in 0..width {
@@ -754,8 +1110,13 @@ fn draw_key(
         2.0,
     )?;
 
-    let rect = Rect::from_xywh(x + 0.5, y + 0.5, (width - 1.0).max(0.0), (height - 1.0).max(0.0))
-        .ok_or_else(|| "invalid key border rectangle".to_string())?;
+    let rect = Rect::from_xywh(
+        x + 0.5,
+        y + 0.5,
+        (width - 1.0).max(0.0),
+        (height - 1.0).max(0.0),
+    )
+    .ok_or_else(|| "invalid key border rectangle".to_string())?;
     let mut paint = Paint::default();
     let (r, g, b, a) = if active {
         KEY_ACTIVE_BORDER_RGBA
@@ -800,7 +1161,17 @@ fn draw_marker_border(
         radius,
         11.0,
     )?;
-    draw_rounded_stroke(pixmap, x, y, width, height, &glow_color, opacity, radius, 2.0)
+    draw_rounded_stroke(
+        pixmap,
+        x,
+        y,
+        width,
+        height,
+        &glow_color,
+        opacity,
+        radius,
+        2.0,
+    )
 }
 
 fn rounded_rect_path(rect: Rect, radius: f32) -> tiny_skia::Path {
@@ -825,7 +1196,8 @@ fn rounded_rect_path(rect: Rect, radius: f32) -> tiny_skia::Path {
     path.line_to(x0, y0 + radius);
     path.cubic_to(x0, y0 + radius - c, x0 + radius - c, y0, x0 + radius, y0);
     path.close();
-    path.finish().unwrap_or_else(|| PathBuilder::from_rect(rect))
+    path.finish()
+        .unwrap_or_else(|| PathBuilder::from_rect(rect))
 }
 
 fn draw_key_label(
@@ -951,8 +1323,15 @@ fn blend_glyph_bitmap(
             }
 
             let src_alpha = (color.3 as f32 / 255.0) * coverage;
-            let offset = ((target_y as usize * pixmap_width as usize + target_x as usize) * 4) as usize;
-            alpha_blend_pixel(&mut data[offset..offset + 4], color.0, color.1, color.2, src_alpha);
+            let offset =
+                ((target_y as usize * pixmap_width as usize + target_x as usize) * 4) as usize;
+            alpha_blend_pixel(
+                &mut data[offset..offset + 4],
+                color.0,
+                color.1,
+                color.2,
+                src_alpha,
+            );
         }
     }
 }
@@ -1097,13 +1476,25 @@ impl ExportOverlayItem {
 #[cfg(test)]
 mod tests {
     use super::{
-        build_webm_ffmpeg_args, estimate_export_overlay_size, export_overlay_video,
-        export_overlay_video_with_progress, render_overlay_frame, resolve_render_thread_count,
-        ExportOverlayItem, ExportOverlayLayout, ExportOverlayProfile, ExportOverlayStyle,
-        ExportRecordingConfig, ExportVideoConfig,
+        build_webm_ffmpeg_args, catch_job_panic, collect_render_batch, drain_reader_limited,
+        estimate_export_overlay_size, marker_frame_ranges, normalize_active_keys,
+        render_overlay_frame, resolve_prefetch_capacity, resolve_render_thread_count,
+        validate_export_range, ExportFrameRange, ExportOverlayItem, ExportOverlayLayout,
+        ExportOverlayProfile, ExportOverlayStyle, ExportRecordingConfig, ExportVideoConfig,
+        FrameCache, RenderedFrame, VisualStateKey, MAX_PREFETCH_FRAMES,
     };
+    #[cfg(unix)]
+    use super::{export_overlay_video, export_overlay_video_with_progress_range};
+    #[cfg(unix)]
     use crate::recording::{encode_kbdrec, RecordingEvent, RecordingSnapshot};
-    use std::{collections::HashSet, io::Write};
+    #[cfg(unix)]
+    use std::io::Write;
+    use std::{
+        collections::HashSet,
+        io::Cursor,
+        sync::{mpsc, Arc},
+        time::Duration,
+    };
 
     #[test]
     fn estimates_export_overlay_size_like_frontend() {
@@ -1124,6 +1515,84 @@ mod tests {
         assert_eq!(resolve_render_thread_count(Some(64), 8), 32);
         assert_eq!(resolve_render_thread_count(Some(-1), 64), 256);
         assert_eq!(resolve_render_thread_count(Some(512), 64), 256);
+    }
+
+    #[test]
+    fn validates_half_open_export_ranges() {
+        assert_eq!(
+            validate_export_range(
+                Some(ExportFrameRange {
+                    start_frame: 4,
+                    end_frame_exclusive: 9,
+                }),
+                10,
+            )
+            .unwrap(),
+            (4, 9)
+        );
+        assert!(validate_export_range(
+            Some(ExportFrameRange {
+                start_frame: 4,
+                end_frame_exclusive: 4,
+            }),
+            10,
+        )
+        .is_err());
+        assert!(validate_export_range(None, 0).is_err());
+        assert_eq!(
+            normalize_active_keys(&["w".into(), "a".into(), "w".into()]),
+            vec!["a".to_string(), "w".to_string()]
+        );
+    }
+
+    #[test]
+    fn catches_job_panics_and_missing_results_without_hanging() {
+        let panic_result = catch_job_panic::<()>(7, || panic!("test panic"));
+        assert!(panic_result.unwrap_err().contains("render job 7 panicked"));
+
+        let (tx, rx) = mpsc::channel::<Result<RenderedFrame, String>>();
+        drop(tx);
+        let error = match collect_render_batch(&rx, 1, Duration::from_millis(1)) {
+            Ok(_) => panic!("missing render result must fail"),
+            Err(error) => error,
+        };
+        assert!(error.contains("disconnected"));
+    }
+
+    #[test]
+    fn bounds_cache_and_prefetch_by_rgba_bytes() {
+        let mut cache = FrameCache::new(7);
+        let first_key = VisualStateKey {
+            active_key_ids: vec!["a".into()],
+            marker_active: false,
+        };
+        let second_key = VisualStateKey {
+            active_key_ids: vec!["b".into()],
+            marker_active: false,
+        };
+        cache.insert(first_key.clone(), Arc::new(vec![1; 4]));
+        cache.insert(second_key.clone(), Arc::new(vec![2; 4]));
+        assert!(cache.get(&first_key).is_none());
+        assert!(cache.get(&second_key).is_some());
+        assert!(cache.current_bytes <= cache.max_bytes);
+
+        assert_eq!(resolve_prefetch_capacity(256, 1), MAX_PREFETCH_FRAMES);
+        assert_eq!(resolve_prefetch_capacity(256, 128 * 1024 * 1024), 1);
+    }
+
+    #[test]
+    fn drains_and_truncates_ffmpeg_stderr_while_preserving_the_tail() {
+        let stderr = drain_reader_limited(Cursor::new(b"0123456789"), 4).unwrap();
+        assert!(stderr.contains("truncated"));
+        assert!(stderr.ends_with("6789"));
+    }
+
+    #[test]
+    fn marker_ranges_saturate_at_the_maximum_frame() {
+        assert_eq!(
+            marker_frame_ranges([u64::MAX], 240, u64::MAX),
+            vec![(u64::MAX, u64::MAX)]
+        );
     }
 
     #[test]
@@ -1257,6 +1726,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn exports_kbdrec_frames_to_ffmpeg_stdin() {
         let root = std::env::temp_dir().join(format!(
             "keyboard-display-video-export-test-{}",
@@ -1305,6 +1775,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn exports_marker_border_for_configured_duration() {
         let root = std::env::temp_dir().join(format!(
             "keyboard-display-marker-duration-test-{}",
@@ -1365,6 +1836,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(unix)]
     fn reports_rendered_frame_progress_during_export() {
         let root = std::env::temp_dir().join(format!(
             "keyboard-display-export-progress-test-{}",
@@ -1391,11 +1863,15 @@ mod tests {
         write_fake_ffmpeg(&fake_ffmpeg_path, &raw_video_path);
         let mut progress_events = Vec::new();
 
-        export_overlay_video_with_progress(
+        export_overlay_video_with_progress_range(
             &recording_path,
             &output_path,
             &fake_ffmpeg_path,
             &profile,
+            Some(ExportFrameRange {
+                start_frame: 1,
+                end_frame_exclusive: 3,
+            }),
             |progress| {
                 progress_events.push(progress);
                 Ok(())
@@ -1403,12 +1879,12 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(progress_events.len(), 3);
-        assert_eq!(progress_events[0].rendered_frames, 1);
-        assert_eq!(progress_events[0].total_frames, 3);
-        assert_eq!(progress_events[2].rendered_frames, 3);
-        assert_eq!(progress_events[2].total_frames, 3);
-        assert_eq!(progress_events[2].active_key_ids, vec!["w".to_string()]);
+        assert!(!progress_events.is_empty());
+        let final_progress = progress_events.last().unwrap();
+        assert_eq!(final_progress.rendered_frames, 2);
+        assert_eq!(final_progress.total_frames, 2);
+        assert_eq!(final_progress.current_frame, 2);
+        assert_eq!(final_progress.active_key_ids, vec!["w".to_string()]);
 
         let _ = std::fs::remove_dir_all(root);
     }
@@ -1455,6 +1931,7 @@ mod tests {
         }
     }
 
+    #[cfg(unix)]
     fn write_fake_ffmpeg(path: &std::path::Path, raw_video_path: &std::path::Path) {
         let script = format!(
             "#!/bin/sh\ncat > '{}'\nfor arg in \"$@\"; do output=\"$arg\"; done\ntouch \"$output\"\n",

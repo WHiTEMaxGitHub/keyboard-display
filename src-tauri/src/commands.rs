@@ -4,7 +4,10 @@ use crate::{
     debug_log,
     exporter::{self, InstallVideoExporterResult, VideoExporterStatus},
     recording::{self, RecordingManager},
-    video_export::{self, ExportOverlayProfile, ExportOverlayProgress, ExportOverlayVideoResult},
+    video_export::{
+        self, ExportFrameRange, ExportOverlayProfile, ExportOverlayProgress,
+        ExportOverlayVideoResult,
+    },
 };
 
 #[tauri::command]
@@ -327,6 +330,26 @@ pub fn inspect_recording_file(
 }
 
 #[tauri::command]
+pub fn inspect_recording_export_info(
+    path: std::path::PathBuf,
+) -> Result<recording::RecordingExportInfo, String> {
+    let bytes = std::fs::read(&path).map_err(|error| {
+        log_error(
+            "recording",
+            &format!("inspect-export-info-read path={}", path.display()),
+            error,
+        )
+    })?;
+    recording::inspect_kbdrec_export_info(&bytes).map_err(|error| {
+        log_error(
+            "recording",
+            &format!("inspect-export-info-parse path={}", path.display()),
+            error,
+        )
+    })
+}
+
+#[tauri::command]
 pub fn list_recording_files(
     root: std::path::PathBuf,
 ) -> Result<recording::RecordingTreeNode, String> {
@@ -439,6 +462,7 @@ pub async fn export_overlay_video(
     output_path: std::path::PathBuf,
     ffmpeg_path: std::path::PathBuf,
     profile: ExportOverlayProfile,
+    range: Option<ExportFrameRange>,
 ) -> Result<ExportOverlayVideoResult, String> {
     if let Some(parent) = output_path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| {
@@ -461,11 +485,12 @@ pub async fn export_overlay_video(
         ),
     );
     tauri::async_runtime::spawn_blocking(move || {
-        video_export::export_overlay_video_with_progress(
+        video_export::export_overlay_video_with_progress_range(
             &recording_path,
             &output_path,
             &ffmpeg_path,
             &profile,
+            range,
             |progress: ExportOverlayProgress| {
                 app.emit("export-progress", progress)
                     .map_err(|error| error.to_string())

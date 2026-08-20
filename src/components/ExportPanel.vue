@@ -7,6 +7,13 @@ import { tauriApi } from "../api/tauri";
 import type { AppConfig } from "../domain/defaultConfig";
 import { formatExportFileName } from "../domain/exportFilename";
 import {
+  formatRecordingBoundaryTime,
+  formatRecordingTime,
+  resolveExportFrameRange,
+  type RecordingExportInfo,
+  type RecordingExportRangeMode,
+} from "../domain/recordingExportRange";
+import {
   normalizeVideoExporterConfig,
   type VideoExporterCandidate,
   type VideoExporterConfig,
@@ -39,6 +46,12 @@ const { t } = useI18n();
 const exporterError = ref("");
 const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
+const recordingExportInfo = ref<RecordingExportInfo | null>(null);
+const recordingInfoLoading = ref(false);
+const recordingInfoError = ref("");
+const rangeMode = ref<RecordingExportRangeMode>("full");
+const rangeStartDraft = ref("0");
+const rangeEndDraft = ref("0");
 const filenameTemplateDraft = ref(props.config.export.filenameTemplate);
 const fontPathDraft = ref(props.config.export.fontPath);
 const renderThreadsDraft = ref(props.config.export.renderThreads);
@@ -60,9 +73,56 @@ const effectiveOutputDirectory = computed(() =>
 const detectedCpuCores = computed(() => navigator.hardwareConcurrency || 4);
 const maxRenderThreads = computed(() => Math.max(1, detectedCpuCores.value * 4));
 
+const selectedExportRange = computed(() => {
+  if (rangeMode.value === "full" || !recordingExportInfo.value) {
+    return null;
+  }
+  try {
+    return resolveExportFrameRange(
+      rangeMode.value,
+      rangeStartDraft.value,
+      rangeEndDraft.value,
+      recordingExportInfo.value,
+    );
+  } catch {
+    return null;
+  }
+});
+const rangeError = computed(() => {
+  if (rangeMode.value === "full") {
+    return "";
+  }
+  if (!recordingExportInfo.value) {
+    return recordingInfoError.value || t("export.overlayVideo.rangeInfoUnavailable");
+  }
+  return selectedExportRange.value ? "" : t("export.overlayVideo.invalidRange");
+});
 const exportReady = computed(() =>
-  Boolean(exporterStatus.value?.resolved && inputRecordingPath.value && effectiveOutputDirectory.value),
+  Boolean(
+    exporterStatus.value?.resolved &&
+    inputRecordingPath.value &&
+    effectiveOutputDirectory.value &&
+    !recordingInfoLoading.value &&
+    !rangeError.value
+  ),
 );
+const recordingDuration = computed(() => {
+  const info = recordingExportInfo.value;
+  return info ? formatRecordingTime(info.frameCount, info.fps) : "";
+});
+const selectedRangeSummary = computed(() => {
+  const info = recordingExportInfo.value;
+  const range = selectedExportRange.value;
+  if (!info || !range) {
+    return "";
+  }
+  return t("export.overlayVideo.rangeSummary", {
+    startFrame: range.startFrame,
+    endFrame: range.endFrameExclusive,
+    startTime: formatRecordingTime(range.startFrame, info.fps),
+    endTime: formatRecordingTime(range.endFrameExclusive, info.fps),
+  });
+});
 
 const outputVideoPath = computed(() => {
   if (!effectiveOutputDirectory.value || !inputRecordingPath.value) {
@@ -230,10 +290,50 @@ async function chooseInputRecording() {
     multiple: false,
   });
 
-  if (typeof selectedPath === "string") {
-    inputRecordingPath.value = selectedPath;
-    exportStatus.value = "";
+  if (typeof selectedPath !== "string") {
+    return;
   }
+  inputRecordingPath.value = selectedPath;
+  exportStatus.value = "";
+  recordingInfoError.value = "";
+  recordingExportInfo.value = null;
+  restoreFullRange();
+  recordingInfoLoading.value = true;
+  try {
+    recordingExportInfo.value = await tauriApi.inspectRecordingExportInfo(selectedPath);
+  } catch (error) {
+    recordingInfoError.value = t("export.overlayVideo.rangeInfoFailed", {
+      error: String(error),
+    });
+  } finally {
+    recordingInfoLoading.value = false;
+  }
+}
+
+function setRangeMode(event: Event) {
+  const mode = (event.target as HTMLSelectElement).value as RecordingExportRangeMode;
+  const info = recordingExportInfo.value;
+  const currentRange = selectedExportRange.value ?? (info
+    ? { startFrame: 0, endFrameExclusive: info.frameCount }
+    : null);
+  rangeMode.value = mode;
+  if (!info || !currentRange || mode === "full") {
+    return;
+  }
+  rangeStartDraft.value = mode === "time"
+    ? formatRecordingBoundaryTime(currentRange.startFrame, info.fps, "start")
+    : String(currentRange.startFrame);
+  rangeEndDraft.value = mode === "time"
+    ? formatRecordingBoundaryTime(currentRange.endFrameExclusive, info.fps, "end")
+    : String(currentRange.endFrameExclusive);
+}
+
+function restoreFullRange() {
+  rangeMode.value = "full";
+  rangeStartDraft.value = "0";
+  rangeEndDraft.value = recordingExportInfo.value
+    ? String(recordingExportInfo.value.frameCount)
+    : "0";
 }
 
 async function chooseFontFile() {
@@ -372,6 +472,7 @@ async function exportOverlayVideo() {
         export: props.config.export,
         recording: props.config.recording,
       },
+      selectedExportRange.value,
     );
     exportStatus.value = "";
   } catch (error) {
@@ -506,6 +607,58 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
           {{ t("export.overlayVideo.openOutputFolder") }}
         </BaseButton>
       </div>
+      <section v-if="inputRecordingPath" class="grid gap-2 mt-3">
+        <div v-if="recordingExportInfo" class="text-text-secondary text-[13px]">
+          {{ t("export.overlayVideo.recordingInfo", {
+            fps: recordingExportInfo.fps,
+            frames: recordingExportInfo.frameCount,
+            duration: recordingDuration,
+          }) }}
+        </div>
+        <div v-else-if="recordingInfoLoading" class="text-text-secondary text-[13px]">
+          {{ t("export.overlayVideo.loadingRangeInfo") }}
+        </div>
+        <label class="text-text-muted text-[13px] font-extrabold">
+          {{ t("export.overlayVideo.exportRange") }}
+        </label>
+        <div class="flex flex-wrap items-center gap-2">
+          <select
+            class="box-border border border-border-control rounded-md bg-surface-control text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
+            :value="rangeMode"
+            :disabled="!recordingExportInfo"
+            @change="setRangeMode"
+          >
+            <option value="full">{{ t("export.overlayVideo.rangeFull") }}</option>
+            <option value="time">{{ t("export.overlayVideo.rangeTime") }}</option>
+            <option value="frames">{{ t("export.overlayVideo.rangeFrames") }}</option>
+          </select>
+          <template v-if="rangeMode !== 'full'">
+            <label class="text-text-secondary text-[13px]">
+              {{ t("export.overlayVideo.rangeStart") }}
+              <input
+                class="box-border w-36 ml-1 border border-border-control rounded-md bg-surface-control text-text-primary font-mono text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
+                :type="rangeMode === 'frames' ? 'number' : 'text'"
+                min="0"
+                v-model="rangeStartDraft"
+              />
+            </label>
+            <label class="text-text-secondary text-[13px]">
+              {{ t("export.overlayVideo.rangeEndExclusive") }}
+              <input
+                class="box-border w-36 ml-1 border border-border-control rounded-md bg-surface-control text-text-primary font-mono text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
+                :type="rangeMode === 'frames' ? 'number' : 'text'"
+                min="0"
+                v-model="rangeEndDraft"
+              />
+            </label>
+            <BaseButton @click="restoreFullRange">
+              {{ t("export.overlayVideo.restoreFullRange") }}
+            </BaseButton>
+          </template>
+        </div>
+        <p v-if="rangeError" class="notice-text">{{ rangeError }}</p>
+        <p v-else-if="selectedRangeSummary" class="frame-status">{{ selectedRangeSummary }}</p>
+      </section>
       <section class="grid gap-2 mt-3">
         <label class="text-text-muted text-[13px] font-extrabold">{{ t("export.overlayVideo.renderThreads") }}</label>
         <div class="flex items-center gap-2">

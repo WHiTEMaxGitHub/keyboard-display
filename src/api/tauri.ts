@@ -24,6 +24,16 @@ export type ExportOverlayVideoResult = {
   fps: number;
 };
 
+export type RecordingExportInfo = {
+  fps: number;
+  frameCount: number;
+};
+
+export type ExportFrameRange = {
+  startFrame: number;
+  endFrameExclusive: number;
+};
+
 export type InitializeAppConfigResult = {
   path: string;
   initialized: boolean;
@@ -114,6 +124,10 @@ export const tauriApi = {
     return invoke<RecordingInspection>("inspect_recording_file", { path });
   },
 
+  inspectRecordingExportInfo(path: string) {
+    return invoke<RecordingExportInfo>("inspect_recording_export_info", { path });
+  },
+
   listRecordingFiles(root: string) {
     return invoke<RecordingTreeNode>("list_recording_files", { root });
   },
@@ -147,12 +161,14 @@ export const tauriApi = {
     outputPath: string,
     ffmpegPath: string,
     profile: Pick<AppConfig, "layout" | "rows" | "style" | "export" | "recording">,
+    range: ExportFrameRange | null = null,
   ) {
     return invoke<ExportOverlayVideoResult>("export_overlay_video", {
       recordingPath,
       outputPath,
       ffmpegPath,
       profile,
+      range,
     });
   },
 

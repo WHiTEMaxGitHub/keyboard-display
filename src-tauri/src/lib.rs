@@ -32,6 +32,7 @@ pub fn run() {
             commands::suppress_recording_keys,
             commands::stop_recording,
             commands::inspect_recording_file,
+            commands::inspect_recording_export_info,
             commands::list_recording_files,
             commands::create_recording_folder,
             commands::read_recording_metadata,
