@@ -11,6 +11,7 @@ type SchedulerOptions = {
   apply: (payload: OverlayActiveKeysPayload) => void;
   onPhase?: (phase: PovFramePhase, payload: OverlayActiveKeysPayload) => void;
   frames?: AnimationFrameDriver;
+  preserveShortPresses?: () => boolean;
 };
 
 const browserFrames: AnimationFrameDriver = {
@@ -27,6 +28,7 @@ export class PovFrameScheduler {
   private readonly applySnapshot: SchedulerOptions["apply"];
   private readonly onPhase?: SchedulerOptions["onPhase"];
   private readonly frames: AnimationFrameDriver;
+  private readonly preserveShortPresses: () => boolean;
   private lastSeq = 0;
   private awaitingPaint = false;
   private current: OverlayActiveKeysPayload | null = null;
@@ -40,6 +42,7 @@ export class PovFrameScheduler {
     this.applySnapshot = options.apply;
     this.onPhase = options.onPhase;
     this.frames = options.frames ?? browserFrames;
+    this.preserveShortPresses = options.preserveShortPresses ?? (() => true);
   }
 
   receive(payload: OverlayActiveKeysPayload): boolean {
@@ -48,8 +51,15 @@ export class PovFrameScheduler {
     }
 
     this.onPhase?.("receive", payload);
-    const hasGap = this.lastSeq !== 0 && payload.seq !== this.lastSeq + 1;
+    const previousSeq = this.lastSeq;
     this.lastSeq = payload.seq;
+
+    if (!this.preserveShortPresses()) {
+      this.applyImmediately(payload);
+      return true;
+    }
+
+    const hasGap = previousSeq !== 0 && payload.seq !== previousSeq + 1;
 
     if (hasGap) {
       this.latest = payload;
@@ -90,6 +100,19 @@ export class PovFrameScheduler {
     this.applySnapshot(payload);
     this.awaitingPaint = true;
     this.paintFrame = this.frames.request(() => this.confirmPaint());
+  }
+
+  private applyImmediately(payload: OverlayActiveKeysPayload) {
+    this.cancelFrames();
+    this.awaitingPaint = false;
+    this.latest = payload;
+    this.current = payload;
+    this.unpaintedPressKeys.clear();
+    this.applySnapshot(payload);
+    this.paintFrame = this.frames.request(() => {
+      this.paintFrame = null;
+      this.onPhase?.("paint", payload);
+    });
   }
 
   private confirmPaint() {

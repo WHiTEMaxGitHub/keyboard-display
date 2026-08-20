@@ -131,6 +131,7 @@ const {
   stopInputBridge,
 } = useInputStateBridge({
   isOverlayWindow,
+  preserveShortPresses: computed(() => config.style.enhancedKeyStyle),
   onConfigInput: handleConfigInput,
 });
 

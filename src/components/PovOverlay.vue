@@ -279,10 +279,7 @@ watch(
   box-shadow: none;
   font: 700 calc(15px * var(--overlay-scale)) / 1 Inter, system-ui, sans-serif;
   letter-spacing: 0;
-  transition:
-    background-color 55ms ease-out,
-    border-color 55ms ease-out,
-    transform 55ms ease-out;
+  transition: none;
 }
 
 .key-gap {
@@ -296,13 +293,16 @@ watch(
   border-color: rgba(255, 255, 255, 0.5);
   background: var(--key-active);
   color: var(--key-active-text);
-  transition-duration: 0ms;
 }
 
 .pov-shell.enhanced-key-style .key {
   box-shadow:
     inset 0 -3px 0 rgba(0, 0, 0, 0.35),
     0 6px 18px rgba(0, 0, 0, 0.24);
+  transition:
+    background-color 55ms ease-out,
+    border-color 55ms ease-out,
+    transform 55ms ease-out;
 }
 
 .pov-shell.enhanced-key-style .key.active {
@@ -310,6 +310,7 @@ watch(
     inset 0 -1px 0 rgba(0, 0, 0, 0.28),
     0 0 18px color-mix(in srgb, var(--key-active), transparent 34%);
   transform: translateY(2px);
+  transition-duration: 0ms;
 }
 
 .pov-shell.idle-hidden .key {

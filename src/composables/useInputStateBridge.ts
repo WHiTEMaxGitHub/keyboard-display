@@ -12,6 +12,7 @@ import { PovFrameScheduler } from "../domain/povFrameScheduler";
 
 type UseInputStateBridgeOptions = {
   isOverlayWindow: ComputedRef<boolean>;
+  preserveShortPresses: ComputedRef<boolean>;
   onConfigInput: (payload: InputStatePayload) => void;
 };
 
@@ -38,6 +39,7 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
       activeKeyIds.value = new Set(payload.keyIds);
     },
     onPhase: logPovPhase,
+    preserveShortPresses: () => options.preserveShortPresses.value,
   });
 
   async function startInputBridge() {

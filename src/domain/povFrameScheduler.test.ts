@@ -32,7 +32,7 @@ function snapshot(seq: number, keyIds: string[]): OverlayActiveKeysPayload {
   return { seq, captureSeq: seq, tCapture: seq * 10, keyIds, debug: false };
 }
 
-function setup() {
+function setup(preserveShortPresses = true) {
   const frames = new ManualFrames();
   const paints: string[][] = [];
   const applied: string[][] = [];
@@ -44,6 +44,7 @@ function setup() {
         paints.push(payload.keyIds);
       }
     },
+    preserveShortPresses: () => preserveShortPresses,
   });
   return { frames, paints, applied, scheduler };
 }
@@ -70,6 +71,16 @@ describe("PovFrameScheduler", () => {
 
     scheduler.receive(snapshot(2, []));
     expect(applied).toEqual([["w"], []]);
+  });
+
+  it("applies every latest state immediately when short-press preservation is disabled", () => {
+    const { applied, scheduler } = setup(false);
+    scheduler.receive(snapshot(1, ["w"]));
+    scheduler.receive(snapshot(2, []));
+    scheduler.receive(snapshot(3, ["space"]));
+    scheduler.receive(snapshot(4, []));
+
+    expect(applied).toEqual([["w"], [], ["space"], []]);
   });
 
   it("ignores old and out-of-order sequence numbers", () => {
