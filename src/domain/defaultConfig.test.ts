@@ -80,6 +80,7 @@ describe("createDefaultConfig", () => {
     expect(config.style.backgroundOpacity).toBe(0.72);
     expect(config.style.backgroundRadius).toBe(8);
     expect(config.style.idleKeyVisibility).toBe("visible");
+    expect(config.style.enhancedKeyStyle).toBe(true);
     expect(config.style.alwaysOnTop).toBe(false);
     expect(config.style.idleTextColor).toBe("#f5f7fa");
     expect(config.style.activeTextColor).toBe("#ffffff");

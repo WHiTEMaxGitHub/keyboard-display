@@ -94,7 +94,10 @@ describe("app config", () => {
             visible: true,
             position: "center",
             layout: createDefaultConfig().layout,
-            style: createDefaultConfig().style,
+            style: {
+              ...createDefaultConfig().style,
+              enhancedKeyStyle: undefined,
+            },
             rows: createDefaultConfig().rows,
           },
         },
@@ -217,6 +220,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.recording.fpsOptions).toEqual([30, 60, 120]);
     expect(appConfig.currentProfile.changed).toBe(true);
     expect(appConfig.currentProfile.recording.maxFps).toBe(1000);
+    expect(appConfig.currentProfile.overlay.style.enhancedKeyStyle).toBe(true);
     expect(appConfig.recording.hotkeys.sync).toEqual(["f8"]);
     expect(appConfig.recording.hotkeys.start).toEqual(["ctrl-left", "shift-left", "r"]);
     expect(appConfig.recording.browserDirectory).toBeNull();

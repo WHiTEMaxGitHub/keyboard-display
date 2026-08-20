@@ -37,6 +37,11 @@ export function parseConfigFile(text: string): OverlayConfigFile {
   const rows = normalizeRows(config.overlay.rows ?? rowsFromLegacyKeys(config.overlay.keys ?? []));
   const recording = normalizeRecordingConfig(config.recording ?? defaultConfig.recording);
   const exportConfig = normalizeExportConfig(config.export ?? defaultConfig.export);
+  const style = {
+    ...defaultConfig.style,
+    ...config.overlay.style,
+    enhancedKeyStyle: config.overlay.style?.enhancedKeyStyle ?? true,
+  };
 
   return {
     ...config,
@@ -46,6 +51,7 @@ export function parseConfigFile(text: string): OverlayConfigFile {
         ...config.overlay.layout,
         gapUnit: normalizeUnit(config.overlay.layout.gapUnit),
       },
+      style,
       rows,
       keys: flattenRowKeys(rows),
       keyIdLabels: normalizeKeyIdLabels(config.overlay.keyIdLabels),

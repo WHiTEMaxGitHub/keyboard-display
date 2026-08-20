@@ -41,6 +41,7 @@ export type OverlayStyle = {
   backgroundOpacity: number;
   backgroundRadius: number;
   idleKeyVisibility: IdleKeyVisibility;
+  enhancedKeyStyle: boolean;
   alwaysOnTop: boolean;
   idleColor: string;
   activeColor: string;
@@ -241,6 +242,7 @@ export function createDefaultConfig(): AppConfig {
       backgroundOpacity: 0.72,
       backgroundRadius: 8,
       idleKeyVisibility: "visible",
+      enhancedKeyStyle: true,
       alwaysOnTop: false,
       idleColor: "#121417",
       activeColor: "#25d366",

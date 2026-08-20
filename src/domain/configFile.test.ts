@@ -66,6 +66,7 @@ describe("parseConfigFile", () => {
     expect(config.overlay.keyIdLabels).toEqual({
       "macos-keycode-123": "Extra key",
     });
+    expect(config.overlay.style.enhancedKeyStyle).toBe(true);
     expect(config.recording.defaultFps).toBe(60);
     expect(config.recording.customFpsEnabled).toBe(true);
     expect(config.recording.customFps).toBe(1000);

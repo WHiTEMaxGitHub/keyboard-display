@@ -100,7 +100,13 @@ watch(
   <section
     ref="shellRef"
     class="pov-shell"
-    :class="[`idle-${overlayStyle.idleKeyVisibility}`, { 'fit-to-container': fitToContainer }]"
+    :class="[
+      `idle-${overlayStyle.idleKeyVisibility}`,
+      {
+        'fit-to-container': fitToContainer,
+        'enhanced-key-style': overlayStyle.enhancedKeyStyle,
+      },
+    ]"
     :style="{
       '--overlay-scale': overlayStyle.scale,
       '--preview-fit-scale': fitScale,
@@ -270,16 +276,13 @@ watch(
   border-radius: var(--radius-md);
   background: var(--key-idle);
   color: var(--key-idle-text);
-  box-shadow:
-    inset 0 -3px 0 rgba(0, 0, 0, 0.35),
-    0 6px 18px rgba(0, 0, 0, 0.24);
+  box-shadow: none;
   font: 700 calc(15px * var(--overlay-scale)) / 1 Inter, system-ui, sans-serif;
   letter-spacing: 0;
   transition:
-    background 90ms ease,
-    border-color 90ms ease,
-    box-shadow 90ms ease,
-    transform 90ms ease;
+    background-color 55ms ease-out,
+    border-color 55ms ease-out,
+    transform 55ms ease-out;
 }
 
 .key-gap {
@@ -293,6 +296,16 @@ watch(
   border-color: rgba(255, 255, 255, 0.5);
   background: var(--key-active);
   color: var(--key-active-text);
+  transition-duration: 0ms;
+}
+
+.pov-shell.enhanced-key-style .key {
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.35),
+    0 6px 18px rgba(0, 0, 0, 0.24);
+}
+
+.pov-shell.enhanced-key-style .key.active {
   box-shadow:
     inset 0 -1px 0 rgba(0, 0, 0, 0.28),
     0 0 18px color-mix(in srgb, var(--key-active), transparent 34%);

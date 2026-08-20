@@ -162,12 +162,18 @@ export function parseAppConfigFile(text: string): AppConfigFile {
   };
   const rows =
     config.currentProfile.overlay.rows ?? rowsFromKeys(config.currentProfile.overlay.keys ?? []);
+  const defaultConfig = createDefaultConfig();
   const profileRecording = normalizeRecordingConfig(
-    config.currentProfile.recording ?? createDefaultConfig().recording,
+    config.currentProfile.recording ?? defaultConfig.recording,
   );
   const profileExport = normalizeExportConfig(
-    config.currentProfile.export ?? createDefaultConfig().export,
+    config.currentProfile.export ?? defaultConfig.export,
   );
+  const profileStyle = {
+    ...defaultConfig.style,
+    ...config.currentProfile.overlay.style,
+    enhancedKeyStyle: config.currentProfile.overlay.style?.enhancedKeyStyle ?? true,
+  };
   const recording = config.recording ?? {};
 
   return {
@@ -182,6 +188,7 @@ export function parseAppConfigFile(text: string): AppConfigFile {
       export: profileExport,
       overlay: {
         ...config.currentProfile.overlay,
+        style: profileStyle,
         rows,
         keys: flattenRowKeys(rows),
         keyIdLabels: normalizeKeyIdLabels(config.currentProfile.overlay.keyIdLabels),

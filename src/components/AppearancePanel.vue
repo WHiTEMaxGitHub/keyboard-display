@@ -88,6 +88,11 @@ function updateIdleKeyVisibility(value: string) {
   emit("update-overlay-style", { ...props.config.style, idleKeyVisibility });
 }
 
+function updateEnhancedKeyStyle(event: Event) {
+  const enhancedKeyStyle = (event.target as HTMLInputElement).checked;
+  emit("update-overlay-style", { ...props.config.style, enhancedKeyStyle });
+}
+
 function updateBackplateTransparent(event: Event) {
   const transparent = (event.target as HTMLInputElement).checked;
   const currentAlpha = alphaFromHex(props.config.style.backgroundColor);
@@ -196,6 +201,13 @@ function alphaFromHex(color: string) {
         @update:model-value="updateIdleKeyVisibility"
       />
     </BaseFormRow>
+
+    <BaseToggleRow
+      :checked="config.style.enhancedKeyStyle"
+      @change="updateEnhancedKeyStyle"
+    >
+      {{ t("appearance.enhancedKeyStyle") }}
+    </BaseToggleRow>
 
     <BaseControlGrid :aria-label="t('appearance.colors.group')">
       <ColorPicker
