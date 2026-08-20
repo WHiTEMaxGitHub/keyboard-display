@@ -238,6 +238,16 @@ pub fn start_recording(state: tauri::State<'_, RecordingManager>, fps: u16) -> R
 }
 
 #[tauri::command]
+pub fn sync_recording_runtime(
+    state: tauri::State<'_, RecordingManager>,
+    settings: recording::RecordingRuntimeSettings,
+) -> Result<(), String> {
+    state
+        .apply_runtime_settings(settings)
+        .map_err(|error| log_error("recording", "sync-runtime", error))
+}
+
+#[tauri::command]
 pub fn record_input_event(
     state: tauri::State<'_, RecordingManager>,
     key_id: String,

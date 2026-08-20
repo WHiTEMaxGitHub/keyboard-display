@@ -1,11 +1,14 @@
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { type ComputedRef, ref } from "vue";
+import { tauriApi } from "../api/tauri";
 import {
   INPUT_STATE_EVENT,
   OVERLAY_ACTIVE_KEYS_EVENT,
+  recoverMissedConfigReleases,
   type InputStatePayload,
   type OverlayActiveKeysPayload,
 } from "../domain/inputEvents";
+import { PovFrameScheduler } from "../domain/povFrameScheduler";
 
 type UseInputStateBridgeOptions = {
   isOverlayWindow: ComputedRef<boolean>;
@@ -15,25 +18,34 @@ type UseInputStateBridgeOptions = {
 export function useInputStateBridge(options: UseInputStateBridgeOptions) {
   const activeKeyIds = ref(new Set<string>());
   let unlistenInputState: UnlistenFn | undefined;
+  let lastConfigSeq = 0;
 
-  function updateActiveKey(keyId: string, pressed: boolean) {
-    const nextKeys = new Set(activeKeyIds.value);
-
-    if (pressed) {
-      nextKeys.add(keyId);
-    } else {
-      nextKeys.delete(keyId);
+  function logPovPhase(
+    phase: "receive" | "paint",
+    payload: OverlayActiveKeysPayload,
+  ) {
+    if (!payload.debug) {
+      return;
     }
-
-    activeKeyIds.value = nextKeys;
+    void tauriApi.writeDebugLog(
+      "pov-webview",
+      `phase=${phase} capture_seq=${payload.captureSeq} display_seq=${payload.seq} t_capture=${payload.tCapture} webview_mono_ms=${performance.now().toFixed(3)} keys=${payload.keyIds.join(",")}`,
+    ).catch(() => undefined);
   }
+
+  const povScheduler = new PovFrameScheduler({
+    apply: (payload) => {
+      activeKeyIds.value = new Set(payload.keyIds);
+    },
+    onPhase: logPovPhase,
+  });
 
   async function startInputBridge() {
     if (options.isOverlayWindow.value) {
       unlistenInputState = await listen<OverlayActiveKeysPayload>(
         OVERLAY_ACTIVE_KEYS_EVENT,
         (event) => {
-          activeKeyIds.value = new Set(event.payload.keyIds);
+          povScheduler.receive(event.payload);
         },
       );
       return;
@@ -42,7 +54,20 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
     unlistenInputState = await listen<InputStatePayload>(
       INPUT_STATE_EVENT,
       (event) => {
-        updateActiveKey(event.payload.keyId, event.payload.pressed);
+        if (event.payload.seq <= lastConfigSeq) {
+          return;
+        }
+        const recoveredReleases = recoverMissedConfigReleases(
+          activeKeyIds.value,
+          lastConfigSeq,
+          event.payload,
+        );
+        lastConfigSeq = event.payload.seq;
+        activeKeyIds.value = new Set(event.payload.keyIds);
+
+        for (const release of recoveredReleases) {
+          options.onConfigInput(release);
+        }
         options.onConfigInput(event.payload);
       },
     );
@@ -51,6 +76,7 @@ export function useInputStateBridge(options: UseInputStateBridgeOptions) {
   function stopInputBridge() {
     unlistenInputState?.();
     unlistenInputState = undefined;
+    povScheduler.stop();
   }
 
   return {

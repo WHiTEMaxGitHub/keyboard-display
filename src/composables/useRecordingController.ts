@@ -1,12 +1,11 @@
-import { emitTo } from "@tauri-apps/api/event";
+import { emitTo, listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
-import { ref, type ComputedRef, type Ref } from "vue";
+import { ref, watch, type ComputedRef, type Ref } from "vue";
 import { tauriApi } from "../api/tauri";
 import { i18n } from "../i18n";
-import { OVERLAY_SYNC_FEEDBACK_EVENT } from "../domain/inputEvents";
+import { OVERLAY_SYNC_FEEDBACK_EVENT, RECORDING_UI_EVENT } from "../domain/inputEvents";
 import { effectiveRecordingFps } from "../domain/recordingConfig";
 import {
-  isHotkeyMatch,
   normalizeHotkey,
   normalizeRecordingHotkeyConfig,
   type RecordingHotkeyConfig,
@@ -17,6 +16,14 @@ import type { RecordingInspection } from "../types/recording";
 import type { OverlayPosition } from "./useOverlayWindow";
 
 export type RecordingHotkeyTarget = "start" | "stop" | "sync";
+
+type RecordingUiPayload =
+  | { type: "countdown"; remaining: number; fps: number }
+  | { type: "started"; fps: number; silent: boolean }
+  | { type: "stopped"; path: string; silent: boolean }
+  | { type: "sync" }
+  | { type: "countdownCancelled" }
+  | { type: "error"; message: string };
 
 type UseRecordingControllerOptions = {
   enabled: boolean;
@@ -50,23 +57,86 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   const activeRecordingFps = ref<number | null>(null);
   const hotkeyCaptureTarget = ref<RecordingHotkeyTarget | null>(null);
   const capturedHotkeyKeys = ref(new Set<string>());
-  const activeRecordingHotkeySignature = ref("");
+  let unlistenRecordingUi: UnlistenFn | undefined;
 
   function t(key: string, params?: Record<string, unknown>) {
     return i18n.global.t(key, params ?? {});
   }
 
-  async function recordInputIfNeeded(keyId: string, pressed: boolean) {
-    if (!options.enabled || options.isOverlayWindow.value || !isRecording.value) {
+  async function pushRecordingRuntime() {
+    if (!options.enabled || options.isOverlayWindow.value) {
       return;
     }
 
-    await tauriApi.recordInputEvent(keyId, pressed);
+    await tauriApi.syncRecordingRuntime({
+      hotkeys: recordingHotkeys.value,
+      outputDirectory: recordingDirectory.value,
+      filenameTemplate: options.config.recording.filenameTemplate,
+      profileName: options.profileName.value,
+      fps: effectiveRecordingFps(options.config.recording),
+      silent: silentRecording.value,
+      syncFeedbackEnabled: options.config.recording.syncFeedbackEnabled,
+      syncFeedbackDurationMs: options.config.recording.syncFeedbackDurationMs,
+    });
   }
 
-  function effectiveRecordingHotkeys(): RecordingHotkeyConfig {
-    return activeRecordingHotkeys.value ?? recordingHotkeys.value;
+  async function applyRecordingUiEvent(payload: RecordingUiPayload) {
+    if (!options.enabled || options.isOverlayWindow.value) {
+      return;
+    }
+
+    if (payload.type === "countdown") {
+      recordingCountdown.value = payload.remaining;
+      recordingStatusMessage.value = t("recording.status.willStart", { fps: payload.fps });
+      return;
+    }
+
+    if (payload.type === "started") {
+      cancelRecordingCountdown();
+      activeRecordingHotkeys.value = { ...recordingHotkeys.value };
+      activeRecordingFps.value = payload.fps;
+      isRecording.value = true;
+      lastRecordingPath.value = "";
+      recordingStatusMessage.value = t("recording.status.started", { fps: payload.fps });
+      restoreOverlayAfterRecording.value = options.isOverlayVisible.value;
+      if (payload.silent && silentRecording.value) {
+        await options.destroyOverlayWindow();
+      }
+      return;
+    }
+
+    if (payload.type === "stopped") {
+      isRecording.value = false;
+      activeRecordingHotkeys.value = null;
+      activeRecordingFps.value = null;
+      lastRecordingPath.value = payload.path;
+      recordingStatusMessage.value = t("recording.status.saved", { path: payload.path });
+      if (payload.silent && silentRecording.value && restoreOverlayAfterRecording.value) {
+        await options.setOverlayVisible(true, false);
+        await options.moveOverlay(options.overlayPosition.value, false);
+      }
+      restoreOverlayAfterRecording.value = false;
+      return;
+    }
+
+    if (payload.type === "sync") {
+      recordingStatusMessage.value = t("recording.status.syncMarkerAdded");
+      return;
+    }
+
+    if (payload.type === "countdownCancelled") {
+      cancelRecordingCountdown();
+      recordingStatusMessage.value = "";
+      return;
+    }
+
+    recordingStatusMessage.value = payload.message;
   }
+
+  // Key events are recorded in Rust from InputStateBridge::apply_key, at the
+  // same timestamp as the overlay snapshot. Do not invoke record_input_event
+  // here — that hop delayed jump-throw keys relative to the live overlay.
+  async function recordInputIfNeeded(_keyId: string, _pressed: boolean) {  }
 
   async function resolveDefaultRecordingDirectory() {
     if (!defaultRecordingDirectory.value) {
@@ -119,6 +189,7 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     }
 
     await resolveRecordingDirectory();
+    await pushRecordingRuntime();
 
     if (isRecording.value || recordingCountdown.value > 0) {
       return;
@@ -264,23 +335,6 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     recordingStatusMessage.value = t("recording.status.syncMarkerAdded");
   }
 
-  async function suppressRecordingHotkeyInput(keys: string[]) {
-    if (!isRecording.value || keys.length === 0) {
-      return;
-    }
-
-    const normalizedKeys = normalizeHotkey(keys);
-    await tauriApi.suppressRecordingKeys(normalizedKeys);
-    releaseSuppressedHotkeyKeys(normalizedKeys);
-  }
-
-  function releaseSuppressedHotkeyKeys(keys: string[]) {
-    const nextActiveKeys = new Set(options.activeKeyIds.value);
-    keys.forEach((key) => nextActiveKeys.delete(key));
-    options.activeKeyIds.value = nextActiveKeys;
-    activeRecordingHotkeySignature.value = "";
-  }
-
   function beginHotkeyCapture(target: RecordingHotkeyTarget) {
     capturedHotkeyKeys.value = new Set();
     hotkeyCaptureTarget.value = target;
@@ -311,74 +365,41 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
   }
 
   async function handleRecordingHotkeys(): Promise<boolean> {
-    if (!options.enabled) {
-      return false;
-    }
-
-    if (hotkeyCaptureTarget.value) {
-      return false;
-    }
-
-    const activeSignature = normalizeHotkey(options.activeKeyIds.value).join("+");
-    if (activeSignature === activeRecordingHotkeySignature.value) {
-      return false;
-    }
-
-    const hotkeys = effectiveRecordingHotkeys();
-    const matchesStart = isHotkeyMatch(options.activeKeyIds.value, hotkeys.start);
-    const matchesStop = isHotkeyMatch(options.activeKeyIds.value, hotkeys.stop);
-    const matchesSync = isHotkeyMatch(options.activeKeyIds.value, hotkeys.sync);
-
-    if (!matchesStart && !matchesStop && !matchesSync) {
-      if (activeSignature === "") {
-        activeRecordingHotkeySignature.value = "";
-      }
-      return false;
-    }
-
-    if (matchesSync && isRecording.value) {
-      activeRecordingHotkeySignature.value = activeSignature;
-      await suppressRecordingHotkeyInput(hotkeys.sync);
-      await addSyncMarker();
-      return true;
-    }
-
-    if (hotkeys.mode === "disabled") {
-      return false;
-    }
-
-    if (hotkeys.mode === "toggle") {
-      if (recordingCountdown.value > 0) {
-        activeRecordingHotkeySignature.value = activeSignature;
-        cancelRecordingCountdown();
-        return true;
-      }
-
-      if (isRecording.value) {
-        activeRecordingHotkeySignature.value = activeSignature;
-        await suppressRecordingHotkeyInput(hotkeys.stop);
-        await stopRecording();
-      } else {
-        activeRecordingHotkeySignature.value = activeSignature;
-        await startRecordingWithCountdown();
-      }
-      return true;
-    }
-
-    if (hotkeys.mode === "separate") {
-      if (!isRecording.value && matchesStart) {
-        activeRecordingHotkeySignature.value = activeSignature;
-        await startRecordingWithCountdown();
-        return true;
-      } else if (isRecording.value && matchesStop) {
-        activeRecordingHotkeySignature.value = activeSignature;
-        await suppressRecordingHotkeyInput(hotkeys.stop);
-        await stopRecording();
-        return true;
-      }
-    }
-
+    // Start/stop/sync are evaluated in Rust from keyboard Raw Input (same
+    // apply_key path as the overlay) so they work while CS2 is focused.
+    // Config-window input-state must not also match: a focused app would
+    // start the Rust countdown then immediately cancel it via toggle.
     return false;
+  }
+
+  if (options.enabled && !options.isOverlayWindow.value) {
+    watch(
+      () => ({
+        hotkeys: recordingHotkeys.value,
+        outputDirectory: recordingDirectory.value,
+        silent: silentRecording.value,
+        profileName: options.profileName.value,
+        filenameTemplate: options.config.recording.filenameTemplate,
+        fps: effectiveRecordingFps(options.config.recording),
+        syncFeedbackEnabled: options.config.recording.syncFeedbackEnabled,
+        syncFeedbackDurationMs: options.config.recording.syncFeedbackDurationMs,
+      }),
+      () => {
+        void pushRecordingRuntime();
+      },
+      { deep: true },
+    );
+
+    void listen<RecordingUiPayload>(RECORDING_UI_EVENT, (event) => {
+      void applyRecordingUiEvent(event.payload);
+    }).then((unlisten) => {
+      unlistenRecordingUi = unlisten;
+    });
+  }
+
+  function stopRecordingUiBridge() {
+    unlistenRecordingUi?.();
+    unlistenRecordingUi = undefined;
   }
 
   return {
@@ -409,5 +430,6 @@ export function useRecordingController(options: UseRecordingControllerOptions) {
     captureHotkeyKey,
     finishHotkeyCapture,
     handleRecordingHotkeys,
+    stopRecordingUiBridge,
   };
 }

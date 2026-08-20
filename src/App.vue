@@ -160,6 +160,7 @@ const {
   captureHotkeyKey,
   finishHotkeyCapture,
   handleRecordingHotkeys,
+  stopRecordingUiBridge,
 } = useRecordingController({
   enabled: !isOverlayWindow.value,
   config,
@@ -184,12 +185,11 @@ function handleConfigInput(payload: InputStatePayload) {
     return;
   }
 
-  void (async () => {
-    const consumed = await handleRecordingHotkeys();
-    if (!consumed) {
-      await recordInputIfNeeded(payload.keyId, payload.pressed);
-    }
-  })();
+  // Overlay snapshot, key recording, and start/stop/sync hotkeys are handled
+  // in Rust on the same apply_key path. Config-window input-state only drives
+  // hotkey capture and the on-screen key highlight.
+  void handleRecordingHotkeys();
+  void recordInputIfNeeded(payload.keyId, payload.pressed);
 }
 
 function overlayStyleSyncMode(
@@ -390,6 +390,7 @@ onUnmounted(() => {
   stopAppConfigWatch?.();
   disposeOverlayStyleSync();
   stopInputBridge();
+  stopRecordingUiBridge();
   unlistenOverlayStyle?.();
   unlistenOverlayReady?.();
   unlistenCloseRequested?.();

@@ -4,6 +4,7 @@ import type {
   RecordingMetadata,
   RecordingTreeNode,
 } from "../types/recording";
+import type { RecordingHotkeyConfig } from "../domain/recordingHotkeys";
 import type { AppConfig } from "../domain/defaultConfig";
 import type { VideoExporterStatus } from "../domain/videoExporter";
 
@@ -68,6 +69,19 @@ export const tauriApi = {
 
   startRecording(fps: number) {
     return invoke<void>("start_recording", { fps });
+  },
+
+  syncRecordingRuntime(settings: {
+    hotkeys: RecordingHotkeyConfig;
+    outputDirectory: string;
+    filenameTemplate: string;
+    profileName: string;
+    fps: number;
+    silent: boolean;
+    syncFeedbackEnabled: boolean;
+    syncFeedbackDurationMs: number;
+  }) {
+    return invoke<void>("sync_recording_runtime", { settings });
   },
 
   recordInputEvent(keyId: string, pressed: boolean) {

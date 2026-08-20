@@ -1,5 +1,5 @@
 use super::{
-    binary::{decode_kbdrec, encode_kbdrec},
+    binary::{decode_kbdrec, decode_kbdrec_for_export, encode_kbdrec, inspect_kbdrec_export_info},
     browser::{create_recording_folder, list_recording_files},
     filename::{format_recording_file_name, parse_recording_file_times},
     inspection::inspect_kbdrec,
@@ -183,6 +183,31 @@ fn samples_frames_without_integer_millisecond_drift() {
 }
 
 #[test]
+fn manager_start_does_not_replace_an_active_session() {
+    let manager = RecordingManager::new();
+
+    manager.start(60, 1000, 1000).unwrap();
+    manager.record_input(1016, "w", true).unwrap();
+    manager.start(60, 2000, 2000).unwrap();
+    manager.record_input(1033, "a", true).unwrap();
+
+    let session = manager.session.lock().unwrap();
+    assert_eq!(
+        session.as_ref().unwrap().session.snapshot().events,
+        vec![
+            RecordingEvent::KeyDown {
+                frame: 1,
+                key_id: "w".to_string(),
+            },
+            RecordingEvent::KeyDown {
+                frame: 2,
+                key_id: "a".to_string(),
+            },
+        ],
+    );
+}
+
+#[test]
 fn manager_writes_binary_kbdrec_file() {
     let output_dir = std::env::temp_dir().join(format!(
         "keyboard-display-recording-test-{}",
@@ -254,6 +279,33 @@ fn manager_uses_filename_template_when_writing_recording() {
 }
 
 #[test]
+fn take_pending_kbdrec_does_not_touch_disk() {
+    let output_dir = std::env::temp_dir().join(format!(
+        "keyboard-display-pending-kbdrec-test-{}",
+        std::process::id()
+    ));
+    let _ = std::fs::remove_dir_all(&output_dir);
+    let manager = RecordingManager::new();
+
+    manager.start(60, 1000, 1000).unwrap();
+    manager.record_input(1016, "w", true).unwrap();
+    let pending = manager
+        .take_pending_kbdrec(output_dir.clone(), 1200, "${start}-${end}", "", 60)
+        .unwrap();
+
+    assert!(
+        !output_dir.exists(),
+        "taking the session must not create the output directory or file"
+    );
+    assert!(manager.session.lock().unwrap().is_none());
+
+    let result = super::manager::write_pending_kbdrec(pending).unwrap();
+    assert!(std::path::Path::new(&result.path).exists());
+
+    let _ = std::fs::remove_dir_all(output_dir);
+}
+
+#[test]
 fn binary_recording_roundtrips_frame_state_stream() {
     let snapshot = {
         let mut session = RecordingSession::new(60, 1000);
@@ -276,6 +328,68 @@ fn binary_recording_roundtrips_frame_state_stream() {
     assert_eq!(decoded.markers[0].frame, 12);
     assert_eq!(decoded.markers[0].name, "sync");
     assert!(decoded.runs.len() < decoded.frames.len());
+}
+
+#[test]
+fn export_decoder_iterates_only_the_requested_absolute_frames() {
+    let mut session = RecordingSession::new(10, 1000);
+    session.record_input(1100, "w", true);
+    session.record_input(1400, "w", false);
+    let encoded = encode_kbdrec(&session.snapshot()).unwrap();
+    let decoded = decode_kbdrec_for_export(&encoded).unwrap();
+    let frames = decoded
+        .frames_in_range(2, 4)
+        .unwrap()
+        .map(|(frame, keys)| (frame, keys.to_vec()))
+        .collect::<Vec<_>>();
+
+    assert_eq!(
+        frames,
+        vec![(2, vec!["w".to_string()]), (3, vec!["w".to_string()])]
+    );
+    assert_eq!(
+        inspect_kbdrec_export_info(&encoded).unwrap().frame_count,
+        decoded.frame_count
+    );
+}
+
+#[test]
+fn export_decoder_rejects_header_and_run_frame_count_mismatch() {
+    let mut session = RecordingSession::new(10, 1000);
+    session.record_input(1100, "w", true);
+    let mut encoded = encode_kbdrec(&session.snapshot()).unwrap();
+    encoded[9] += 1;
+
+    let error = decode_kbdrec_for_export(&encoded).unwrap_err();
+    assert!(error.contains("frame count mismatch"));
+}
+
+#[test]
+fn export_decoder_rejects_malicious_collection_counts_before_allocating() {
+    fn push_varint(mut value: u64, bytes: &mut Vec<u8>) {
+        while value >= 0x80 {
+            bytes.push((value as u8) | 0x80);
+            value >>= 7;
+        }
+        bytes.push(value as u8);
+    }
+
+    for (counts, expected_name) in [
+        ([u64::MAX, 0, 0, 0], "key"),
+        ([0, 0, u64::MAX, 0], "run"),
+        ([0, 0, 0, u64::MAX], "marker"),
+    ] {
+        let mut bytes = b"KBDR".to_vec();
+        bytes.extend_from_slice(&[1, 0]);
+        bytes.extend_from_slice(&60_u16.to_le_bytes());
+        for count in counts {
+            push_varint(count, &mut bytes);
+        }
+
+        let error = decode_kbdrec_for_export(&bytes).unwrap_err();
+        assert!(error.contains(expected_name), "{error}");
+        assert!(error.contains("safety limit"), "{error}");
+    }
 }
 
 #[test]

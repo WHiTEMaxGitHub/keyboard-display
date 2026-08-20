@@ -2,19 +2,16 @@ use std::{
     mem::size_of,
     ptr::{null, null_mut},
     sync::OnceLock,
-    thread,
-    time::Duration,
 };
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use windows_sys::Win32::{
     Foundation::{GetLastError, HINSTANCE, HWND, LPARAM, LRESULT, WPARAM},
     System::LibraryLoader::GetModuleHandleW,
     UI::{
         Input::{
-            GetRawInputData,
-            KeyboardAndMouse::{GetAsyncKeyState, VK_LBUTTON, VK_MBUTTON, VK_RBUTTON},
-            RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE, RAWINPUTHEADER,
-            RAWKEYBOARD, RAWMOUSE, RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEKEYBOARD, RIM_TYPEMOUSE,
+            GetRawInputData, RegisterRawInputDevices, HRAWINPUT, RAWINPUT, RAWINPUTDEVICE,
+            RAWINPUTHEADER, RAWKEYBOARD, RAWMOUSE, RIDEV_INPUTSINK, RID_INPUT, RIM_TYPEKEYBOARD,
+            RIM_TYPEMOUSE,
         },
         WindowsAndMessaging::{
             CreateWindowExW, DefWindowProcW, DispatchMessageW, GetMessageW, GetSystemMetrics,
@@ -24,12 +21,10 @@ use windows_sys::Win32::{
     },
 };
 
-use super::{emit_backend_log, emit_input_state, mapping, InputStateBridge};
+use super::{emit_backend_log, emit_input_state, mapping};
 
 static APP_HANDLE: OnceLock<AppHandle> = OnceLock::new();
 
-const MOUSE_POLL_INTERVAL: Duration = Duration::from_millis(16);
-const ASYNC_KEY_DOWN_MASK: u16 = 0x8000;
 const RAW_MOUSE_BUTTON_FLAGS: u16 = 0x003F;
 
 const RAW_INPUT_CLASS_NAME: &[u16] = &[
@@ -40,8 +35,6 @@ const RAW_INPUT_CLASS_NAME: &[u16] = &[
 
 pub fn start(app_handle: AppHandle) {
     let _ = APP_HANDLE.set(app_handle.clone());
-
-    start_mouse_state_poller();
 
     std::thread::spawn(move || unsafe {
         let module = GetModuleHandleW(null());
@@ -63,45 +56,6 @@ pub fn start(app_handle: AppHandle) {
             DispatchMessageW(&message);
         }
     });
-}
-
-fn start_mouse_state_poller() {
-    thread::spawn(move || loop {
-        thread::sleep(MOUSE_POLL_INTERVAL);
-
-        let Some(app_handle) = APP_HANDLE.get() else {
-            continue;
-        };
-        let Some(bridge) = app_handle.try_state::<InputStateBridge>() else {
-            continue;
-        };
-
-        // Safety net only: emit when GetAsyncKeyState disagrees with overlay
-        // state (missed Raw Input UP/DOWN). Do not stream every OS edge.
-        for (key_id, async_pressed) in sample_mouse_button_states() {
-            if let Some(pressed) = mouse_reconcile_pressed(bridge.is_active(key_id), async_pressed)
-            {
-                emit_input_state(app_handle, key_id, pressed);
-            }
-        }
-    });
-}
-
-fn sample_mouse_button_states() -> [(&'static str, bool); 3] {
-    [
-        ("mouse-left", is_mouse_button_down(VK_LBUTTON)),
-        ("mouse-right", is_mouse_button_down(VK_RBUTTON)),
-        ("mouse-middle", is_mouse_button_down(VK_MBUTTON)),
-    ]
-}
-
-fn is_async_key_down(virtual_key: u16) -> bool {
-    let state = unsafe { GetAsyncKeyState(i32::from(virtual_key)) };
-    (state as u16 & ASYNC_KEY_DOWN_MASK) != 0
-}
-
-fn is_mouse_button_down(virtual_key: u16) -> bool {
-    is_async_key_down(virtual_key)
 }
 
 unsafe fn create_raw_input_window(instance: HINSTANCE) -> HWND {
@@ -211,6 +165,7 @@ fn handle_raw_keyboard(keyboard: RAWKEYBOARD) {
         .unwrap_or_else(|| mapping::layout_id_from_windows_codes(vk_code, scan_code));
 
     if let Some(app_handle) = APP_HANDLE.get() {
+        // Parse + enqueue only; ingest applies/records off this thread.
         emit_input_state(app_handle, key_id, pressed);
     }
 }
@@ -221,7 +176,10 @@ fn handle_raw_mouse(mouse: RAWMOUSE) {
         return;
     }
 
-    // Physical Raw Input flags vs logical overlay ids: match former WH_MOUSE_LL
+    // Mouse hold source of truth is Raw Input button flags only. Do not poll
+    // GetAsyncKeyState: async UP caused CS2 false LMB drops, and filling DOWN
+    // from a stale high bit after a real Raw UP re-lit mouse-left forever.
+    // Physical flags vs logical overlay ids: match former WH_MOUSE_LL
     // WM_*BUTTON* behavior, which follows SM_SWAPBUTTON.
     let swap_buttons = unsafe { GetSystemMetrics(SM_SWAPBUTTON) != 0 };
     let Some(app_handle) = APP_HANDLE.get() else {
@@ -229,6 +187,7 @@ fn handle_raw_mouse(mouse: RAWMOUSE) {
     };
 
     for (key_id, pressed) in mapping::overlay_events_from_raw_mouse_flags(flags, swap_buttons) {
+        // Parse + enqueue only; ingest applies/records off this thread.
         emit_input_state(app_handle, key_id, pressed);
     }
 }
@@ -252,24 +211,18 @@ unsafe fn read_raw_input(raw_input: HRAWINPUT) -> Option<RAWINPUT> {
     }
 }
 
-fn mouse_reconcile_pressed(overlay_pressed: bool, async_pressed: bool) -> Option<bool> {
-    (overlay_pressed != async_pressed).then_some(async_pressed)
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{
-        is_async_key_down, mouse_reconcile_pressed, sample_mouse_button_states, InputStateBridge,
-    };
+    use super::super::InputStateBridge;
     use std::{mem::size_of, ptr::null, thread, time::Duration};
     use windows_sys::Win32::{
         Foundation::{HWND, POINT, RECT},
         System::LibraryLoader::GetModuleHandleW,
         UI::{
             Input::KeyboardAndMouse::{
-                SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE, KEYBDINPUT,
-                KEYEVENTF_KEYUP, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEINPUT, VK_LBUTTON,
-                VK_SPACE,
+                GetAsyncKeyState, SendInput, INPUT, INPUT_0, INPUT_KEYBOARD, INPUT_MOUSE,
+                KEYBDINPUT, KEYEVENTF_KEYUP, MOUSEEVENTF_LEFTDOWN, MOUSEEVENTF_LEFTUP, MOUSEINPUT,
+                VK_LBUTTON, VK_SPACE,
             },
             WindowsAndMessaging::{
                 CreateWindowExW, DefWindowProcW, DestroyWindow, GetCursorPos, GetWindowRect,
@@ -279,30 +232,68 @@ mod tests {
         },
     };
 
+    const ASYNC_KEY_DOWN_MASK: u16 = 0x8000;
+
     fn keys(ids: &[&str]) -> Vec<String> {
         ids.iter().map(|id| (*id).to_string()).collect()
     }
 
-    fn apply_poller_reconcile(bridge: &InputStateBridge) {
-        for (key_id, async_pressed) in sample_mouse_button_states() {
-            if let Some(pressed) = mouse_reconcile_pressed(bridge.is_active(key_id), async_pressed) {
-                bridge
-                    .apply_key(key_id, pressed)
-                    .expect("input state lock");
-            }
+    fn is_async_key_down(virtual_key: u16) -> bool {
+        let state = unsafe { GetAsyncKeyState(i32::from(virtual_key)) };
+        (state as u16 & ASYNC_KEY_DOWN_MASK) != 0
+    }
+
+    /// GetAsyncKeyState is not a mouse overlay source. Neither missed-DOWN
+    /// fill nor async UP is applied — DOWN fill re-lit LMB after a real Raw
+    /// UP (stale high bit), and async UP caused CS2 false clears.
+    fn mouse_async_reconcile_pressed(_overlay_pressed: bool, _async_pressed: bool) -> Option<bool> {
+        None
+    }
+
+    fn apply_async_mouse_sample(bridge: &InputStateBridge, key_id: &str, async_pressed: bool) {
+        if let Some(pressed) =
+            mouse_async_reconcile_pressed(bridge.is_active(key_id), async_pressed)
+        {
+            bridge.apply_key(key_id, pressed).expect("input state lock");
         }
     }
 
     #[test]
-    fn poller_emits_only_when_async_state_disagrees_with_overlay() {
-        assert_eq!(mouse_reconcile_pressed(true, true), None);
-        assert_eq!(mouse_reconcile_pressed(false, false), None);
-        assert_eq!(mouse_reconcile_pressed(true, false), Some(false));
-        assert_eq!(mouse_reconcile_pressed(false, true), Some(true));
+    fn async_mouse_sample_never_emits_down_or_up() {
+        assert_eq!(mouse_async_reconcile_pressed(true, true), None);
+        assert_eq!(mouse_async_reconcile_pressed(false, false), None);
+        assert_eq!(mouse_async_reconcile_pressed(true, false), None);
+        assert_eq!(
+            mouse_async_reconcile_pressed(false, true),
+            None,
+            "stale GetAsyncKeyState down after Raw UP must not fill mouse-left"
+        );
     }
 
     #[test]
-    fn missed_mouse_left_up_is_cleared_when_async_samples_up() {
+    fn stale_async_down_after_raw_up_does_not_stick_mouse_left() {
+        let bridge = InputStateBridge::new();
+        assert_eq!(
+            bridge.apply_key("mouse-left", true).unwrap(),
+            keys(&["mouse-left"])
+        );
+        assert_eq!(bridge.apply_key("mouse-left", false).unwrap(), keys(&[]));
+        assert!(!bridge.is_active("mouse-left"));
+
+        // Race: Raw DOWN → Raw UP (overlay empty), then the next ~16ms poll
+        // still sees GetAsyncKeyState high bit = 1. A DOWN-only reconciler
+        // would emit DOWN and never UP afterwards, sticking mouse-left.
+        apply_async_mouse_sample(&bridge, "mouse-left", true);
+
+        assert_eq!(bridge.snapshot(), keys(&[]));
+        assert!(
+            !bridge.is_active("mouse-left"),
+            "overlay must stay clear after Raw UP even if async still reads down"
+        );
+    }
+
+    #[test]
+    fn missed_mouse_left_up_stays_held_when_async_samples_up() {
         let bridge = InputStateBridge::new();
         assert_eq!(
             bridge.apply_key("mouse-left", true).unwrap(),
@@ -318,17 +309,17 @@ mod tests {
         );
         assert_eq!(bridge.snapshot(), keys(&["mouse-left"]));
 
-        let overlay = bridge.is_active("mouse-left");
-        let async_pressed = false;
-        let pressed = mouse_reconcile_pressed(overlay, async_pressed)
-            .expect("reconciler should emit mouse-left up");
-        assert!(!pressed);
-        assert_eq!(bridge.apply_key("mouse-left", pressed).unwrap(), keys(&[]));
-        assert!(bridge.snapshot().is_empty());
+        apply_async_mouse_sample(&bridge, "mouse-left", false);
+        assert_eq!(
+            bridge.snapshot(),
+            keys(&["mouse-left"]),
+            "GetAsyncKeyState UP must not clear a held mouse-left"
+        );
+        assert!(bridge.is_active("mouse-left"));
     }
 
     #[test]
-    fn jump_throw_sendinput_updates_async_keys_and_clears_missed_mouse_up() {
+    fn jump_throw_sendinput_keeps_mouse_left_when_async_samples_up() {
         let mut probe = LiveInputProbe::start().expect("create probe window");
         let bridge = InputStateBridge::new();
         let mut stages = Vec::new();
@@ -376,20 +367,46 @@ mod tests {
             "overlay should still hold mouse-left when Raw Input UP is missed: {stages:?}"
         );
 
-        apply_poller_reconcile(&bridge);
-        stages.push(probe.stage("after GetAsyncKeyState reconciler", &bridge));
+        apply_async_mouse_sample(&bridge, "mouse-left", false);
+        stages.push(probe.stage("after GetAsyncKeyState sample (ignored)", &bridge));
         assert!(
-            !bridge.is_active("mouse-left"),
-            "reconciler should clear stuck mouse-left: {stages:?}"
+            bridge.is_active("mouse-left"),
+            "GetAsyncKeyState UP must not clear held mouse-left: {stages:?}"
         );
-        assert!(
-            bridge.snapshot().is_empty(),
-            "active_keys should be empty after delayed left-up reconcile: {stages:?}"
+        assert_eq!(
+            bridge.snapshot(),
+            keys(&["mouse-left"]),
+            "active_keys should keep mouse-left after delayed left-up sample: {stages:?}"
         );
 
         for stage in &stages {
             eprintln!("{stage}");
         }
+    }
+
+    #[test]
+    fn sendinput_press_release_does_not_relight_from_stale_async_down() {
+        let mut probe = LiveInputProbe::start().expect("create probe window");
+        let bridge = InputStateBridge::new();
+
+        probe.send_mouse_left(true);
+        thread::sleep(Duration::from_millis(50));
+        bridge.apply_key("mouse-left", true).unwrap();
+        assert_eq!(bridge.snapshot(), keys(&["mouse-left"]));
+
+        probe.send_mouse_left(false);
+        bridge.apply_key("mouse-left", false).unwrap();
+        assert_eq!(bridge.snapshot(), keys(&[]));
+
+        // Even if GetAsyncKeyState still reads down right after release,
+        // overlay must not be re-lit (the desktop sticky-LMB race).
+        apply_async_mouse_sample(&bridge, "mouse-left", true);
+        assert!(
+            !bridge.is_active("mouse-left"),
+            "stale async-down after Raw UP must not stick mouse-left; async={}",
+            is_async_key_down(VK_LBUTTON)
+        );
+        assert_eq!(bridge.snapshot(), keys(&[]));
     }
 
     const PROBE_CLASS: &[u16] = &[

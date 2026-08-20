@@ -26,6 +26,7 @@ pub fn run() {
             commands::default_recording_dir,
             commands::default_export_video_dir,
             commands::start_recording,
+            commands::sync_recording_runtime,
             commands::record_input_event,
             commands::add_recording_marker,
             commands::suppress_recording_keys,
