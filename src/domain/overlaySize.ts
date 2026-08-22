@@ -9,21 +9,35 @@ export type OverlaySize = {
 const BACKPLATE_PADDING = 10 * 2;
 const OVERLAY_BLEED = 12 * 2;
 const FLOAT_EPSILON = 0.000001;
+export const EXPORT_RESOLUTION_SCALES = [1, 2, 3, 4] as const;
+
+export function normalizeExportResolutionScale(value: unknown): number {
+  const scale = Math.round(Number(value));
+  if (!Number.isFinite(scale)) {
+    return 1;
+  }
+  return Math.min(4, Math.max(1, scale));
+}
 
 export function estimateOverlaySize(
   layout: OverlayLayout,
   rows: OverlayRow[],
   style: OverlayStyle,
+  resolutionScale = 1,
 ): OverlaySize {
-  const unit = layout.unitPx * style.scale;
+  const outputScale = normalizeExportResolutionScale(resolutionScale);
+  const unit = layout.unitPx * style.scale * outputScale;
   const gap = unit * normalizeUnit(layout.gapUnit);
-  const padding = isBackplateVisible(style.backgroundColor) ? BACKPLATE_PADDING : 0;
+  const padding = isBackplateVisible(style.backgroundColor)
+    ? BACKPLATE_PADDING * outputScale
+    : 0;
+  const bleed = OVERLAY_BLEED * outputScale;
   const widthUnits = Math.max(...rows.map((row) => rowWidthUnits(row, layout.gapUnit)), 1);
   const rowCount = Math.max(rows.length, 1);
 
   return {
-    width: ceilStable(widthUnits * unit + padding + OVERLAY_BLEED),
-    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding + OVERLAY_BLEED),
+    width: ceilStable(widthUnits * unit + padding + bleed),
+    height: ceilStable(rowCount * unit + (rowCount - 1) * gap + padding + bleed),
   };
 }
 

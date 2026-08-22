@@ -13,6 +13,7 @@ import {
   type VideoExporterConfig,
 } from "./videoExporter";
 import { sanitizeExportFilenameTemplate } from "./exportFilename";
+import { normalizeExportResolutionScale } from "./overlaySize";
 import {
   createProfileConfig,
   DEFAULT_BUILT_IN_PROFILE_ID,
@@ -246,6 +247,7 @@ function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppC
     ),
     fontPath: exportConfig.fontPath ?? defaultExport.fontPath,
     renderThreads: exportConfig.renderThreads ?? defaultExport.renderThreads,
+    resolutionScale: normalizeExportResolutionScale(exportConfig.resolutionScale),
   };
 }
 

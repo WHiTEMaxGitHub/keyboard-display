@@ -130,6 +130,7 @@ describe("app config", () => {
     expect(appConfig.currentProfile.overlay.position).toBe("center");
     expect(appConfig.currentProfile.overlay.keys).toEqual(createDefaultConfig().keys);
     expect(appConfig.currentProfile.export.renderMarkers).toBe(true);
+    expect(appConfig.currentProfile.export.resolutionScale).toBe(1);
     expect(appConfig.recording.browserDirectory).toBe("/tmp/browse-recordings");
     expect(appConfig.exporter.video.userSelectedPath).toBe("/Applications/ffmpeg");
     expect(appConfig.exporter.video.outputDirectory).toBe("/tmp/exports");

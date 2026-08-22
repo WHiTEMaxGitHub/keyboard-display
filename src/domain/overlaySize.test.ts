@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDefaultConfig } from "./defaultConfig";
-import { estimateOverlaySize } from "./overlaySize";
+import { estimateOverlaySize, normalizeExportResolutionScale } from "./overlaySize";
 
 describe("estimateOverlaySize", () => {
   it("scales default row overlay dimensions", () => {
@@ -82,5 +82,23 @@ describe("estimateOverlaySize", () => {
 
     expect(panelSize.width - transparentSize.width).toBe(20);
     expect(panelSize.height - transparentSize.height).toBe(20);
+  });
+
+  it("scales export dimensions by resolution multiplier", () => {
+    const config = createDefaultConfig();
+    const base = estimateOverlaySize(config.layout, config.rows, config.style, 1);
+    const scaled = estimateOverlaySize(config.layout, config.rows, config.style, 2);
+
+    expect(scaled.width).toBeGreaterThanOrEqual(base.width * 2 - 1);
+    expect(scaled.width).toBeLessThanOrEqual(base.width * 2);
+    expect(scaled.height).toBeGreaterThanOrEqual(base.height * 2 - 1);
+    expect(scaled.height).toBeLessThanOrEqual(base.height * 2);
+  });
+
+  it("clamps export resolution scale to 1x-4x", () => {
+    expect(normalizeExportResolutionScale(undefined)).toBe(1);
+    expect(normalizeExportResolutionScale(0)).toBe(1);
+    expect(normalizeExportResolutionScale(2.4)).toBe(2);
+    expect(normalizeExportResolutionScale(9)).toBe(4);
   });
 });

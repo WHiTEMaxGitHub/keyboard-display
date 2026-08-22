@@ -71,6 +71,7 @@ describe("createDefaultConfig", () => {
     expect(config.export.defaultFormat).toBe("webm");
     expect(config.export.renderMarkers).toBe(true);
     expect(config.export.filenameTemplate).toBe("${profileSlug}-${recordingName}-overlay");
+    expect(config.export.resolutionScale).toBe(1);
   });
 
   it("defaults to a transparent backplate with visible idle keys", () => {

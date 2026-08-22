@@ -113,6 +113,42 @@ describe("parseConfigFile", () => {
     expect(config.export.filenameTemplate).toBe("${recordingName}-keys");
   });
 
+  it("defaults missing export resolution scale to 1x", () => {
+    const config = parseConfigFile(
+      JSON.stringify({
+        version: 1,
+        overlay: {
+          layout: createDefaultConfig().layout,
+          style: createDefaultConfig().style,
+          rows: createDefaultConfig().rows,
+        },
+        export: {
+          filenameTemplate: "${recordingName}-keys",
+        },
+      }),
+    );
+
+    expect(config.export.resolutionScale).toBe(1);
+  });
+
+  it("loads export resolution scale", () => {
+    const config = parseConfigFile(
+      JSON.stringify({
+        version: 1,
+        overlay: {
+          layout: createDefaultConfig().layout,
+          style: createDefaultConfig().style,
+          rows: createDefaultConfig().rows,
+        },
+        export: {
+          resolutionScale: 3,
+        },
+      }),
+    );
+
+    expect(config.export.resolutionScale).toBe(3);
+  });
+
   it("loads row layout with custom gaps", () => {
     const config = parseConfigFile(
       JSON.stringify({

@@ -13,6 +13,7 @@ import {
 import { normalizeUnit } from "./layoutUnits";
 import { normalizeRecordingConfig } from "./recordingConfig";
 import { sanitizeExportFilenameTemplate } from "./exportFilename";
+import { normalizeExportResolutionScale } from "./overlaySize";
 
 export type OverlayConfigFile = {
   version: number;
@@ -120,6 +121,7 @@ function normalizeExportConfig(exportConfig: Partial<AppConfig["export"]>): AppC
     ),
     fontPath: exportConfig.fontPath ?? defaultExport.fontPath,
     renderThreads: exportConfig.renderThreads ?? defaultExport.renderThreads,
+    resolutionScale: normalizeExportResolutionScale(exportConfig.resolutionScale),
   };
 }
 

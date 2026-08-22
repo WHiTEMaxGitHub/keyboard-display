@@ -72,6 +72,7 @@ export type ExportConfig = {
   filenameTemplate: string;
   fontPath: string | null;
   renderThreads: number | null;
+  resolutionScale: number;
 };
 
 export type OverlayCustomPosition = {
@@ -269,6 +270,7 @@ export function createDefaultConfig(): AppConfig {
       filenameTemplate: "${profileSlug}-${recordingName}-overlay",
       fontPath: null,
       renderThreads: null,
+      resolutionScale: 1,
     },
   };
 }
