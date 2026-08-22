@@ -1,10 +1,13 @@
 export const DEFAULT_EXPORT_FILENAME_TEMPLATE = "${profileSlug}-${recordingName}-overlay";
 
+export type OverlayExportFormat = "webm" | "pngMov";
+
 export type ExportFilenameTemplateInput = {
   template: string;
   recordingPath: string;
   profileName: string;
   fps: number;
+  format?: OverlayExportFormat;
 };
 
 export function sanitizeExportFilenameTemplate(template: string) {
@@ -25,7 +28,17 @@ export function formatExportFileName(input: ExportFilenameTemplateInput) {
     return values[key as keyof typeof values];
   });
 
-  return `${sanitizeFileName(expanded)}.webm`;
+  return `${sanitizeFileName(expanded)}.${overlayExportFileExtension(input.format ?? "webm")}`;
+}
+
+export function overlayExportFileExtension(format: OverlayExportFormat) {
+  return format === "pngMov" ? "mov" : "webm";
+}
+
+export function formatConvertedPngMovFileName(webmPath: string) {
+  const fileName = webmPath.split(/[\\/]/).pop() ?? webmPath;
+  const baseName = fileName.replace(/\.(webm|mov)$/i, "").replace(/\.png$/i, "") || "overlay";
+  return `${sanitizeFileName(baseName)}.png.mov`;
 }
 
 function recordingNameFromPath(path: string) {

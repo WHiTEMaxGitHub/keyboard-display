@@ -5,7 +5,11 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { tauriApi } from "../api/tauri";
 import type { AppConfig } from "../domain/defaultConfig";
-import { formatExportFileName } from "../domain/exportFilename";
+import {
+  formatConvertedPngMovFileName,
+  formatExportFileName,
+  type OverlayExportFormat,
+} from "../domain/exportFilename";
 import {
   formatRecordingBoundaryTime,
   formatRecordingTime,
@@ -13,6 +17,11 @@ import {
   type RecordingExportInfo,
   type RecordingExportRangeMode,
 } from "../domain/recordingExportRange";
+import {
+  EXPORT_RESOLUTION_SCALES,
+  estimateOverlaySize,
+  normalizeExportResolutionScale,
+} from "../domain/overlaySize";
 import {
   normalizeVideoExporterConfig,
   type VideoExporterCandidate,
@@ -46,6 +55,7 @@ const { t } = useI18n();
 const exporterError = ref("");
 const exporterChecking = ref(false);
 const inputRecordingPath = ref("");
+const inputWebmPath = ref("");
 const recordingExportInfo = ref<RecordingExportInfo | null>(null);
 const recordingInfoLoading = ref(false);
 const recordingInfoError = ref("");
@@ -57,6 +67,7 @@ const fontPathDraft = ref(props.config.export.fontPath);
 const renderThreadsDraft = ref(props.config.export.renderThreads);
 const exportStatus = ref("");
 const exportInProgress = ref(false);
+const showFrameProgress = ref(false);
 const defaultExportVideoDirectory = ref("");
 const renderThreadsNotice = ref("");
 const exportProgress = ref({
@@ -106,6 +117,13 @@ const exportReady = computed(() =>
     !rangeError.value
   ),
 );
+const convertReady = computed(() =>
+  Boolean(
+    exporterStatus.value?.resolved &&
+    inputWebmPath.value &&
+    effectiveOutputDirectory.value
+  ),
+);
 const recordingDuration = computed(() => {
   const info = recordingExportInfo.value;
   return info ? formatRecordingTime(info.frameCount, info.fps) : "";
@@ -131,7 +149,27 @@ const outputVideoPath = computed(() => {
 
   return joinPath(
     effectiveOutputDirectory.value,
-    defaultOutputFileName(inputRecordingPath.value),
+    defaultOutputFileName(inputRecordingPath.value, "webm"),
+  );
+});
+const outputPngMovPath = computed(() => {
+  if (!effectiveOutputDirectory.value || !inputRecordingPath.value) {
+    return "";
+  }
+
+  return joinPath(
+    effectiveOutputDirectory.value,
+    defaultOutputFileName(inputRecordingPath.value, "pngMov"),
+  );
+});
+const convertedPngMovPath = computed(() => {
+  if (!effectiveOutputDirectory.value || !inputWebmPath.value) {
+    return "";
+  }
+
+  return joinPath(
+    effectiveOutputDirectory.value,
+    formatConvertedPngMovFileName(inputWebmPath.value),
   );
 });
 
@@ -147,6 +185,22 @@ const exportProgressPercent = computed(() => {
     Math.round((exportProgress.value.renderedFrames / exportProgress.value.totalFrames) * 100),
   );
 });
+
+const exportResolutionScales = EXPORT_RESOLUTION_SCALES;
+const exportResolutionScale = computed(() =>
+  normalizeExportResolutionScale(props.config.export.resolutionScale),
+);
+const baseOverlaySize = computed(() =>
+  estimateOverlaySize(props.config.layout, props.config.rows, props.config.style, 1),
+);
+const exportOverlaySize = computed(() =>
+  estimateOverlaySize(
+    props.config.layout,
+    props.config.rows,
+    props.config.style,
+    exportResolutionScale.value,
+  ),
+);
 
 const currentFrameKeyStatus = computed(() => {
   if (exportProgress.value.totalFrames <= 0) {
@@ -373,6 +427,13 @@ function onRenderThreadsInput(event: Event) {
   renderThreadsNotice.value = "";
 }
 
+function setResolutionScale(event: Event) {
+  emit("update-export-config", {
+    ...props.config.export,
+    resolutionScale: normalizeExportResolutionScale((event.target as HTMLSelectElement).value),
+  });
+}
+
 function commitRenderThreads() {
   let renderThreads = renderThreadsDraft.value === null
     ? null
@@ -429,7 +490,7 @@ async function resolveOutputDirectory() {
   return outputDirectory;
 }
 
-async function exportOverlayVideo() {
+async function exportOverlayVideo(format: OverlayExportFormat = "webm") {
   if (exportInProgress.value) {
     return;
   }
@@ -448,20 +509,23 @@ async function exportOverlayVideo() {
   const outputDirectory = await resolveOutputDirectory();
   const resolvedOutputVideoPath = joinPath(
     outputDirectory,
-    defaultOutputFileName(inputRecordingPath.value),
+    defaultOutputFileName(inputRecordingPath.value, format),
   );
 
   exportInProgress.value = true;
+  showFrameProgress.value = true;
   exportProgress.value = {
     renderedFrames: 0,
     totalFrames: 0,
     currentFrame: 0,
     activeKeyIds: [],
   };
-  exportStatus.value = t("export.status.exporting");
+  exportStatus.value = format === "pngMov"
+    ? t("export.status.exportingPngMov")
+    : t("export.status.exporting");
 
   try {
-      await tauriApi.exportOverlayVideo(
+    const result = await tauriApi.exportOverlayVideo(
       inputRecordingPath.value,
       resolvedOutputVideoPath,
       exporterPath,
@@ -473,10 +537,69 @@ async function exportOverlayVideo() {
         recording: props.config.recording,
       },
       selectedExportRange.value,
+      format,
     );
-    exportStatus.value = "";
+    if (format === "webm") {
+      inputWebmPath.value = result.outputPath;
+    }
+    exportStatus.value = t("export.status.exportComplete", { path: result.outputPath });
   } catch (error) {
     exportStatus.value = t("export.status.exportFailed", { error: String(error) });
+  } finally {
+    exportInProgress.value = false;
+    showFrameProgress.value = false;
+  }
+}
+
+async function chooseInputWebm() {
+  const selectedPath = await open({
+    title: t("export.dialog.chooseWebm"),
+    filters: [{ name: t("export.dialog.webmFilter"), extensions: ["webm"] }],
+    multiple: false,
+  });
+
+  if (typeof selectedPath !== "string") {
+    return;
+  }
+  inputWebmPath.value = selectedPath;
+  exportStatus.value = "";
+}
+
+async function convertWebmToPngMov() {
+  if (exportInProgress.value) {
+    return;
+  }
+
+  if (!convertReady.value) {
+    exportStatus.value = t("export.status.missingConvertRequirements");
+    return;
+  }
+
+  const exporterPath = exporterStatus.value?.resolved?.path;
+  if (!exporterPath) {
+    exportStatus.value = t("export.status.missingExporter");
+    return;
+  }
+
+  const outputDirectory = await resolveOutputDirectory();
+  const resolvedOutputVideoPath = joinPath(
+    outputDirectory,
+    formatConvertedPngMovFileName(inputWebmPath.value),
+  );
+
+  exportInProgress.value = true;
+  showFrameProgress.value = false;
+  exportStatus.value = t("export.status.convertingPngMov");
+
+  try {
+    const result = await tauriApi.convertWebmToPngMov(
+      inputWebmPath.value,
+      resolvedOutputVideoPath,
+      exporterPath,
+    );
+    exportStatus.value = t("export.status.convertComplete", { path: result.outputPath });
+  } catch (error) {
+    exportStatus.value = t("export.status.convertFailed", { error: String(error) });
   } finally {
     exportInProgress.value = false;
   }
@@ -514,11 +637,12 @@ async function uninstallAppManagedExporter() {
   emit("uninstall-app-managed-exporter");
 }
 
-function defaultOutputFileName(recordingPath: string) {
+function defaultOutputFileName(recordingPath: string, format: OverlayExportFormat = "webm") {
   return formatExportFileName({
     template: props.config.export.filenameTemplate,
     recordingPath,
     profileName: props.profileName,
+    format,
     fps: props.config.recording.customFpsEnabled
       ? props.config.recording.customFps
       : props.config.recording.defaultFps,
@@ -549,7 +673,7 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
 <template>
   <BasePanel wide>
     <h2 class="m-0 mb-4 text-lg leading-6 tracking-normal">{{ t("export.title") }}</h2>
-    <BaseFieldRow :label="t('export.transparentOverlay')">WebM</BaseFieldRow>
+    <BaseFieldRow :label="t('export.transparentOverlay')">WebM / PNG MOV</BaseFieldRow>
     <BaseFieldRow :label="t('export.compatibleVideo')">MP4</BaseFieldRow>
     <BaseToggleRow :checked="renderMarkers" @change="emit('update-render-markers', $event)">
       {{ t("export.renderMarkers") }}
@@ -579,19 +703,31 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
     <section class="grid gap-2.5 mt-4 border border-border-control rounded-lg bg-surface-control p-3.5">
       <div class="flex items-center justify-between gap-3 mb-2">
         <h3 class="m-0 text-text-body text-base leading-[22px] tracking-normal">{{ t("export.overlayVideo.title") }}</h3>
-        <BaseButton
-          variant="primary"
-          :disabled="!exportReady || exportInProgress"
-          @click="exportOverlayVideo"
-        >
-          {{ exportInProgress ? t("export.overlayVideo.exportingButton") : t("export.overlayVideo.exportButton") }}
-        </BaseButton>
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          <BaseButton
+            variant="primary"
+            :disabled="!exportReady || exportInProgress"
+            @click="exportOverlayVideo('webm')"
+          >
+            {{ exportInProgress ? t("export.overlayVideo.exportingButton") : t("export.overlayVideo.exportButton") }}
+          </BaseButton>
+          <BaseButton
+            variant="primary"
+            :disabled="!exportReady || exportInProgress"
+            @click="exportOverlayVideo('pngMov')"
+          >
+            {{ exportInProgress ? t("export.overlayVideo.exportingButton") : t("export.overlayVideo.exportPngMovButton") }}
+          </BaseButton>
+        </div>
       </div>
       <BaseFieldRow :label="t('export.overlayVideo.recording')">
         {{ inputRecordingPath || t("export.overlayVideo.noRecording") }}
       </BaseFieldRow>
       <BaseFieldRow :label="t('export.overlayVideo.output')">
         {{ outputVideoPath || effectiveOutputDirectory || t("export.overlayVideo.noOutputFolder") }}
+      </BaseFieldRow>
+      <BaseFieldRow :label="t('export.overlayVideo.pngMovOutput')">
+        {{ outputPngMovPath || effectiveOutputDirectory || t("export.overlayVideo.noOutputFolder") }}
       </BaseFieldRow>
       <div class="flex flex-wrap gap-2">
         <BaseButton @click="chooseInputRecording">
@@ -660,6 +796,32 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
         <p v-else-if="selectedRangeSummary" class="frame-status">{{ selectedRangeSummary }}</p>
       </section>
       <section class="grid gap-2 mt-3">
+        <label class="text-text-muted text-[13px] font-extrabold">{{ t("export.overlayVideo.resolutionScale") }}</label>
+        <div class="flex flex-wrap items-center gap-2">
+          <select
+            class="box-border border border-border-control rounded-md bg-surface-control text-text-primary font-inherit text-[13px] px-2.5 py-2 focus:outline-none focus:border-accent-focus-border"
+            :value="exportResolutionScale"
+            @change="setResolutionScale"
+          >
+            <option
+              v-for="scale in exportResolutionScales"
+              :key="scale"
+              :value="scale"
+            >
+              {{ t("export.overlayVideo.resolutionScaleOption", { scale }) }}
+            </option>
+          </select>
+          <span class="text-text-secondary text-[13px]">
+            {{ t("export.overlayVideo.resolutionPreview", {
+              baseWidth: baseOverlaySize.width,
+              baseHeight: baseOverlaySize.height,
+              exportWidth: exportOverlaySize.width,
+              exportHeight: exportOverlaySize.height,
+            }) }}
+          </span>
+        </div>
+      </section>
+      <section class="grid gap-2 mt-3">
         <label class="text-text-muted text-[13px] font-extrabold">{{ t("export.overlayVideo.renderThreads") }}</label>
         <div class="flex items-center gap-2">
           <input
@@ -677,7 +839,28 @@ function describeExporter(candidate: VideoExporterCandidate | null) {
         </div>
         <p v-if="renderThreadsNotice" class="notice-text">{{ renderThreadsNotice }}</p>
       </section>
-      <div v-if="exportInProgress" class="export-progress-stack">
+      <section class="grid gap-2 mt-3">
+        <label class="text-text-muted text-[13px] font-extrabold">{{ t("export.overlayVideo.convertTitle") }}</label>
+        <p class="text-text-secondary text-[13px]">{{ t("export.overlayVideo.convertHint") }}</p>
+        <BaseFieldRow :label="t('export.overlayVideo.webmSource')">
+          {{ inputWebmPath || t("export.overlayVideo.noWebm") }}
+        </BaseFieldRow>
+        <BaseFieldRow :label="t('export.overlayVideo.convertOutput')">
+          {{ convertedPngMovPath || t("export.overlayVideo.noWebm") }}
+        </BaseFieldRow>
+        <div class="flex flex-wrap gap-2">
+          <BaseButton @click="chooseInputWebm">
+            {{ t("export.overlayVideo.chooseWebm") }}
+          </BaseButton>
+          <BaseButton
+            :disabled="!convertReady || exportInProgress"
+            @click="convertWebmToPngMov"
+          >
+            {{ exportInProgress ? t("export.overlayVideo.convertingButton") : t("export.overlayVideo.convertButton") }}
+          </BaseButton>
+        </div>
+      </section>
+      <div v-if="exportInProgress && showFrameProgress" class="export-progress-stack">
         <div class="flex items-center justify-between gap-3 text-text-muted text-[13px] font-extrabold">
           <span>{{ t("export.overlayVideo.renderingFrames") }}</span>
           <strong class="text-text-body">{{ exportProgress.renderedFrames }} / {{ exportProgress.totalFrames }}</strong>

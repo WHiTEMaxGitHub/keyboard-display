@@ -5,8 +5,8 @@ use crate::{
     exporter::{self, InstallVideoExporterResult, VideoExporterStatus},
     recording::{self, RecordingManager},
     video_export::{
-        self, ExportFrameRange, ExportOverlayProfile, ExportOverlayProgress,
-        ExportOverlayVideoResult,
+        self, ConvertOverlayVideoResult, ExportFrameRange, ExportOverlayProfile,
+        ExportOverlayProgress, ExportOverlayVideoResult, OverlayEncodeFormat,
     },
 };
 
@@ -463,7 +463,9 @@ pub async fn export_overlay_video(
     ffmpeg_path: std::path::PathBuf,
     profile: ExportOverlayProfile,
     range: Option<ExportFrameRange>,
+    format: Option<OverlayEncodeFormat>,
 ) -> Result<ExportOverlayVideoResult, String> {
+    let format = format.unwrap_or_default();
     if let Some(parent) = output_path.parent() {
         std::fs::create_dir_all(parent).map_err(|error| {
             log_error(
@@ -477,10 +479,11 @@ pub async fn export_overlay_video(
     debug_log::write(
         "export",
         &format!(
-            "overlay-start recording={} output={} ffmpeg={} render_threads={:?}",
+            "overlay-start recording={} output={} ffmpeg={} format={:?} render_threads={:?}",
             recording_path.display(),
             output_path.display(),
             ffmpeg_path.display(),
+            format,
             profile.export.render_threads
         ),
     );
@@ -490,6 +493,7 @@ pub async fn export_overlay_video(
             &output_path,
             &ffmpeg_path,
             &profile,
+            format,
             range,
             |progress: ExportOverlayProgress| {
                 app.emit("export-progress", progress)
@@ -507,6 +511,46 @@ pub async fn export_overlay_video(
                 "overlay-complete output={} frames={} size={}x{} fps={}",
                 result.output_path, result.frame_count, result.width, result.height, result.fps
             ),
+        );
+        result
+    })
+}
+
+#[tauri::command]
+pub async fn convert_webm_to_png_mov(
+    input_path: std::path::PathBuf,
+    output_path: std::path::PathBuf,
+    ffmpeg_path: std::path::PathBuf,
+) -> Result<ConvertOverlayVideoResult, String> {
+    if let Some(parent) = output_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|error| {
+            log_error(
+                "export",
+                &format!("create-convert-parent path={}", parent.display()),
+                error,
+            )
+        })?;
+    }
+
+    debug_log::write(
+        "export",
+        &format!(
+            "convert-start input={} output={} ffmpeg={}",
+            input_path.display(),
+            output_path.display(),
+            ffmpeg_path.display()
+        ),
+    );
+    tauri::async_runtime::spawn_blocking(move || {
+        video_export::convert_webm_to_png_mov(&input_path, &output_path, &ffmpeg_path)
+    })
+    .await
+    .map_err(|error| log_error("export", "convert-join", error))?
+    .map_err(|error| log_error("export", "convert", error))
+    .map(|result| {
+        debug_log::write(
+            "export",
+            &format!("convert-complete output={}", result.output_path),
         );
         result
     })

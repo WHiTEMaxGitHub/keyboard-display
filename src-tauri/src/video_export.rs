@@ -71,6 +71,12 @@ pub struct ExportVideoConfig {
     pub render_markers: bool,
     pub font_path: Option<String>,
     pub render_threads: Option<i32>,
+    #[serde(default = "default_resolution_scale")]
+    pub resolution_scale: f32,
+}
+
+fn default_resolution_scale() -> f32 {
+    1.0
 }
 
 #[derive(Clone, Debug, PartialEq, Deserialize)]
@@ -112,6 +118,20 @@ pub struct ExportFrameRange {
     pub end_frame_exclusive: u64,
 }
 
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum OverlayEncodeFormat {
+    #[default]
+    Webm,
+    PngMov,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConvertOverlayVideoResult {
+    pub output_path: String,
+}
+
 const BACKPLATE_PADDING: f32 = 10.0 * 2.0;
 const OVERLAY_BLEED: f32 = 12.0 * 2.0;
 const FLOAT_EPSILON: f32 = 0.000001;
@@ -127,13 +147,15 @@ const PROGRESS_INTERVAL: Duration = Duration::from_millis(100);
 static EXPORT_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 
 pub fn estimate_export_overlay_size(profile: &ExportOverlayProfile) -> ExportOverlaySize {
-    let unit = profile.layout.unit_px * profile.style.scale;
+    let output_scale = export_resolution_scale(profile);
+    let unit = profile.layout.unit_px * profile.style.scale * output_scale;
     let gap = unit * normalize_unit(profile.layout.gap_unit);
     let padding = if is_backplate_visible(&profile.style.background_color) {
-        BACKPLATE_PADDING
+        BACKPLATE_PADDING * output_scale
     } else {
         0.0
     };
+    let bleed = OVERLAY_BLEED * output_scale;
     let width_units = profile
         .rows
         .iter()
@@ -142,9 +164,16 @@ pub fn estimate_export_overlay_size(profile: &ExportOverlayProfile) -> ExportOve
     let row_count = profile.rows.len().max(1) as f32;
 
     ExportOverlaySize {
-        width: ceil_stable(width_units * unit + padding + OVERLAY_BLEED),
-        height: ceil_stable(row_count * unit + (row_count - 1.0) * gap + padding + OVERLAY_BLEED),
+        width: ceil_stable(width_units * unit + padding + bleed),
+        height: ceil_stable(row_count * unit + (row_count - 1.0) * gap + padding + bleed),
     }
+}
+
+fn export_resolution_scale(profile: &ExportOverlayProfile) -> f32 {
+    if !profile.export.resolution_scale.is_finite() {
+        return 1.0;
+    }
+    profile.export.resolution_scale.round().clamp(1.0, 4.0)
 }
 
 /// 渲染单帧 RGBA overlay。
@@ -184,6 +213,18 @@ pub fn render_overlay_frame_with_font(
     Ok((size, premultiplied_to_straight_rgba(pixmap.take())))
 }
 
+pub fn build_overlay_ffmpeg_args(
+    format: OverlayEncodeFormat,
+    output_path: &str,
+    size: ExportOverlaySize,
+    fps: u16,
+) -> Vec<String> {
+    match format {
+        OverlayEncodeFormat::Webm => build_webm_ffmpeg_args(output_path, size, fps),
+        OverlayEncodeFormat::PngMov => build_png_mov_ffmpeg_args(output_path, size, fps),
+    }
+}
+
 pub fn build_webm_ffmpeg_args(output_path: &str, size: ExportOverlaySize, fps: u16) -> Vec<String> {
     vec![
         "-y".to_string(),
@@ -208,6 +249,48 @@ pub fn build_webm_ffmpeg_args(output_path: &str, size: ExportOverlaySize, fps: u
     ]
 }
 
+pub fn build_png_mov_ffmpeg_args(output_path: &str, size: ExportOverlaySize, fps: u16) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-f".to_string(),
+        "rawvideo".to_string(),
+        "-pix_fmt".to_string(),
+        "rgba".to_string(),
+        "-s".to_string(),
+        format!("{}x{}", size.width, size.height),
+        "-r".to_string(),
+        fps.to_string(),
+        "-i".to_string(),
+        "-".to_string(),
+        "-an".to_string(),
+        "-c:v".to_string(),
+        "png".to_string(),
+        "-pix_fmt".to_string(),
+        "rgba".to_string(),
+        "-f".to_string(),
+        "mov".to_string(),
+        output_path.to_string(),
+    ]
+}
+
+pub fn build_webm_to_png_mov_args(input_path: &str, output_path: &str) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-c:v".to_string(),
+        "libvpx-vp9".to_string(),
+        "-i".to_string(),
+        input_path.to_string(),
+        "-an".to_string(),
+        "-c:v".to_string(),
+        "png".to_string(),
+        "-pix_fmt".to_string(),
+        "rgba".to_string(),
+        "-f".to_string(),
+        "mov".to_string(),
+        output_path.to_string(),
+    ]
+}
+
 /// 从 `.kbdrec` 帧状态流渲染透明 WebM overlay，不修改用户 ffmpeg 安装。
 pub fn export_overlay_video(
     recording_path: &Path,
@@ -220,6 +303,7 @@ pub fn export_overlay_video(
         output_path,
         ffmpeg_path,
         profile,
+        OverlayEncodeFormat::Webm,
         |_| Ok(()),
     )
 }
@@ -232,6 +316,7 @@ pub fn export_overlay_video_with_progress(
     output_path: &Path,
     ffmpeg_path: &Path,
     profile: &ExportOverlayProfile,
+    format: OverlayEncodeFormat,
     mut on_progress: impl FnMut(ExportOverlayProgress) -> Result<(), String>,
 ) -> Result<ExportOverlayVideoResult, String> {
     export_overlay_video_with_progress_range(
@@ -239,6 +324,7 @@ pub fn export_overlay_video_with_progress(
         output_path,
         ffmpeg_path,
         profile,
+        format,
         None,
         &mut on_progress,
     )
@@ -249,6 +335,7 @@ pub fn export_overlay_video_with_progress_range(
     output_path: &Path,
     ffmpeg_path: &Path,
     profile: &ExportOverlayProfile,
+    format: OverlayEncodeFormat,
     range: Option<ExportFrameRange>,
     mut on_progress: impl FnMut(ExportOverlayProgress) -> Result<(), String>,
 ) -> Result<ExportOverlayVideoResult, String> {
@@ -268,7 +355,7 @@ pub fn export_overlay_video_with_progress_range(
         profile.recording.sync_feedback_duration_ms,
     );
     let output_path_string = output_path.to_string_lossy().to_string();
-    let args = build_webm_ffmpeg_args(&output_path_string, size, decoded.fps);
+    let args = build_overlay_ffmpeg_args(format, &output_path_string, size, decoded.fps);
     let mut child = Command::new(ffmpeg_path)
         .args(&args)
         .stdin(Stdio::piped())
@@ -430,6 +517,56 @@ pub fn export_overlay_video_with_progress_range(
         width: size.width,
         height: size.height,
         fps,
+    })
+}
+
+pub fn convert_webm_to_png_mov(
+    input_path: &Path,
+    output_path: &Path,
+    ffmpeg_path: &Path,
+) -> Result<ConvertOverlayVideoResult, String> {
+    let _export_guard = EXPORT_LOCK
+        .get_or_init(|| Mutex::new(()))
+        .lock()
+        .map_err(|_| "export lock poisoned".to_string())?;
+    if !input_path.is_file() {
+        return Err("webm input file was not found".to_string());
+    }
+    if input_path == output_path {
+        return Err("png mov output path must be different from the webm input".to_string());
+    }
+
+    let input_path_string = input_path.to_string_lossy().to_string();
+    let output_path_string = output_path.to_string_lossy().to_string();
+    let args = build_webm_to_png_mov_args(&input_path_string, &output_path_string);
+    let mut child = Command::new(ffmpeg_path)
+        .args(&args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("failed to start ffmpeg: {error}"))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "failed to open ffmpeg stderr".to_string())?;
+    let stderr_handle =
+        std::thread::spawn(move || drain_reader_limited(stderr, MAX_FFMPEG_STDERR_BYTES));
+    let status = child
+        .wait()
+        .map_err(|error| format!("failed to finish ffmpeg convert: {error}"))?;
+    let stderr = stderr_handle
+        .join()
+        .map_err(|_| "ffmpeg stderr reader panicked".to_string())??;
+    if !status.success() {
+        return Err(append_ffmpeg_stderr(
+            format!("ffmpeg convert failed with status {status}"),
+            &stderr,
+        ));
+    }
+
+    Ok(ConvertOverlayVideoResult {
+        output_path: output_path_string,
     })
 }
 
@@ -718,18 +855,20 @@ fn render_profile(
     marker_active: bool,
     font: Option<&fontdue::Font>,
 ) -> Result<(), String> {
-    let unit = profile.layout.unit_px * profile.style.scale;
+    let output_scale = export_resolution_scale(profile);
+    let visual_scale = profile.style.scale * output_scale;
+    let unit = profile.layout.unit_px * visual_scale;
     let gap = unit * normalize_unit(profile.layout.gap_unit);
     let padding = if is_backplate_visible(&profile.style.background_color) {
-        10.0
+        10.0 * output_scale
     } else {
         0.0
     };
-    let bleed = 12.0;
+    let bleed = 12.0 * output_scale;
     let origin_x = bleed + padding;
     let origin_y = bleed + padding;
-    let cluster_width = pixmap.width() as f32 - OVERLAY_BLEED;
-    let cluster_height = pixmap.height() as f32 - OVERLAY_BLEED;
+    let cluster_width = pixmap.width() as f32 - OVERLAY_BLEED * output_scale;
+    let cluster_height = pixmap.height() as f32 - OVERLAY_BLEED * output_scale;
 
     if is_backplate_visible(&profile.style.background_color) {
         draw_rect(
@@ -740,7 +879,7 @@ fn render_profile(
             cluster_height,
             &profile.style.background_color,
             backplate_opacity(profile),
-            profile.style.background_radius,
+            profile.style.background_radius * output_scale,
         )?;
     }
 
@@ -758,7 +897,7 @@ fn render_profile(
                 let active = active_keys.contains(id);
                 if active || profile.style.idle_key_visibility != "hidden" {
                     let key_y = y + if active {
-                        2.0 * profile.style.scale
+                        2.0 * visual_scale
                     } else {
                         0.0
                     };
@@ -782,6 +921,7 @@ fn render_profile(
                         color,
                         active,
                         profile.style.opacity,
+                        visual_scale,
                     )?;
                     draw_key_label(
                         pixmap,
@@ -792,7 +932,7 @@ fn render_profile(
                         unit,
                         text_color,
                         profile.style.opacity,
-                        profile.style.scale,
+                        visual_scale,
                         font,
                     )?;
                 }
@@ -811,7 +951,8 @@ fn render_profile(
             cluster_height,
             &profile.style.active_color,
             profile.style.opacity,
-            profile.style.background_radius,
+            profile.style.background_radius * output_scale,
+            output_scale,
         )?;
     }
 
@@ -1073,48 +1214,49 @@ fn draw_key(
     color: &str,
     active: bool,
     opacity: f32,
+    scale: f32,
 ) -> Result<(), String> {
     if active {
         draw_blurred_rect(
             pixmap,
-            x - 4.0,
-            y - 4.0,
-            width + 8.0,
-            height + 8.0,
+            x - 4.0 * scale,
+            y - 4.0 * scale,
+            width + 8.0 * scale,
+            height + 8.0 * scale,
             color,
             opacity * 0.18,
-            10.0,
-            9.0,
+            10.0 * scale,
+            9.0 * scale,
         )?;
     }
     draw_blurred_rect(
         pixmap,
         x,
-        y + 6.0,
+        y + 6.0 * scale,
         width,
         height,
         "#000000",
         opacity * 0.24,
-        8.0,
-        9.0,
+        8.0 * scale,
+        9.0 * scale,
     )?;
-    draw_rect(pixmap, x, y, width, height, color, opacity, 8.0)?;
+    draw_rect(pixmap, x, y, width, height, color, opacity, 8.0 * scale)?;
     draw_rect(
         pixmap,
-        x + 1.0,
-        y + height - if active { 1.0 } else { 3.0 },
-        (width - 2.0).max(0.0),
-        if active { 1.0 } else { 3.0 },
+        x + 1.0 * scale,
+        y + height - if active { 1.0 * scale } else { 3.0 * scale },
+        (width - 2.0 * scale).max(0.0),
+        if active { 1.0 * scale } else { 3.0 * scale },
         "#000000",
         opacity * if active { 0.28 } else { 0.35 },
-        2.0,
+        2.0 * scale,
     )?;
 
     let rect = Rect::from_xywh(
-        x + 0.5,
-        y + 0.5,
-        (width - 1.0).max(0.0),
-        (height - 1.0).max(0.0),
+        x + 0.5 * scale,
+        y + 0.5 * scale,
+        (width - 1.0 * scale).max(0.0),
+        (height - 1.0 * scale).max(0.0),
     )
     .ok_or_else(|| "invalid key border rectangle".to_string())?;
     let mut paint = Paint::default();
@@ -1125,11 +1267,11 @@ fn draw_key(
     };
     paint.set_color(Color::from_rgba8(r, g, b, scaled_alpha(a, opacity)));
     let mut stroke = Stroke::default();
-    stroke.width = 1.0;
+    stroke.width = 1.0 * scale;
     stroke.line_cap = LineCap::Butt;
     stroke.line_join = LineJoin::Round;
     pixmap.stroke_path(
-        &rounded_rect_path(rect, 8.0),
+        &rounded_rect_path(rect, 8.0 * scale),
         &paint,
         &stroke,
         Transform::identity(),
@@ -1148,18 +1290,19 @@ fn draw_marker_border(
     color: &str,
     opacity: f32,
     radius: f32,
+    scale: f32,
 ) -> Result<(), String> {
     let glow_color = brighten_color(color, 16.0);
     draw_blurred_rect(
         pixmap,
-        x - 4.0,
-        y - 4.0,
-        width + 8.0,
-        height + 8.0,
+        x - 4.0 * scale,
+        y - 4.0 * scale,
+        width + 8.0 * scale,
+        height + 8.0 * scale,
         &glow_color,
         opacity * 0.18,
         radius,
-        11.0,
+        11.0 * scale,
     )?;
     draw_rounded_stroke(
         pixmap,
@@ -1170,7 +1313,7 @@ fn draw_marker_border(
         &glow_color,
         opacity,
         radius,
-        2.0,
+        2.0 * scale,
     )
 }
 
@@ -1505,6 +1648,30 @@ mod tests {
     }
 
     #[test]
+    fn scales_export_overlay_size_by_resolution() {
+        let mut profile = test_profile();
+        let base = estimate_export_overlay_size(&profile);
+        profile.export.resolution_scale = 2.0;
+
+        let scaled = estimate_export_overlay_size(&profile);
+
+        assert!(scaled.width >= base.width * 2 - 1);
+        assert!(scaled.width <= base.width * 2);
+        assert!(scaled.height >= base.height * 2 - 1);
+        assert!(scaled.height <= base.height * 2);
+    }
+
+    #[test]
+    fn defaults_missing_resolution_scale_to_one() {
+        let config: ExportVideoConfig = serde_json::from_str(
+            r#"{"renderMarkers":true,"fontPath":null,"renderThreads":null}"#,
+        )
+        .unwrap();
+
+        assert_eq!(config.resolution_scale, 1.0);
+    }
+
+    #[test]
     fn resolves_render_thread_count_modes() {
         assert_eq!(resolve_render_thread_count(None, 8), 8);
         assert_eq!(resolve_render_thread_count(None, 1), 1);
@@ -1726,6 +1893,34 @@ mod tests {
     }
 
     #[test]
+    fn builds_raw_rgba_png_mov_ffmpeg_arguments() {
+        let args = super::build_png_mov_ffmpeg_args(
+            "/tmp/out.mov",
+            super::ExportOverlaySize {
+                width: 320,
+                height: 180,
+            },
+            60,
+        );
+
+        assert!(args.windows(2).any(|args| args == ["-c:v", "png"]));
+        assert!(args.windows(2).any(|args| args == ["-pix_fmt", "rgba"]));
+        assert!(args.windows(2).any(|args| args == ["-f", "mov"]));
+        assert_eq!(args.last().unwrap(), "/tmp/out.mov");
+    }
+
+    #[test]
+    fn builds_webm_to_png_mov_ffmpeg_arguments() {
+        let args = super::build_webm_to_png_mov_args("/tmp/in.webm", "/tmp/out.png.mov");
+
+        assert_eq!(args[1], "-c:v");
+        assert_eq!(args[2], "libvpx-vp9");
+        assert!(args.windows(2).any(|args| args == ["-c:v", "png"]));
+        assert!(args.windows(2).any(|args| args == ["-pix_fmt", "rgba"]));
+        assert_eq!(args.last().unwrap(), "/tmp/out.png.mov");
+    }
+
+    #[test]
     #[cfg(unix)]
     fn exports_kbdrec_frames_to_ffmpeg_stdin() {
         let root = std::env::temp_dir().join(format!(
@@ -1868,6 +2063,7 @@ mod tests {
             &output_path,
             &fake_ffmpeg_path,
             &profile,
+            super::OverlayEncodeFormat::Webm,
             Some(ExportFrameRange {
                 start_frame: 1,
                 end_frame_exclusive: 3,
@@ -1924,6 +2120,7 @@ mod tests {
                 render_markers: true,
                 font_path: None,
                 render_threads: None,
+                resolution_scale: 1.0,
             },
             recording: ExportRecordingConfig {
                 sync_feedback_duration_ms: 420,

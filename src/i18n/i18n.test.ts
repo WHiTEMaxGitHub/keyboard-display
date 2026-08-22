@@ -67,6 +67,8 @@ describe("i18n", () => {
 
     expect(keys).toContain("export.title");
     expect(keys).toContain("export.overlayVideo.exportButton");
+    expect(keys).toContain("export.overlayVideo.exportPngMovButton");
+    expect(keys).toContain("export.overlayVideo.convertButton");
     expect(keys).toContain("export.exporter.appManaged");
     expect(keys).toContain("export.status.exporting");
     expect(keys).toContain("export.dialog.chooseRecording");

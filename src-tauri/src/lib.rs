@@ -41,6 +41,7 @@ pub fn run() {
             commands::install_app_managed_video_exporter,
             commands::uninstall_app_managed_video_exporter,
             commands::export_overlay_video,
+            commands::convert_webm_to_png_mov,
             commands::copy_font_file,
             commands::open_directory
         ])

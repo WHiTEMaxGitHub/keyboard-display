@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   DEFAULT_EXPORT_FILENAME_TEMPLATE,
+  formatConvertedPngMovFileName,
   formatExportFileName,
   sanitizeExportFilenameTemplate,
 } from "./exportFilename";
@@ -38,5 +39,21 @@ describe("export filename templates", () => {
         fps: 60,
       }),
     ).toBe("..-CS-POV-b.webm");
+  });
+
+  it("uses a mov extension for png mov exports", () => {
+    expect(
+      formatExportFileName({
+        template: DEFAULT_EXPORT_FILENAME_TEMPLATE,
+        recordingPath: "/recordings/session.kbdrec",
+        profileName: "CS POV",
+        fps: 60,
+        format: "pngMov",
+      }),
+    ).toBe("cs-pov-session-overlay.mov");
+  });
+
+  it("names converted png mov files from the source webm", () => {
+    expect(formatConvertedPngMovFileName("C:/exports/overlay.webm")).toBe("overlay.png.mov");
   });
 });

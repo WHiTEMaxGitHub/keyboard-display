@@ -6,6 +6,7 @@ import type {
 } from "../types/recording";
 import type { RecordingHotkeyConfig } from "../domain/recordingHotkeys";
 import type { AppConfig } from "../domain/defaultConfig";
+import type { OverlayExportFormat } from "../domain/exportFilename";
 import type { VideoExporterStatus } from "../domain/videoExporter";
 
 export type StopRecordingResult = {
@@ -22,6 +23,10 @@ export type ExportOverlayVideoResult = {
   width: number;
   height: number;
   fps: number;
+};
+
+export type ConvertOverlayVideoResult = {
+  outputPath: string;
 };
 
 export type RecordingExportInfo = {
@@ -162,6 +167,7 @@ export const tauriApi = {
     ffmpegPath: string,
     profile: Pick<AppConfig, "layout" | "rows" | "style" | "export" | "recording">,
     range: ExportFrameRange | null = null,
+    format: OverlayExportFormat = "webm",
   ) {
     return invoke<ExportOverlayVideoResult>("export_overlay_video", {
       recordingPath,
@@ -169,6 +175,15 @@ export const tauriApi = {
       ffmpegPath,
       profile,
       range,
+      format,
+    });
+  },
+
+  convertWebmToPngMov(inputPath: string, outputPath: string, ffmpegPath: string) {
+    return invoke<ConvertOverlayVideoResult>("convert_webm_to_png_mov", {
+      inputPath,
+      outputPath,
+      ffmpegPath,
     });
   },
 
